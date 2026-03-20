@@ -1,6 +1,29 @@
+# Environment
 .env
-.DS_Store
-__pycache__/
+.env.*
 
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.venv/
+
+# Test / Coverage
+.pytest_cache/
+htmlcov/
+.coverage
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Project-specific
 *.txt
 !requirements.txt
