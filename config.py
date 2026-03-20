@@ -9,7 +9,6 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 # マクロ関連
 MACRO_DIR = PROJECT_ROOT / "マクロ格納フォルダ"
-JOBS_XLSX = "download_jobs.xlsx"
 
 # 出力フォルダ
 # CSV_STAGING_DIR = PROJECT_ROOT / "outputs_csv"

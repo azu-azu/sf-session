@@ -1,7 +1,4 @@
-"""マクロ格納フォルダのジョブ定義を読み取る。
-
-download_jobs.xlsx (macro_to_xlsx.py で生成) を優先し、
-なければ .xlsm にフォールバックする。
+"""マクロ格納フォルダの xlsm からジョブ定義を読み取る。
 
 Usage:
     python sf-session/macro_book_reader.py
@@ -10,12 +7,14 @@ Usage:
 from __future__ import annotations
 
 import logging
+import re
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 
 from openpyxl import load_workbook
 
-from .config import JOBS_XLSX, MACRO_DIR, read_ids_file
+from .config import MACRO_DIR, read_ids_file
 
 logger = logging.getLogger(__name__)
 
@@ -88,6 +87,23 @@ def _find_xlsm(directory: Path) -> Path | None:
     return files[0]
 
 
+_RE_TRAILING_DATE = re.compile(r"_(\d{8})$")
+
+
+def _strip_trailing_date(name: str) -> str:
+    """末尾の _YYYYMMDD を除去する。日付として invalid or 今年でなければ何もしない。"""
+    m = _RE_TRAILING_DATE.search(name)
+    if not m:
+        return name
+    try:
+        dt = datetime.strptime(m.group(1), "%Y%m%d")
+    except ValueError:
+        return name
+    if dt.year != datetime.now().year:
+        return name
+    return name[: m.start()]
+
+
 def read_jobs_from_xlsm(xlsm_path: Path) -> list[JobEntry]:
     """指定した xlsm パスからジョブ定義を読み取る。"""
     wb = load_workbook(xlsm_path, read_only=True, data_only=True)
@@ -109,7 +125,7 @@ def read_jobs_from_xlsm(xlsm_path: Path) -> list[JobEntry]:
             no=str(no) if no is not None else "",
             report_id=_extract_id(url),
             has_filename=has_fn,
-            new_filename=str(raw_filename).strip() if has_fn else "",
+            new_filename=_strip_trailing_date(str(raw_filename).strip()) if has_fn else "",
             src_folder_name=str(_cell(ws, row, _COL_SRC_FOLDER_NAME) or ""),
             encode=str(_cell(ws, row, _COL_ENCODE) or ""),
             skip=str(_cell(ws, row, _COL_SKIP) or ""),
@@ -119,61 +135,18 @@ def read_jobs_from_xlsm(xlsm_path: Path) -> list[JobEntry]:
     return entries
 
 
-def read_jobs_from_xlsx(xlsx_path: Path) -> list[JobEntry]:
-    """download_jobs.xlsx からジョブ定義を読み取る。
-
-    Row 2: ヘッダ (no, report_id, report_name, new_filename, dst_folder_name, encode, skip)
-    Row 3+: データ
-    """
-    wb = load_workbook(xlsx_path, read_only=True, data_only=True)
-    ws = wb.active
-
-    entries: list[JobEntry] = []
-    for row in ws.iter_rows(min_row=3, max_col=7, values_only=True):
-        no = row[0]
-        if no is None:
-            break
-
-        report_id = row[1]
-        # row[2] = report_name (表示用、JobEntry では不使用)
-        new_filename = row[3]
-        dst_folder_name = row[4]
-        encode = row[5]
-        skip = row[6]
-
-        has_fn = _has_filename(new_filename)
-
-        entries.append(JobEntry(
-            no=str(no) if no is not None else "",
-            report_id=str(report_id).strip() if report_id else None,
-            has_filename=has_fn,
-            new_filename=str(new_filename).strip() if has_fn else "",
-            src_folder_name=str(dst_folder_name or ""),
-            encode=str(encode or ""),
-            skip=str(skip or ""),
-        ))
-
-    wb.close()
-    return entries
-
-
 def read_jobs(macro_dir: Path = MACRO_DIR) -> list[JobEntry]:
-    """ジョブ定義を読み取る。xlsx を優先し、なければ xlsm にフォールバック。"""
+    """マクロ格納フォルダの xlsm からジョブ定義を読み取る。"""
     if not macro_dir.is_dir():
         raise FileNotFoundError(f"'{macro_dir}' が見つかりません。")
-
-    xlsx_path = macro_dir / JOBS_XLSX
-    if xlsx_path.is_file():
-        logger.info("xlsx から読み取り: %s", xlsx_path.name)
-        return read_jobs_from_xlsx(xlsx_path)
 
     xlsm_path = _find_xlsm(macro_dir)
     if xlsm_path is None:
         raise FileNotFoundError(
-            f"'{macro_dir.name}/' に {JOBS_XLSX} も .xlsm もありません。"
+            f"'{macro_dir.name}/' に .xlsm がありません。"
         )
 
-    logger.info("xlsm にフォールバック: %s", xlsm_path.name)
+    logger.info("xlsm から読み取り: %s", xlsm_path.name)
     return read_jobs_from_xlsm(xlsm_path)
 
 

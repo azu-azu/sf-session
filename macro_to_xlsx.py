@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import argparse
 import logging
-import re
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -16,8 +15,10 @@ from pathlib import Path
 from openpyxl import Workbook
 from openpyxl.utils import get_column_letter
 
-from .config import JOBS_XLSX, MACRO_DIR, SF_BASE_URL, create_sf_client
+from .config import MACRO_DIR, SF_BASE_URL, create_sf_client
 from .macro_book_reader import JobEntry, read_jobs_from_xlsm
+
+JOBS_XLSX = "download_jobs.xlsx"
 
 logger = logging.getLogger(__name__)
 
@@ -43,29 +44,12 @@ def _find_single_xlsm(macro_dir: Path) -> Path:
     return files[0]
 
 
-_RE_TRAILING_DATE = re.compile(r"_(\d{8})$")
-
-
-def _strip_trailing_date(name: str) -> str:
-    """末尾の _YYYYMMDD を除去する。日付として invalid なら何もしない。"""
-    m = _RE_TRAILING_DATE.search(name)
-    if not m:
-        return name
-    try:
-        dt = datetime.strptime(m.group(1), "%Y%m%d")
-    except ValueError:
-        return name
-    if dt.year != datetime.now().year:
-        return name
-    return name[: m.start()]
-
-
 def _entry_to_row(no: int, entry: JobEntry, report_name: str) -> list:
     return [
         no,
         entry.report_id or "",
         report_name,
-        _strip_trailing_date(entry.new_filename),
+        entry.new_filename,
         entry.src_folder_name,
         entry.encode,
         entry.skip,
