@@ -32,7 +32,7 @@ API ではなく、ブラウザの export URL (`?export=1`) を使う VBA マク
                         ▼
 ┌──────────────────────────────────────────────────────────┐
 │ Step 5: 05_convert.bat                                   │
-│   vba_* フォルダの CSV を UTF-8 BOM に変換                  │
+│   *_jis/ フォルダの CSV を UTF-8 BOM に変換                  │
 └──────────────────────────────────────────────────────────┘
 ```
 
@@ -45,8 +45,8 @@ API ではなく、ブラウザの export URL (`?export=1`) を使う VBA マク
 | `sf_session/session_keeper.py` | Chrome をリモートデバッグモードで起動し、定期 reload でセッション維持 |
 | `sf_session/dl_batch.py` | ジョブ定義に基づきバッチ export |
 | `sf_session/file_dispatch.py` | `reportID_*` ファイルをマクロ定義の移動先フォルダへコピー・リネーム |
-| `sf_session/file_collect.py` | 各フォルダから CSV を収集して `確認実行用フォルダ/vba_YYYYMMDD_jis/` に集約 (file_dispatch の逆) |
-| `sf_session/jis_to_utf8.py` | `確認実行用フォルダ/vba_*` の CSV を UTF-8 BOM に変換 → `vba_*_utf/` |
+| `sf_session/file_collect.py` | 各フォルダから CSV を収集して `CSV_STAGING_DIR` に集約 (file_dispatch の逆) |
+| `sf_session/jis_to_utf8.py` | `CSV_STAGING_DIR` 内の CSV を UTF-8 BOM に変換 → `*_utf/` |
 | `sf_session/macro_to_xlsx.py` | xlsm → `download_jobs.xlsx` 変換。SF API で report_name を取得して列追加 |
 | `sf_session/macro_book_reader.py` | ジョブ定義 (`JobEntry`) の読み取り。xlsm から直接読み取り |
 | `sf_session/config.py` | 共通パス定数 + `read_ids_file()` + `create_sf_client()` |
