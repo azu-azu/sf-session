@@ -8,31 +8,31 @@ API ではなく、ブラウザの export URL (`?export=1`) を使う VBA マク
 ```
 ┌──────────────────────────────────────────────────────────┐
 │ Step 1: session_keeper.py                                │
-│   Chrome 起動 → 手動ログイン → 定期 reload で維持        │
+│   Chrome 起動 → 手動ログイン → 定期 reload で維持             │
 └───────────────────────┬──────────────────────────────────┘
                         │ Chrome がログイン状態を維持
                         ▼
 ┌──────────────────────────────────────────────────────────┐
-│ Step 2: dl_batch.py (or dl_single.py)                    │
-│   export URL を Chrome で開く → Downloads 監視 → 移動    │
+│ Step 2: dl_batch.py                                      │
+│   export URL を Chrome で開く → Downloads 監視 → 移動       │
 └───────────────────────┬──────────────────────────────────┘
                         │ reportID_*.csv が出力先に集まる
                         ▼
 ┌──────────────────────────────────────────────────────────┐
-│ Step 3 (optional): file_dispatch.py                      │
-│   reportID_* ファイルを Box フォルダへ振り分け・リネーム  │
+│ Step 3: file_dispatch.py                                 │
+│   reportID_* ファイルを Box フォルダへ振り分け・リネーム        │
 └───────────────────────┬──────────────────────────────────┘
                         │
                         ▼
 ┌──────────────────────────────────────────────────────────┐
-│ Step 4 (optional): file_collect.py                       │
-│   各フォルダから CSV を収集して確認実行用フォルダに集約   │
+│ Step 4: file_collect.py                                  │
+│   各フォルダから CSV を収集して確認実行用フォルダに集約          │
 └───────────────────────┬──────────────────────────────────┘
                         │
                         ▼
 ┌──────────────────────────────────────────────────────────┐
-│ Step 5 (optional): jis_to_utf8.py                        │
-│   vba_* フォルダの CSV を UTF-8 BOM に変換               │
+│ Step 5: jis_to_utf8.py                                   │
+│   vba_* フォルダの CSV を UTF-8 BOM に変換                  │
 └──────────────────────────────────────────────────────────┘
 ```
 
@@ -41,8 +41,8 @@ API ではなく、ブラウザの export URL (`?export=1`) を使う VBA マク
 | スクリプト | 役割 |
 |---|---|
 | `session_keeper.py` | Chrome をリモートデバッグモードで起動し、定期 reload でセッション維持 |
-| `dl_single.py` | 1 レポートを export → Downloads 監視 → 移動/コピー |
-| `dl_batch.py` | ジョブ定義に基づきバッチ export。`dl_single` の関数を内部利用 |
+| `dl_batch.py` | ジョブ定義に基づきバッチ export |
+| `_dl_single.py` | 内部モジュール。1 レポートの export/監視/移動。`dl_batch` から利用 |
 | `file_dispatch.py` | `reportID_*` ファイルをマクロ定義の移動先フォルダへコピー・リネーム |
 | `file_collect.py` | 各フォルダから CSV を収集して `確認実行用フォルダ/vba_YYYYMMDD_jis/` に集約 (file_dispatch の逆) |
 | `jis_to_utf8.py` | `確認実行用フォルダ/vba_*` の CSV を UTF-8 BOM に変換 → `vba_*_utf/` |
@@ -83,23 +83,7 @@ py session_keeper.py
 --no-launch     既存 Chrome に接続 (Chrome を起動しない)
 ```
 
-### 2a. 単発 export
-
-```powershell
-py dl_single.py 00OXXXXXXXXX --chrome-path "C:\...\chrome.exe"
-```
-
-主なオプション:
-
-```
---enc           エンコーディング (default: UTF-8)
---fmt           csv or xls (default: csv)
--o / --output   保存先パス (省略時は Downloads にそのまま)
---keep-original コピー (move ではなく copy)
---timeout       ダウンロード待ちタイムアウト秒 (default: 120)
-```
-
-### 2b. バッチ export
+### 2. バッチ export
 
 ```powershell
 # dry-run でジョブ一覧を確認

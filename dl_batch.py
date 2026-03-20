@@ -25,7 +25,7 @@ from pathlib import Path
 from config import CHROME_EXE_PATH, CHROME_USER_DATA_DIR, DEFAULT_IDS_FILE, MACRO_DIR, CSV_STAGING_DIR
 from macro_book_reader import JobEntry, load_active_jobs
 from utils import setup_logging
-from dl_single import (
+from _dl_single import (
     DOWNLOAD_EXTS,
     build_chrome_command,
     build_export_url,
