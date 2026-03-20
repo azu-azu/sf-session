@@ -15,7 +15,7 @@ from pathlib import Path
 
 from openpyxl import load_workbook
 
-from config import JOBS_XLSX, MACRO_DIR, read_ids_file
+from .config import JOBS_XLSX, MACRO_DIR, read_ids_file
 
 logger = logging.getLogger(__name__)
 

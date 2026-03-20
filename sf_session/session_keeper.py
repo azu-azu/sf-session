@@ -21,7 +21,7 @@ except ImportError:
         "ChromeDriver も PATH に必要。"
     )
 
-from config import CHROME_EXE_PATH, CHROME_USER_DATA_DIR, SF_BASE_URL
+from .config import CHROME_EXE_PATH, CHROME_USER_DATA_DIR, SF_BASE_URL
 
 logger = logging.getLogger(__name__)
 

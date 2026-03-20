@@ -7,31 +7,31 @@ API ではなく、ブラウザの export URL (`?export=1`) を使う VBA マク
 
 ```
 ┌──────────────────────────────────────────────────────────┐
-│ Step 1: session_keeper.py                                │
+│ Step 1: 01_session.bat                                   │
 │   Chrome 起動 → 手動ログイン → 定期 reload で維持             │
 └───────────────────────┬──────────────────────────────────┘
                         │ Chrome がログイン状態を維持
                         ▼
 ┌──────────────────────────────────────────────────────────┐
-│ Step 2: dl_batch.py                                      │
+│ Step 2: 02_download.bat                                  │
 │   export URL を Chrome で開く → Downloads 監視 → 移動       │
 └───────────────────────┬──────────────────────────────────┘
                         │ reportID_*.csv が出力先に集まる
                         ▼
 ┌──────────────────────────────────────────────────────────┐
-│ Step 3: file_dispatch.py                                 │
+│ Step 3: 03_dispatch.bat                                  │
 │   reportID_* ファイルを Box フォルダへ振り分け・リネーム        │
 └───────────────────────┬──────────────────────────────────┘
                         │
                         ▼
 ┌──────────────────────────────────────────────────────────┐
-│ Step 4: file_collect.py                                  │
+│ Step 4: 04_collect.bat                                   │
 │   各フォルダから CSV を収集して確認実行用フォルダに集約          │
 └───────────────────────┬──────────────────────────────────┘
                         │
                         ▼
 ┌──────────────────────────────────────────────────────────┐
-│ Step 5: jis_to_utf8.py                                   │
+│ Step 5: 05_convert.bat                                   │
 │   vba_* フォルダの CSV を UTF-8 BOM に変換                  │
 └──────────────────────────────────────────────────────────┘
 ```
@@ -40,16 +40,16 @@ API ではなく、ブラウザの export URL (`?export=1`) を使う VBA マク
 
 | スクリプト | 役割 |
 |---|---|
-| `session_keeper.py` | Chrome をリモートデバッグモードで起動し、定期 reload でセッション維持 |
-| `dl_batch.py` | ジョブ定義に基づきバッチ export |
-| `_dl_single.py` | 内部モジュール。1 レポートの export/監視/移動。`dl_batch` から利用 |
-| `file_dispatch.py` | `reportID_*` ファイルをマクロ定義の移動先フォルダへコピー・リネーム |
-| `file_collect.py` | 各フォルダから CSV を収集して `確認実行用フォルダ/vba_YYYYMMDD_jis/` に集約 (file_dispatch の逆) |
-| `jis_to_utf8.py` | `確認実行用フォルダ/vba_*` の CSV を UTF-8 BOM に変換 → `vba_*_utf/` |
-| `macro_to_xlsx.py` | xlsm → `download_jobs.xlsx` 変換。SF API で report_name を取得して列追加 |
-| `macro_book_reader.py` | ジョブ定義 (`JobEntry`) の読み取り。xlsx 優先 → xlsm fallback |
-| `config.py` | 共通パス定数 + `read_ids_file()` + `create_sf_client()` |
-| `clean.py` | `__pycache__` / `.pyc` / `.log` 等のクリーンアップ |
+| `sf_session/session_keeper.py` | Chrome をリモートデバッグモードで起動し、定期 reload でセッション維持 |
+| `sf_session/dl_batch.py` | ジョブ定義に基づきバッチ export |
+| `sf_session/_dl_single.py` | 内部モジュール。1 レポートの export/監視/移動。`dl_batch` から利用 |
+| `sf_session/file_dispatch.py` | `reportID_*` ファイルをマクロ定義の移動先フォルダへコピー・リネーム |
+| `sf_session/file_collect.py` | 各フォルダから CSV を収集して `確認実行用フォルダ/vba_YYYYMMDD_jis/` に集約 (file_dispatch の逆) |
+| `sf_session/jis_to_utf8.py` | `確認実行用フォルダ/vba_*` の CSV を UTF-8 BOM に変換 → `vba_*_utf/` |
+| `sf_session/macro_to_xlsx.py` | xlsm → `download_jobs.xlsx` 変換。SF API で report_name を取得して列追加 |
+| `sf_session/macro_book_reader.py` | ジョブ定義 (`JobEntry`) の読み取り。xlsx 優先 → xlsm fallback |
+| `sf_session/config.py` | 共通パス定数 + `read_ids_file()` + `create_sf_client()` |
+| `sf_session/clean.py` | `__pycache__` / `.pyc` / `.log` 等のクリーンアップ |
 
 ## セットアップ
 
@@ -58,17 +58,19 @@ API ではなく、ブラウザの export URL (`?export=1`) を使う VBA マク
 py -m venv .venv
 .\.venv\Scripts\Activate.ps1
 py -m pip install --upgrade pip
-py -m pip install -r requirements.txt
+py -m pip install -r sf_session/requirements.txt
 ```
 
 依存: `selenium`, `openpyxl`, `simple-salesforce`, `python-dotenv`
 
 ## 使い方
 
+bat ファイルをダブルクリック、または PowerShell からオプション付きで実行。
+
 ### 1. セッション確立
 
 ```powershell
-py session_keeper.py
+01_session.bat
 # Chrome が起動 → 手動で SF にログイン → Enter
 # 以降 8 分ごとに reload してセッションを維持
 # Ctrl+C で停止
@@ -87,19 +89,19 @@ py session_keeper.py
 
 ```powershell
 # dry-run でジョブ一覧を確認
-py dl_batch.py --dry-run
+02_download.bat --dry-run
 
 # 実行 (outputs_csv/ に全ファイル集約)
-py dl_batch.py
+02_download.bat
 
 # Box フォルダへ per-job 振り分け
-py dl_batch.py --box-folder
+02_download.bat --box-folder
 
 # ids.txt でフィルタ
-py dl_batch.py --ids-file
+02_download.bat --ids-file
 
 # 日付サフィックス付与
-py dl_batch.py --date-suffix
+02_download.bat --date-suffix
 ```
 
 主なオプション:
@@ -118,13 +120,13 @@ py dl_batch.py --date-suffix
 
 ```powershell
 # dry-run で振り分け先を確認
-py file_dispatch.py --source-dir outputs_csv --dry-run
+03_dispatch.bat --source-dir outputs_csv --dry-run
 
 # 実行
-py file_dispatch.py --source-dir outputs_csv
+03_dispatch.bat --source-dir outputs_csv
 
 # 日付サフィックス + ids.txt フィルタ
-py file_dispatch.py --source-dir outputs_csv --date-suffix --ids-file
+03_dispatch.bat --source-dir outputs_csv --date-suffix --ids-file
 ```
 
 ## ids.txt — レポート ID フィルタ
@@ -142,7 +144,7 @@ py file_dispatch.py --source-dir outputs_csv --date-suffix --ids-file
 00O000000000002AAA
 ```
 
-`dl_batch.py` / `file_dispatch.py` の両方で使える。
+`02_download.bat` / `03_dispatch.bat` の両方で使える。
 
 ## ジョブ定義
 
@@ -178,12 +180,12 @@ py file_dispatch.py --source-dir outputs_csv --date-suffix --ids-file
 ## テスト
 
 ```bash
-cd sf-session && python -m pytest . -v
+python -m pytest sf_session/ -v
 ```
 
 ## クリーンアップ
 
 ```powershell
-py -m clean          # __pycache__, .pyc, .log, .bak 等を削除
-py -m clean --dry-run  # 削除せず対象だけ表示
+06_clean.bat              # __pycache__, .pyc, .log, .bak 等を削除
+06_clean.bat --dry-run    # 削除せず対象だけ表示
 ```

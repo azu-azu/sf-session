@@ -22,10 +22,10 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
-from config import CHROME_EXE_PATH, CHROME_USER_DATA_DIR, DEFAULT_IDS_FILE, MACRO_DIR, CSV_STAGING_DIR
-from macro_book_reader import JobEntry, load_active_jobs
-from utils import setup_logging
-from _dl_single import (
+from .config import CHROME_EXE_PATH, CHROME_USER_DATA_DIR, DEFAULT_IDS_FILE, MACRO_DIR, CSV_STAGING_DIR
+from .macro_book_reader import JobEntry, load_active_jobs
+from .utils import setup_logging
+from ._dl_single import (
     DOWNLOAD_EXTS,
     build_chrome_command,
     build_export_url,
@@ -478,7 +478,7 @@ class TestBuildDestination:
         downloaded = tmp_path / "report.csv"
         downloaded.touch()
 
-        with patch("dl_batch.datetime") as mock_dt:
+        with patch("sf_session.dl_batch.datetime") as mock_dt:
             mock_dt.now.return_value.strftime.return_value = "20260317"
             result = build_destination(job, downloaded, date_suffix=True)
 
@@ -495,7 +495,7 @@ class TestBuildDestination:
         downloaded = tmp_path / "original.xlsx"
         downloaded.touch()
 
-        with patch("dl_batch.datetime") as mock_dt:
+        with patch("sf_session.dl_batch.datetime") as mock_dt:
             mock_dt.now.return_value.strftime.return_value = "20260317"
             result = build_destination(job, downloaded, date_suffix=True)
 
@@ -550,7 +550,7 @@ class TestBuildDestination:
         downloaded = tmp_path / "report.csv"
         downloaded.touch()
 
-        with patch("dl_batch.datetime") as mock_dt:
+        with patch("sf_session.dl_batch.datetime") as mock_dt:
             mock_dt.now.return_value.strftime.return_value = "20260318"
             result = build_destination(
                 job, downloaded, date_suffix=True, output_dir=out_dir,
@@ -570,13 +570,13 @@ class TestExportOne:
         job = _make_job()
 
         monkeypatch.setattr(
-            "dl_batch.snapshot_files", lambda *a, **kw: {}
+            "sf_session.dl_batch.snapshot_files", lambda *a, **kw: {}
         )
         monkeypatch.setattr(
-            "dl_batch.subprocess.Popen", lambda cmd: None
+            "sf_session.dl_batch.subprocess.Popen", lambda cmd: None
         )
         monkeypatch.setattr(
-            "dl_batch.wait_for_new_download",
+            "sf_session.dl_batch.wait_for_new_download",
             lambda *a, **kw: (_ for _ in ()).throw(
                 TimeoutError("timeout")
             ),
@@ -592,13 +592,13 @@ class TestExportOne:
         downloaded.write_text("data")
 
         monkeypatch.setattr(
-            "dl_batch.snapshot_files", lambda *a, **kw: {}
+            "sf_session.dl_batch.snapshot_files", lambda *a, **kw: {}
         )
         monkeypatch.setattr(
-            "dl_batch.subprocess.Popen", lambda cmd: None
+            "sf_session.dl_batch.subprocess.Popen", lambda cmd: None
         )
         monkeypatch.setattr(
-            "dl_batch.wait_for_new_download",
+            "sf_session.dl_batch.wait_for_new_download",
             lambda *a, **kw: downloaded,
         )
 
@@ -610,10 +610,10 @@ class TestExportOne:
         job = _make_job()
 
         monkeypatch.setattr(
-            "dl_batch.snapshot_files", lambda *a, **kw: {}
+            "sf_session.dl_batch.snapshot_files", lambda *a, **kw: {}
         )
         monkeypatch.setattr(
-            "dl_batch.subprocess.Popen",
+            "sf_session.dl_batch.subprocess.Popen",
             lambda cmd: (_ for _ in ()).throw(OSError("not found")),
         )
 
@@ -628,14 +628,14 @@ class TestExportOne:
 
         launched_cmds: list[list[str]] = []
         monkeypatch.setattr(
-            "dl_batch.snapshot_files", lambda *a, **kw: {}
+            "sf_session.dl_batch.snapshot_files", lambda *a, **kw: {}
         )
         monkeypatch.setattr(
-            "dl_batch.subprocess.Popen",
+            "sf_session.dl_batch.subprocess.Popen",
             lambda cmd: launched_cmds.append(cmd),
         )
         monkeypatch.setattr(
-            "dl_batch.wait_for_new_download",
+            "sf_session.dl_batch.wait_for_new_download",
             lambda *a, **kw: downloaded,
         )
 
@@ -663,13 +663,13 @@ class TestExportBatch:
         downloaded.write_text("data")
 
         monkeypatch.setattr(
-            "dl_batch.snapshot_files", lambda *a, **kw: {}
+            "sf_session.dl_batch.snapshot_files", lambda *a, **kw: {}
         )
         monkeypatch.setattr(
-            "dl_batch.subprocess.Popen", lambda cmd: None
+            "sf_session.dl_batch.subprocess.Popen", lambda cmd: None
         )
         monkeypatch.setattr(
-            "dl_batch.wait_for_new_download",
+            "sf_session.dl_batch.wait_for_new_download",
             lambda *a, **kw: downloaded,
         )
 
@@ -697,13 +697,13 @@ class TestExportBatch:
         ]
 
         monkeypatch.setattr(
-            "dl_batch.snapshot_files", lambda *a, **kw: {}
+            "sf_session.dl_batch.snapshot_files", lambda *a, **kw: {}
         )
         monkeypatch.setattr(
-            "dl_batch.subprocess.Popen", lambda cmd: None
+            "sf_session.dl_batch.subprocess.Popen", lambda cmd: None
         )
         monkeypatch.setattr(
-            "dl_batch.wait_for_new_download", mock_wait
+            "sf_session.dl_batch.wait_for_new_download", mock_wait
         )
 
         results = export_batch(
@@ -725,13 +725,13 @@ class TestExportBatch:
         job = _make_job(no="1", src_folder_name=str(dest_dir))
 
         monkeypatch.setattr(
-            "dl_batch.snapshot_files", lambda *a, **kw: {}
+            "sf_session.dl_batch.snapshot_files", lambda *a, **kw: {}
         )
         monkeypatch.setattr(
-            "dl_batch.subprocess.Popen", lambda cmd: None
+            "sf_session.dl_batch.subprocess.Popen", lambda cmd: None
         )
         monkeypatch.setattr(
-            "dl_batch.wait_for_new_download",
+            "sf_session.dl_batch.wait_for_new_download",
             lambda *a, **kw: downloaded,
         )
 
@@ -755,13 +755,13 @@ class TestExportBatch:
         job = _make_job(no="1", report_id="00O999")
 
         monkeypatch.setattr(
-            "dl_batch.snapshot_files", lambda *a, **kw: {}
+            "sf_session.dl_batch.snapshot_files", lambda *a, **kw: {}
         )
         monkeypatch.setattr(
-            "dl_batch.subprocess.Popen", lambda cmd: None
+            "sf_session.dl_batch.subprocess.Popen", lambda cmd: None
         )
         monkeypatch.setattr(
-            "dl_batch.wait_for_new_download",
+            "sf_session.dl_batch.wait_for_new_download",
             lambda *a, **kw: downloaded,
         )
 
@@ -784,13 +784,13 @@ class TestExportBatch:
         )
 
         monkeypatch.setattr(
-            "dl_batch.snapshot_files", lambda *a, **kw: {}
+            "sf_session.dl_batch.snapshot_files", lambda *a, **kw: {}
         )
         monkeypatch.setattr(
-            "dl_batch.subprocess.Popen", lambda cmd: None
+            "sf_session.dl_batch.subprocess.Popen", lambda cmd: None
         )
         monkeypatch.setattr(
-            "dl_batch.wait_for_new_download",
+            "sf_session.dl_batch.wait_for_new_download",
             lambda *a, **kw: downloaded,
         )
 

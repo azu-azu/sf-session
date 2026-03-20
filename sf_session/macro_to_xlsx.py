@@ -16,8 +16,8 @@ from pathlib import Path
 from openpyxl import Workbook
 from openpyxl.utils import get_column_letter
 
-from config import JOBS_XLSX, MACRO_DIR, SF_BASE_URL, create_sf_client
-from macro_book_reader import JobEntry, read_jobs_from_xlsm
+from .config import JOBS_XLSX, MACRO_DIR, SF_BASE_URL, create_sf_client
+from .macro_book_reader import JobEntry, read_jobs_from_xlsm
 
 logger = logging.getLogger(__name__)
 

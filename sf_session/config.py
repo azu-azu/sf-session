@@ -3,9 +3,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from utils import read_ids_file  # noqa: F401 — re-export
+from .utils import read_ids_file  # noqa: F401 — re-export
 
-PROJECT_ROOT = Path(__file__).resolve().parent
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 # マクロ関連
 MACRO_DIR = PROJECT_ROOT / "マクロ格納フォルダ"

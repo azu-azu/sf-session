@@ -21,9 +21,9 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
-from config import DEFAULT_IDS_FILE, MACRO_DIR
-from macro_book_reader import JobEntry, load_active_jobs
-from utils import setup_logging
+from .config import DEFAULT_IDS_FILE, MACRO_DIR
+from .macro_book_reader import JobEntry, load_active_jobs
+from .utils import setup_logging
 
 logger = logging.getLogger(__name__)
 
@@ -327,7 +327,7 @@ class TestBuildDestination:
         source = tmp_path / "00O123_report.csv"
         source.touch()
 
-        with patch("file_dispatch.datetime") as mock_dt:
+        with patch("sf_session.file_dispatch.datetime") as mock_dt:
             mock_dt.now.return_value.strftime.return_value = "20260319"
             result = build_destination(job, source, date_suffix=True)
 
@@ -344,7 +344,7 @@ class TestBuildDestination:
         source = tmp_path / "00O123_original.xlsx"
         source.touch()
 
-        with patch("file_dispatch.datetime") as mock_dt:
+        with patch("sf_session.file_dispatch.datetime") as mock_dt:
             mock_dt.now.return_value.strftime.return_value = "20260319"
             result = build_destination(job, source, date_suffix=True)
 

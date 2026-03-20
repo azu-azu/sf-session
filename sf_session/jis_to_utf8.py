@@ -12,8 +12,8 @@ import logging
 import sys
 from pathlib import Path
 
-from config import CSV_STAGING_DIR
-from utils import setup_logging
+from .config import CSV_STAGING_DIR
+from .utils import setup_logging
 
 logger = logging.getLogger(__name__)
 

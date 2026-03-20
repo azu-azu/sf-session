@@ -9,7 +9,7 @@ import logging
 import time
 from pathlib import Path
 
-from config import SF_BASE_URL
+from .config import SF_BASE_URL
 
 logger = logging.getLogger(__name__)
 

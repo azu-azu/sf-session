@@ -1,17 +1,13 @@
 """config.py のテスト。"""
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
-# sf-session root を sys.path に追加
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-
-from config import CSV_STAGING_DIR, DEFAULT_IDS_FILE, MACRO_DIR, PROJECT_ROOT
+from sf_session.config import CSV_STAGING_DIR, DEFAULT_IDS_FILE, MACRO_DIR, PROJECT_ROOT
 
 
 def test_project_root_is_sf_session():
-    assert PROJECT_ROOT == Path(__file__).resolve().parent.parent
+    assert PROJECT_ROOT == Path(__file__).resolve().parent.parent.parent
 
 
 def test_macro_dir():

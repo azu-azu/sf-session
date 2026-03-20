@@ -13,9 +13,9 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-from config import CSV_STAGING_DIR, OUTPUT_RESULTS_DIR
-from macro_book_reader import JobEntry, read_jobs
-from utils import setup_logging
+from .config import CSV_STAGING_DIR, OUTPUT_RESULTS_DIR
+from .macro_book_reader import JobEntry, read_jobs
+from .utils import setup_logging
 
 logger = logging.getLogger(__name__)
 
