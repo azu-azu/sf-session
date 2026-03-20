@@ -15,7 +15,7 @@ def test_macro_dir():
 
 
 def test_csv_staging_dir():
-    assert CSV_STAGING_DIR == Path(r"Z:\Box\work\outputs_csv")
+    assert CSV_STAGING_DIR == PROJECT_ROOT / "outputs"
 
 
 def test_default_ids_file():
