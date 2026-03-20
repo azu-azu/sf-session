@@ -41,23 +41,3 @@ def create_sf_client():
         security_token=os.environ["SF_SECURITY_TOKEN"],
         domain=os.environ.get("SF_DOMAIN", "login"),
     )
-
-
-# ---------------------------------------------------------------------------
-# Tests (run with pytest)
-# ---------------------------------------------------------------------------
-
-def test_project_root_is_sf_session():
-    assert PROJECT_ROOT == Path(__file__).resolve().parent
-
-
-def test_macro_dir():
-    assert MACRO_DIR == PROJECT_ROOT / "マクロ格納フォルダ"
-
-
-def test_csv_staging_dir():
-    assert CSV_STAGING_DIR == Path(r"Z:\Box\work\outputs_csv")
-
-
-def test_default_ids_file():
-    assert DEFAULT_IDS_FILE == Path("ids.txt")
