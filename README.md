@@ -44,7 +44,6 @@ API ではなく、ブラウザの export URL (`?export=1`) を使う VBA マク
 |---|---|
 | `sf_session/session_keeper.py` | Chrome をリモートデバッグモードで起動し、定期 reload でセッション維持 |
 | `sf_session/dl_batch.py` | ジョブ定義に基づきバッチ export |
-| `sf_session/_dl_single.py` | 内部モジュール。1 レポートの export/監視/移動。`dl_batch` から利用 |
 | `sf_session/file_dispatch.py` | `reportID_*` ファイルをマクロ定義の移動先フォルダへコピー・リネーム |
 | `sf_session/file_collect.py` | 各フォルダから CSV を収集して `確認実行用フォルダ/vba_YYYYMMDD_jis/` に集約 (file_dispatch の逆) |
 | `sf_session/jis_to_utf8.py` | `確認実行用フォルダ/vba_*` の CSV を UTF-8 BOM に変換 → `vba_*_utf/` |
