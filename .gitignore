@@ -23,6 +23,7 @@ Thumbs.db
 .vscode/
 .idea/
 *.swp
+.claude/
 
 # Project-specific
 *.txt
