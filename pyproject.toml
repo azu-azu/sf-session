@@ -1,2 +1,2 @@
 [tool.pytest.ini_options]
-cache_dir = ".pytest_cache"
+cache_dir = "sf_session/.pytest_cache"

@@ -47,7 +47,7 @@ API ではなく、ブラウザの export URL (`?export=1`) を使う VBA マク
 | `sf_session/file_collect.py` | 各フォルダから CSV を収集して `確認実行用フォルダ/vba_YYYYMMDD_jis/` に集約 (file_dispatch の逆) |
 | `sf_session/jis_to_utf8.py` | `確認実行用フォルダ/vba_*` の CSV を UTF-8 BOM に変換 → `vba_*_utf/` |
 | `sf_session/macro_to_xlsx.py` | xlsm → `download_jobs.xlsx` 変換。SF API で report_name を取得して列追加 |
-| `sf_session/macro_book_reader.py` | ジョブ定義 (`JobEntry`) の読み取り。xlsx 優先 → xlsm fallback |
+| `sf_session/macro_book_reader.py` | ジョブ定義 (`JobEntry`) の読み取り。xlsm から直接読み取り |
 | `sf_session/config.py` | 共通パス定数 + `read_ids_file()` + `create_sf_client()` |
 | `sf_session/clean.py` | `__pycache__` / `.pyc` / `.log` 等のクリーンアップ |
 
@@ -148,39 +148,25 @@ bat ファイルをダブルクリック、または PowerShell からオプシ�
 
 ## ジョブ定義
 
-### download_jobs.xlsx (推奨)
-
-`macro_to_xlsx.py` で xlsm から生成。`macro_book_reader.py` はこちらを優先して読む。
-
-| 列 | 内容 |
-|---|---|
-| no | 連番 |
-| report_id | レポート ID (SF へのハイパーリンク付き) |
-| report_name | レポート名 (SF API describe で取得) |
-| new_filename | リネーム後ファイル名 |
-| dst_folder_name | 移動先フォルダパス |
-| encode | エンコーディング |
-| skip | skip フラグ |
-
-### xlsm (fallback)
-
-`マクロ格納フォルダ/` に配置した `.xlsm` の `SalseForce` シートから読み取り。
+`マクロ格納フォルダ/` に配置した `.xlsm` の `SalseForce` シートから直接読み取る。
 
 | 列 | 内容 |
 |---|---|
 | AA | No |
 | AB | export URL (末尾の ID を抽出) |
-| AC | リネーム後ファイル名 (空なら元名維持) |
+| AC | リネーム後ファイル名 (空なら元名維持、末尾 `_YYYYMMDD` は自動除去) |
 | AD | 移動先フォルダパス |
 | AE | エンコーディング (空なら Shift_JIS) |
 | AG | skip フラグ (値があればスキップ) |
 
 データは 101 行目から開始。No と URL が両方空になった行で終端。
 
+`macro_to_xlsx.py` で xlsm → `download_jobs.xlsx` を生成することもできる（確認用）。
+
 ## テスト
 
 ```bash
-python -m pytest sf_session/ -v
+python -m pytest sf_session/tests/ -v
 ```
 
 ## クリーンアップ

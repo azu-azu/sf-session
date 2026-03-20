@@ -20,5 +20,12 @@ Thumbs.db
 *.swp
 .claude/
 
+# Env
+.env
+
+# Data (ローカル固有)
+マクロ格納フォルダ/
+レポートID/
+
 # Temp
 tmp.md
