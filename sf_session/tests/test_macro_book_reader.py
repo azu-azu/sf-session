@@ -1,6 +1,7 @@
 """macro_book_reader.py のテスト。"""
 from __future__ import annotations
 
+from datetime import datetime
 from unittest.mock import patch
 
 from sf_session.macro_book_reader import _strip_trailing_date
@@ -8,7 +9,8 @@ from sf_session.macro_book_reader import _strip_trailing_date
 
 class TestStripTrailingDate:
     def test_strip_current_year(self):
-        assert _strip_trailing_date("01_RPT_20260313") == "01_RPT"
+        year = datetime.now().year
+        assert _strip_trailing_date(f"01_RPT_{year}0313") == "01_RPT"
 
     def test_no_date(self):
         assert _strip_trailing_date("01_RPT") == "01_RPT"

@@ -27,5 +27,9 @@ Thumbs.db
 マクロ格納フォルダ/
 レポートID/
 
+# Launcher (ローカル固有)
+*.bat
+README.txt
+
 # Temp
 tmp.md

@@ -1,7 +1,7 @@
 """マクロ格納フォルダの xlsm からジョブ定義を読み取る。
 
 Usage:
-    python sf-session/macro_book_reader.py
+    python -m sf_session.macro_book_reader
 """
 
 from __future__ import annotations
@@ -14,7 +14,7 @@ from pathlib import Path
 
 from openpyxl import load_workbook
 
-from .config import MACRO_DIR, read_ids_file
+from .config import DEFAULT_IDS_FILE, MACRO_DIR, read_ids_file
 
 logger = logging.getLogger(__name__)
 
@@ -166,7 +166,7 @@ def load_active_jobs(
     )
 
     if ids_file:
-        target_ids = read_ids_file()
+        target_ids = read_ids_file(DEFAULT_IDS_FILE)
         before = len(active)
         active = [j for j in active if j.report_id in target_ids]
         logger.info(

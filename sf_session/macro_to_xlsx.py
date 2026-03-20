@@ -1,7 +1,7 @@
 """xlsm から必要なジョブ定義だけを抽出した xlsx を生成する。
 
 Usage:
-    python sf-session/macro_to_xlsx.py [--macro-dir PATH]
+    python -m sf_session.macro_to_xlsx [--macro-dir PATH]
 """
 
 from __future__ import annotations
