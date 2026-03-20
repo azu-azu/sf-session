@@ -1,0 +1,7 @@
+# レポート ID リスト
+# 使い方例: sf-other scaffold --ids-file
+#
+# 1行1ID。# で始まる行と空行は無視される。
+
+# --- ここに ID を追加 ---
+# YOUR_REPORT_ID
