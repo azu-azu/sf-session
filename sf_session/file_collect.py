@@ -17,24 +17,11 @@ from pathlib import Path
 
 from .config import CSV_STAGING_DIR, OUTPUT_RESULTS_DIR
 from .macro_book_reader import JobEntry, read_jobs
-from .utils import setup_logging
+from .utils import find_latest_success_ids, read_ids_file, setup_logging
 
 logger = logging.getLogger(__name__)
 
 _COLLECT_FOLDER_TEMPLATE = "#_jis"
-
-
-def _find_latest_success_ids() -> Path | None:
-    """outputs_result/ から最新の success_ids_*.txt を返す。"""
-    if not OUTPUT_RESULTS_DIR.is_dir():
-        return None
-    candidates = sorted(OUTPUT_RESULTS_DIR.glob("success_ids_*.txt"))
-    return candidates[-1] if candidates else None
-
-
-def _read_success_ids(path: Path) -> set[str]:
-    """success_ids テキストから report_id の集合を返す。"""
-    return {line.strip() for line in path.read_text(encoding="utf-8").splitlines() if line.strip()}
 
 
 def _strip_date_suffix(name: str) -> str:
@@ -149,12 +136,12 @@ def main() -> int:
         logger.error("%s", e)
         return 1
 
-    ids_path = _find_latest_success_ids()
+    ids_path = find_latest_success_ids(OUTPUT_RESULTS_DIR)
     if ids_path is None:
         logger.error("success_ids ファイルが見つかりません。")
         return 1
 
-    success_ids = _read_success_ids(ids_path)
+    success_ids = read_ids_file(ids_path)
     logger.info("success IDs: %s (%d 件)", ids_path.name, len(success_ids))
 
     today_str = datetime.now().strftime("%Y%m%d")

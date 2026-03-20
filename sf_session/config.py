@@ -11,7 +11,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 MACRO_DIR = PROJECT_ROOT / "マクロ格納フォルダ"
 
 # 出力フォルダ
-CSV_STAGING_DIR = PROJECT_ROOT / "outputs"
+CSV_STAGING_DIR = PROJECT_ROOT / "outputs_csv"
 OUTPUT_RESULTS_DIR = PROJECT_ROOT / "outputs_result"
 
 # Chrome

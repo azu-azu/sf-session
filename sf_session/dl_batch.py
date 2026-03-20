@@ -4,10 +4,9 @@
 Downloads フォルダを監視して新規ファイルを移動先にリネーム・コピーする。
 
 Usage:
-    python sf-session/dl_batch.py --chrome-path /path/to/chrome --dry-run
-    python sf-session/dl_batch.py --chrome-path /path/to/chrome --date-suffix
-    python sf-session/dl_batch.py --chrome-path /path/to/chrome --box-folder
-    python sf-session/dl_batch.py --chrome-path /path/to/chrome --ids-file
+    python -m sf_session.dl_batch --dry-run
+    python -m sf_session.dl_batch --ids-file
+    python -m sf_session.dl_batch --retry
 """
 
 from __future__ import annotations
@@ -22,7 +21,14 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
-from .config import CHROME_EXE_PATH, CHROME_USER_DATA_DIR, DEFAULT_IDS_FILE, MACRO_DIR, CSV_STAGING_DIR
+from .config import (
+    CHROME_EXE_PATH,
+    CHROME_USER_DATA_DIR,
+    CSV_STAGING_DIR,
+    DEFAULT_IDS_FILE,
+    MACRO_DIR,
+    OUTPUT_RESULTS_DIR,
+)
 from .macro_book_reader import JobEntry, load_active_jobs
 from .utils import setup_logging
 from ._dl_single import (
@@ -249,6 +255,20 @@ def log_summary(results: list[ExportResult]) -> None:
     logger.info("*" * 50)
 
 
+def write_success_ids(results: list[ExportResult]) -> Path | None:
+    """成功した report_id を OUTPUT_RESULTS_DIR/success_ids_YYYYMMDD.txt に書き出す。"""
+    ids = [r.report_id for r in results if r.success and r.report_id]
+    if not ids:
+        return None
+
+    OUTPUT_RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+    today = datetime.now().strftime("%Y%m%d")
+    path = OUTPUT_RESULTS_DIR / f"success_ids_{today}.txt"
+    path.write_text("\n".join(ids) + "\n", encoding="utf-8")
+    logger.info("success_ids を書き出し: %s (%d 件)", path.name, len(ids))
+    return path
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="VBA procSalseForce 相当 — バッチ export スクリプト",
@@ -314,6 +334,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help=f"{DEFAULT_IDS_FILE} から report ID を読み取り、ジョブ定義との intersection でフィルタ",
     )
     parser.add_argument(
+        "--retry",
+        action="store_true",
+        default=False,
+        help="前回の success_ids を読み、成功済みを除外して失敗分だけ再実行",
+    )
+    parser.add_argument(
         "--box-folder",
         action="store_true",
         help="Box フォルダに per-job 振り分け (default: outputs_csv/ に全出力)",
@@ -333,7 +359,9 @@ def main(argv: list[str] | None = None) -> int:
 
     # --- setup ---
     try:
-        active_jobs = load_active_jobs(args.macro_dir, ids_file=args.ids_file)
+        active_jobs = load_active_jobs(
+            args.macro_dir, ids_file=args.ids_file, exclude_success=args.retry,
+        )
     except FileNotFoundError as e:
         logger.error("%s", e)
         return 1
@@ -421,6 +449,7 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     log_summary(results)
+    write_success_ids(results)
 
     failed = sum(1 for r in results if not r.success)
     return 1 if failed else 0
@@ -882,4 +911,46 @@ class TestParseArgs:
         assert args.profile_directory == "Profile 1"
 
 
+class TestWriteSuccessIds:
+    def test_writes_success_ids(self, tmp_path, monkeypatch):
+        from unittest.mock import patch
+
+        monkeypatch.setattr("sf_session.dl_batch.OUTPUT_RESULTS_DIR", tmp_path)
+        results = [
+            ExportResult(seq=1, report_id="00O001", success=True, elapsed=1.0),
+            ExportResult(seq=2, report_id="00O002", success=False, elapsed=2.0),
+            ExportResult(seq=3, report_id="00O003", success=True, elapsed=1.5),
+        ]
+
+        with patch("sf_session.dl_batch.datetime") as mock_dt:
+            mock_dt.now.return_value.strftime.return_value = "20260321"
+            path = write_success_ids(results)
+
+        assert path == tmp_path / "success_ids_20260321.txt"
+        lines = path.read_text(encoding="utf-8").strip().splitlines()
+        assert lines == ["00O001", "00O003"]
+
+    def test_no_success_returns_none(self, tmp_path, monkeypatch):
+        monkeypatch.setattr("sf_session.dl_batch.OUTPUT_RESULTS_DIR", tmp_path)
+        results = [
+            ExportResult(seq=1, report_id="00O001", success=False, elapsed=1.0),
+        ]
+        assert write_success_ids(results) is None
+
+    def test_creates_dir_if_missing(self, tmp_path, monkeypatch):
+        from unittest.mock import patch
+
+        out_dir = tmp_path / "outputs_result"
+        monkeypatch.setattr("sf_session.dl_batch.OUTPUT_RESULTS_DIR", out_dir)
+        results = [
+            ExportResult(seq=1, report_id="00O001", success=True, elapsed=1.0),
+        ]
+
+        with patch("sf_session.dl_batch.datetime") as mock_dt:
+            mock_dt.now.return_value.strftime.return_value = "20260321"
+            path = write_success_ids(results)
+
+        assert out_dir.is_dir()
+        assert path is not None
+        assert path.exists()
 

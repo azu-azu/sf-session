@@ -14,7 +14,8 @@ from pathlib import Path
 
 from openpyxl import load_workbook
 
-from .config import DEFAULT_IDS_FILE, MACRO_DIR, read_ids_file
+from .config import DEFAULT_IDS_FILE, MACRO_DIR, OUTPUT_RESULTS_DIR, read_ids_file
+from .utils import find_latest_success_ids
 
 logger = logging.getLogger(__name__)
 
@@ -154,8 +155,9 @@ def load_active_jobs(
     macro_dir: Path = MACRO_DIR,
     *,
     ids_file: bool = False,
+    exclude_success: bool = False,
 ) -> list[JobEntry]:
-    """ジョブ定義を読み込み、skip と ids-file でフィルタして返す。"""
+    """ジョブ定義を読み込み、skip / ids-file / success 除外でフィルタして返す。"""
     jobs = read_jobs(macro_dir)
     logger.info("ジョブ定義: %d 件読み取り", len(jobs))
 
@@ -173,6 +175,19 @@ def load_active_jobs(
             "ids-file フィルタ: %d 件 → %d 件 (ids-file: %d IDs)",
             before, len(active), len(target_ids),
         )
+
+    if exclude_success:
+        ids_path = find_latest_success_ids(OUTPUT_RESULTS_DIR)
+        if ids_path is None:
+            logger.warning("success_ids ファイルが見つかりません。除外なしで続行。")
+        else:
+            success_ids = read_ids_file(ids_path)
+            before = len(active)
+            active = [j for j in active if j.report_id not in success_ids]
+            logger.info(
+                "success 除外: %d 件 → %d 件 (%s: %d IDs)",
+                before, len(active), ids_path.name, len(success_ids),
+            )
 
     return active
 
