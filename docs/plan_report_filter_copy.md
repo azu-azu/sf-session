@@ -48,8 +48,8 @@ SF client は `create_sf_client()` を使う。
 |---|---|
 | `cli_utils.format_elapsed()` | `job.py` にインライン（3行の関数） |
 | `cli_utils.deduplicate_ids()` | `writer.py` にインライン（3行の関数） |
-| `config.DEFAULT_PIPELINE_DIR` | `job.py` 内で `Path("pipelines")` をデフォルトに |
-| `config.OUTPUT_ERRORS_DIR` | `writer.py` 内で `Path("outputs_log/errors")` をデフォルトに |
+| `config.DEFAULT_PIPELINE_DIR` | `sf_session/config.py` に `PIPELINE_DIR = PROJECT_ROOT / "pipelines"` を追加 |
+| `config.OUTPUT_ERRORS_DIR` | `sf_session/config.py` に `OUTPUT_ERRORS_DIR = PROJECT_ROOT / "outputs_log" / "errors"` を追加 |
 | `config.SF_NOTCONTAIN_*`, `_TRUTHY` | `operators.py` 内にインライン |
 | `exceptions.py` | 不要（使用箇所なし） |
 | `shared.ids` | sf-session の `utils.read_ids_file` を使用 |
@@ -90,6 +90,27 @@ pipelines/{report_id}/
 | `sf_session/report_filter/writer.py` | コピー + import 書き換え |
 | `sf_session/report_filter/_shared.py` | コピー |
 | `sf_session/report_filter/analytics_api.py` | コピー |
+
+## 設計判断メモ
+
+### パスは PROJECT_ROOT 基準にする（cwd 依存を避ける）
+
+`pipelines/` や `outputs_log/` を `Path("pipelines")` のように相対パスで書くと、
+実行時の cwd によって出力先が変わる。`config.py` の `PROJECT_ROOT` から解決することで、
+`python -m sf_session.report_filter` をどこから実行しても同じ場所に出力される。
+
+### analytics_api.py は将来 shared 化の候補
+
+sf-other の `connectors/support/analytics_reports_api.py` をそのままコピーする。
+短期的にはこれで正しいが、sf-other 側が API 呼び出しを改善した場合、
+sf-session 側が古いまま取り残されるリスクがある。
+将来的には shared パッケージとして切り出すか、sf-other を pip install して import する形を検討。
+
+### report_filter は optional utility として扱う
+
+sf-session の主機能（session 維持・DL・振り分け）とは責務が異なる。
+`sf_session/report_filter/` に閉じ込めて、既存コードとの混在を避ける。
+README でも「optional utility」寄りの扱いにする。
 
 ## Verification
 
