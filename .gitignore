@@ -27,3 +27,7 @@ Thumbs.db
 # Project-specific
 *.txt
 !requirements.txt
+
+tmp.md
+マクロ格納フォルダ
+レポートID

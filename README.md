@@ -131,7 +131,7 @@ py file_dispatch.py --source-dir outputs_csv --date-suffix --ids-file
 
 `--ids-file` フラグを付けると、`ids.txt` に書かれた report ID だけを処理対象にする。
 
-- **置き場所**: カレントディレクトリ直下の `ids.txt`
+- **置き場所**: `レポートID/ids.txt`
 - **フォーマット**: 1 行 1 report ID（UTF-8）
 - `#` で始まる行はコメント扱いでスキップ
 - 空行もスキップ

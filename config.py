@@ -24,7 +24,7 @@ CHROME_USER_DATA_DIR = r"C:\ChromeProfile"
 SF_BASE_URL = "https://example.my.salesforce.com"
 
 # ID フィルタ
-DEFAULT_IDS_FILE = Path("ids.txt")
+DEFAULT_IDS_FILE = Path("レポートID/ids.txt")
 
 
 def create_sf_client():

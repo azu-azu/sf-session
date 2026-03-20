@@ -23,4 +23,4 @@ def test_csv_staging_dir():
 
 
 def test_default_ids_file():
-    assert DEFAULT_IDS_FILE == Path("ids.txt")
+    assert DEFAULT_IDS_FILE == Path("レポートID/ids.txt")
