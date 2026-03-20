@@ -38,6 +38,8 @@ API ではなく、ブラウザの export URL (`?export=1`) を使う VBA マク
 
 ## スクリプト一覧
 
+ルート直下の `*.bat` がランチャー、`sf_session/` 以下が Python モジュール。
+
 | スクリプト | 役割 |
 |---|---|
 | `sf_session/session_keeper.py` | Chrome をリモートデバッグモードで起動し、定期 reload でセッション維持 |
@@ -166,7 +168,7 @@ bat ファイルをダブルクリック、または PowerShell からオプシ�
 ## テスト
 
 ```bash
-python -m pytest sf_session/tests/ -v
+python -m pytest -v
 ```
 
 ## クリーンアップ
