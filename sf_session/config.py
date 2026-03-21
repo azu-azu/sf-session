@@ -27,6 +27,7 @@ CHROME_USER_DATA_DIR = r"C:\ChromeProfile"
 
 # Salesforce
 SF_BASE_URL = "https://example.my.salesforce.com"
+SF_HOME_URL = f"{SF_BASE_URL}/home/home.jsp"
 
 # ID フィルタ
 DEFAULT_IDS_FILE = Path("レポートID/ids.txt")
@@ -46,3 +47,15 @@ def create_sf_client():
         security_token=os.environ["SF_SECURITY_TOKEN"],
         domain=os.environ.get("SF_DOMAIN", "login"),
     )
+
+
+def get_login_credentials() -> tuple[str, str]:
+    """UI ログイン用の credentials を返す。専用変数がなければ API 用にフォールバック。"""
+    import os
+
+    from dotenv import load_dotenv
+
+    load_dotenv()
+    username = os.environ.get("SF_LOGIN_USERNAME") or os.environ["SF_USERNAME"]
+    password = os.environ.get("SF_LOGIN_PASSWORD") or os.environ["SF_PASSWORD"]
+    return username, password

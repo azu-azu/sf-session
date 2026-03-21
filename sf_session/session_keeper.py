@@ -1,33 +1,27 @@
 """Salesforce session keeper.
 
-Chrome をリモートデバッグモードで起動し、手動ログイン後に
+Chrome をリモートデバッグモードで起動し、自動ログイン（MFA は手動待ち）後に
 定期リロードでセッションを維持する。
 """
 
 import argparse
 import logging
-import subprocess
 import sys
 import time
 
-try:
-    from selenium import webdriver
-    from selenium.webdriver.chrome.options import Options
-    from selenium.common.exceptions import WebDriverException
-except ImportError:
-    sys.exit(
-        "selenium が見つからない。\n"
-        "  pip install selenium\n"
-        "ChromeDriver も PATH に必要。"
-    )
-
-from .config import CHROME_EXE_PATH, CHROME_USER_DATA_DIR, SF_BASE_URL
+from .browser import (
+    REMOTE_DEBUGGING_PORT,
+    launch_chrome,
+    connect_driver,
+    wait_page_load,
+)
+from .config import CHROME_EXE_PATH, CHROME_USER_DATA_DIR, SF_HOME_URL, get_login_credentials
+from .login_helper import ensure_logged_in
 
 logger = logging.getLogger(__name__)
 
 # ── defaults ──────────────────────────────────────────────
-REMOTE_DEBUGGING_PORT = 9222
-TARGET_URL = f"{SF_BASE_URL}/home/home.jsp"
+TARGET_URL = SF_HOME_URL
 KEEP_ALIVE_INTERVAL = 480  # seconds
 CHROME_STARTUP_WAIT = 5  # seconds
 
@@ -40,30 +34,7 @@ def format_elapsed(seconds: float) -> str:
     return f"{m}分{s}秒"
 
 
-def launch_chrome(
-    exe: str = CHROME_EXE_PATH,
-    port: int = REMOTE_DEBUGGING_PORT,
-    user_data_dir: str = CHROME_USER_DATA_DIR,
-    url: str = TARGET_URL,
-) -> subprocess.Popen:
-    """Chrome をリモートデバッグモードで起動。"""
-    cmd = [exe, f"--remote-debugging-port={port}", f"--user-data-dir={user_data_dir}", url]
-    logger.info("Chrome 起動: %s", " ".join(cmd))
-    proc = subprocess.Popen(cmd)
-    logger.info("Chrome PID: %d", proc.pid)
-    return proc
-
-
-def connect_driver(port: int = REMOTE_DEBUGGING_PORT) -> webdriver.Chrome:
-    """起動済み Chrome に Selenium で接続。"""
-    opts = Options()
-    opts.add_experimental_option("debuggerAddress", f"127.0.0.1:{port}")
-    driver = webdriver.Chrome(options=opts)
-    logger.info("WebDriver 接続完了: %s", driver.current_url)
-    return driver
-
-
-def keep_alive(driver: webdriver.Chrome, url: str, interval: int) -> None:
+def keep_alive(driver, url: str, interval: int) -> None:
     """定期リロードでセッションを維持。Ctrl-C で停止。"""
     logger.info("keep-alive 開始 (interval=%s, url=%s)", format_elapsed(interval), url)
     try:
@@ -133,14 +104,17 @@ def main(argv: list[str] | None = None) -> int:
             )
             time.sleep(CHROME_STARTUP_WAIT)
 
-        # 手動ログイン待ち
-        input("Chrome でログインしたら Enter を押す...（実行をキャンセルする場合は Ctrl + C を2回）")
-
         # Selenium 接続
         driver = connect_driver(port=args.port)
 
-        # 初回遷移
+        # 初回遷移 + ページ読み込み待ち
         driver.get(args.url)
+        wait_page_load(driver)
+
+        # 自動ログイン（MFA は手動待ち）
+        username, password = get_login_credentials()
+        ensure_logged_in(driver, username, password)
+
         logger.info("初回遷移: %s", driver.current_url)
 
         # keep-alive ループ
@@ -148,9 +122,11 @@ def main(argv: list[str] | None = None) -> int:
 
     except KeyboardInterrupt:
         logger.info("Ctrl-C で停止")
-    except WebDriverException as e:
-        logger.error("WebDriver エラー: %s", e)
-        return 1
+    except Exception as e:
+        if "WebDriver" in type(e).__name__ or "selenium" in type(e).__module__:
+            logger.error("WebDriver エラー: %s", e)
+            return 1
+        raise
     except FileNotFoundError:
         logger.error("Chrome が見つからない: %s", args.chrome_exe)
         return 1

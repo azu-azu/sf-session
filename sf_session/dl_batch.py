@@ -20,6 +20,10 @@ import time
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from selenium.webdriver.chrome.webdriver import WebDriver
 
 from .config import (
     CHROME_EXE_PATH,
@@ -28,7 +32,15 @@ from .config import (
     DEFAULT_IDS_FILE,
     MACRO_DIR,
     OUTPUT_RESULTS_DIR,
+    SF_HOME_URL,
+    get_login_credentials,
 )
+from .browser import (
+    REMOTE_DEBUGGING_PORT,
+    try_connect_driver,
+    wait_page_load,
+)
+from .login_helper import ensure_logged_in, find_login_tab
 from .macro_book_reader import JobEntry, load_active_jobs
 from .utils import setup_logging
 from ._dl_single import (
@@ -89,39 +101,26 @@ def build_destination(
     return dest_dir / f"{stem}{ext}"
 
 
-def export_one(
+def _run_export(
     chrome_path: Path,
     job: JobEntry,
     download_dir: Path,
     *,
     seq: int,
-    timeout: int = DEFAULT_TIMEOUT,
-    poll: float = DEFAULT_POLL,
-    user_data_dir: Path | None = None,
-    profile_directory: str | None = None,
+    timeout: int,
+    poll: float,
+    user_data_dir: Path | None,
+    profile_directory: str | None,
 ) -> ExportResult:
-    """1レポートの export を実行し結果を返す。"""
+    """1レポートの Chrome 起動 → ダウンロード待機。login recovery なしの内部実装。"""
     report_id = job.report_id or ""
     t0 = time.time()
 
-    # report_id が空なら skip
-    if not report_id:
-        return ExportResult(
-            seq=seq,
-            report_id=report_id,
-            success=False,
-            elapsed=0.0,
-            error="report_id が空",
-        )
-
-    # encode 列の値を使う（空なら Shift_JIS）
     enc = job.encode if job.encode else "Shift_JIS"
     export_url = build_export_url(report_id, enc=enc)
 
-    # Downloads のベースライン取得
     before = snapshot_files(download_dir, DOWNLOAD_EXTS)
 
-    # Chrome で export URL を開く
     cmd = build_chrome_command(
         chrome_path,
         export_url,
@@ -142,7 +141,6 @@ def export_one(
             error=f"Chrome 起動失敗: {e}",
         )
 
-    # ダウンロード完了を待機
     try:
         downloaded = wait_for_new_download(
             download_dir,
@@ -172,6 +170,59 @@ def export_one(
     )
 
 
+def export_one(
+    chrome_path: Path,
+    job: JobEntry,
+    download_dir: Path,
+    *,
+    seq: int,
+    timeout: int = DEFAULT_TIMEOUT,
+    poll: float = DEFAULT_POLL,
+    user_data_dir: Path | None = None,
+    profile_directory: str | None = None,
+    driver: WebDriver | None = None,
+    login_credentials: tuple[str, str] | None = None,
+) -> ExportResult:
+    """1レポートの export を実行し結果を返す。
+
+    driver と login_credentials が渡されている場合、timeout 後にタブ走査で
+    ログインページを検出し、自動ログイン → 1回だけリトライする。
+    """
+    report_id = job.report_id or ""
+
+    if not report_id:
+        return ExportResult(
+            seq=seq,
+            report_id=report_id,
+            success=False,
+            elapsed=0.0,
+            error="report_id が空",
+        )
+
+    result = _run_export(
+        chrome_path, job, download_dir,
+        seq=seq, timeout=timeout, poll=poll,
+        user_data_dir=user_data_dir, profile_directory=profile_directory,
+    )
+
+    # timeout 失敗 + driver あり → login recovery を試行（1回限り）
+    if not result.success and driver is not None and login_credentials is not None:
+        if find_login_tab(driver):
+            logger.info("[%d件目] ログインページ検出 — login recovery 開始", seq)
+            username, password = login_credentials
+            ensure_logged_in(driver, username, password)
+            logger.info("[%d件目] login recovery 完了 — リトライ", seq)
+            result = _run_export(
+                chrome_path, job, download_dir,
+                seq=seq, timeout=timeout, poll=poll,
+                user_data_dir=user_data_dir, profile_directory=profile_directory,
+            )
+        else:
+            logger.debug("[%d件目] ログインページ未検出 — recovery skip", seq)
+
+    return result
+
+
 def export_batch(
     chrome_path: Path,
     jobs: list[JobEntry],
@@ -184,6 +235,8 @@ def export_batch(
     output_dir: Path | None = None,
     user_data_dir: Path | None = None,
     profile_directory: str | None = None,
+    driver: WebDriver | None = None,
+    login_credentials: tuple[str, str] | None = None,
 ) -> list[ExportResult]:
     """ジョブリストを順次 export し、結果リストを返す。"""
     results: list[ExportResult] = []
@@ -195,6 +248,8 @@ def export_batch(
             seq=seq, timeout=timeout, poll=poll,
             user_data_dir=user_data_dir,
             profile_directory=profile_directory,
+            driver=driver,
+            login_credentials=login_credentials,
         )
 
         if not result.success or result.dest_path is None:
@@ -345,6 +400,17 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Box フォルダに per-job 振り分け (default: outputs_csv/ に全出力)",
     )
     parser.add_argument(
+        "--port",
+        type=int,
+        default=REMOTE_DEBUGGING_PORT,
+        help=f"Chrome リモートデバッグポート (default: {REMOTE_DEBUGGING_PORT})",
+    )
+    parser.add_argument(
+        "--no-login-check",
+        action="store_true",
+        help="起動時の pre-flight login check を skip",
+    )
+    parser.add_argument(
         "--dry-run",
         action="store_true",
         help="実行せずジョブ一覧を表示",
@@ -434,6 +500,27 @@ def main(argv: list[str] | None = None) -> int:
     else:
         logger.info("Output mode : box-folder (per-job)")
 
+    # --- pre-flight login check ---
+    driver = None
+    login_creds = None
+
+    if not args.no_login_check:
+        from selenium.common.exceptions import WebDriverException
+        driver = try_connect_driver(port=args.port)
+        if driver is not None:
+            try:
+                login_creds = get_login_credentials()
+                driver.get(SF_HOME_URL)
+                wait_page_load(driver)
+                ensure_logged_in(driver, *login_creds)
+                logger.info("pre-flight login check 完了")
+            except (WebDriverException, KeyError, TimeoutError) as e:
+                logger.warning("pre-flight login check 失敗: %s — export を続行", e)
+                driver = None
+                login_creds = None
+        else:
+            logger.info("WebDriver 接続不可 — login check skip")
+
     # --- execute ---
     results = export_batch(
         chrome_path,
@@ -446,6 +533,8 @@ def main(argv: list[str] | None = None) -> int:
         output_dir=output_dir,
         user_data_dir=user_data_dir,
         profile_directory=args.profile_directory,
+        driver=driver,
+        login_credentials=login_creds,
     )
 
     log_summary(results)
@@ -882,6 +971,8 @@ class TestParseArgs:
         assert not args.ids_file
         assert args.user_data_dir == CHROME_USER_DATA_DIR
         assert args.profile_directory is None
+        assert args.port == REMOTE_DEBUGGING_PORT
+        assert not args.no_login_check
 
     def test_all_flags(self):
         args = parse_args([
@@ -897,6 +988,8 @@ class TestParseArgs:
             "--my-chrome",
             "--user-data-dir", CHROME_USER_DATA_DIR,
             "--profile-directory", "Profile 1",
+            "--port", "9333",
+            "--no-login-check",
         ])
         assert args.download_dir == "/tmp/dl"
         assert args.timeout == 30
@@ -909,6 +1002,8 @@ class TestParseArgs:
         assert args.my_chrome
         assert args.user_data_dir == CHROME_USER_DATA_DIR
         assert args.profile_directory == "Profile 1"
+        assert args.port == 9333
+        assert args.no_login_check
 
 
 class TestWriteSuccessIds:
