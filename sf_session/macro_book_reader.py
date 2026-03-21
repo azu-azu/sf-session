@@ -215,9 +215,14 @@ def _log_jobs(entries: list[JobEntry]) -> None:
 
 
 if __name__ == "__main__":
-    try:
-        jobs = read_jobs()
-    except FileNotFoundError as e:
-        logger.error("%s", e)
+    from .utils import setup_logging
+
+    setup_logging()
+    xlsm_path = _find_xlsm(MACRO_DIR)
+    if xlsm_path is None:
+        logger.error("'%s/' に .xlsm がありません。", MACRO_DIR.name)
     else:
+        mtime = datetime.fromtimestamp(xlsm_path.stat().st_mtime)
+        logger.info("ファイル: %s (更新: %s)", xlsm_path.name, mtime.strftime("%Y-%m-%d %H:%M"))
+        jobs = read_jobs_from_xlsm(xlsm_path)
         _log_jobs(jobs)
