@@ -51,6 +51,7 @@ API ではなく、ブラウザの export URL (`?export=1`) を使う VBA マク
 | `sf_session/macro_book_reader.py` | ジョブ定義 (`JobEntry`) の読み取り。xlsm から直接読み取り |
 | `sf_session/config.py` | 共通パス定数 + `read_ids_file()` + `create_sf_client()` |
 | `sf_session/clean.py` | `__pycache__` / `.pyc` / `.log` 等のクリーンアップ |
+| `sf_session/report_filter/` | レポートのメタデータ抽出 (API 経由、データ本体は取らない) |
 
 ## セットアップ
 
@@ -163,6 +164,18 @@ bat ファイルをダブルクリック、または PowerShell からオプシ�
 データは 101 行目から開始。No と URL が両方空になった行で終端。
 
 `macro_to_xlsx.py` で xlsm → `download_jobs.xlsx` を生成することもできる（確認用）。
+
+## レポートメタデータ抽出 (optional)
+
+API 経由でレポートのフィルタ条件・行数・列数・オブジェクト情報を取得する。データ本体はダウンロードしない。
+
+```powershell
+py -m sf_session.report_filter
+```
+
+- 前提: `.env` に SF 認証情報、`レポートID/ids.txt` に対象 ID を記載
+- 出力: `outputs_log/report_filters/` (JSON) + `pipelines/{report_id}/report_metadata.json`
+- auto/manual 分類: フィルタが SOQL に自動変換可能かどうかで分類
 
 ## テスト
 
