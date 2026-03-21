@@ -13,6 +13,13 @@ MACRO_DIR = PROJECT_ROOT / "マクロ格納フォルダ"
 # 出力フォルダ
 CSV_STAGING_DIR = PROJECT_ROOT / "outputs_csv"
 OUTPUT_RESULTS_DIR = PROJECT_ROOT / "outputs_result"
+OUTPUT_LOG_DIR = PROJECT_ROOT / "outputs_log"
+OUTPUT_ERRORS_DIR = OUTPUT_LOG_DIR / "errors"
+
+# report_filter 用
+PIPELINE_DIR = PROJECT_ROOT / "pipelines"
+FILTER_OUTPUT_DIR = OUTPUT_LOG_DIR / "report_filters"
+DEFAULT_FILTER_OUTPUT = FILTER_OUTPUT_DIR / "report_filters.json"
 
 # Chrome
 CHROME_EXE_PATH = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
