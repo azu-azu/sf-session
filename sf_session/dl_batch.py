@@ -37,6 +37,8 @@ from .config import (
 )
 from .browser import (
     REMOTE_DEBUGGING_PORT,
+    connect_driver,
+    launch_chrome,
     try_connect_driver,
     wait_page_load,
 )
@@ -60,6 +62,7 @@ logger = logging.getLogger(__name__)
 DEFAULT_TIMEOUT = 600  # per-report seconds
 DEFAULT_POLL = 2.0  # poll interval seconds
 DEFAULT_INTERVAL = 2.0  # inter-report wait seconds
+CHROME_STARTUP_WAIT = 5  # seconds
 
 
 @dataclass
@@ -503,10 +506,26 @@ def main(argv: list[str] | None = None) -> int:
     # --- pre-flight login check ---
     driver = None
     login_creds = None
+    chrome_proc = None
 
     if not args.no_login_check:
         from selenium.common.exceptions import WebDriverException
+
         driver = try_connect_driver(port=args.port)
+
+        # 既存 Chrome に接続できなければ自前で起動
+        if driver is None and user_data_dir is not None:
+            try:
+                chrome_proc = launch_chrome(
+                    exe=str(chrome_path), port=args.port,
+                    user_data_dir=str(user_data_dir),
+                )
+                time.sleep(CHROME_STARTUP_WAIT)
+                driver = connect_driver(port=args.port)
+            except (OSError, WebDriverException, ImportError) as e:
+                logger.warning("Chrome 起動/接続失敗: %s — login check skip", e)
+                driver = None
+
         if driver is not None:
             try:
                 login_creds = get_login_credentials()
@@ -522,26 +541,32 @@ def main(argv: list[str] | None = None) -> int:
             logger.info("WebDriver 接続不可 — login check skip")
 
     # --- execute ---
-    results = export_batch(
-        chrome_path,
-        active_jobs,
-        download_dir,
-        timeout=args.timeout,
-        poll=args.poll,
-        interval=args.interval,
-        date_suffix=args.date_suffix,
-        output_dir=output_dir,
-        user_data_dir=user_data_dir,
-        profile_directory=args.profile_directory,
-        driver=driver,
-        login_credentials=login_creds,
-    )
+    try:
+        results = export_batch(
+            chrome_path,
+            active_jobs,
+            download_dir,
+            timeout=args.timeout,
+            poll=args.poll,
+            interval=args.interval,
+            date_suffix=args.date_suffix,
+            output_dir=output_dir,
+            user_data_dir=user_data_dir,
+            profile_directory=args.profile_directory,
+            driver=driver,
+            login_credentials=login_creds,
+        )
 
-    log_summary(results)
-    write_success_ids(results)
+        log_summary(results)
+        write_success_ids(results)
 
-    failed = sum(1 for r in results if not r.success)
-    return 1 if failed else 0
+        failed = sum(1 for r in results if not r.success)
+        return 1 if failed else 0
+    finally:
+        if chrome_proc and chrome_proc.poll() is None:
+            logger.info("Chrome プロセス終了 (PID=%d)", chrome_proc.pid)
+            chrome_proc.terminate()
+            chrome_proc.wait(timeout=5)
 
 
 if __name__ == "__main__":
