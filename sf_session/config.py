@@ -26,7 +26,13 @@ CHROME_EXE_PATH = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
 CHROME_USER_DATA_DIR = r"C:\ChromeProfile"
 
 # Salesforce
-SF_BASE_URL = "https://example.my.salesforce.com"
+def _load_sf_base_url() -> str:
+    import os
+    from dotenv import load_dotenv
+    load_dotenv()
+    return os.environ["SF_BASE_URL"]
+
+SF_BASE_URL = _load_sf_base_url()
 SF_HOME_URL = f"{SF_BASE_URL}/home/home.jsp"
 
 # ID フィルタ
