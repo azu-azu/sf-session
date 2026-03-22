@@ -560,6 +560,13 @@ def main(argv: list[str] | None = None) -> int:
         log_summary(results)
         write_success_ids(results)
 
+        if output_dir is not None:
+            ok = sum(1 for r in results if r.success)
+            ng = sum(1 for r in results if not r.success)
+            marker = output_dir / f"★完了_成功{ok}件_失敗{ng}件.txt"
+            marker.touch()
+            logger.info("完了マーカー: %s", marker.name)
+
         failed = sum(1 for r in results if not r.success)
         return 1 if failed else 0
     finally:
