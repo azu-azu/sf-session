@@ -23,8 +23,8 @@ from .login_helper import ensure_logged_in
 logger = logging.getLogger(__name__)
 
 # ── defaults ──────────────────────────────────────────────
-KEEP_ALIVE_INTERVAL = 480  # seconds
-CHROME_STARTUP_WAIT = 5  # seconds
+KEEP_ALIVE_INTERVAL = 480  # session 維持のための reload 間隔 (秒)
+CHROME_STARTUP_WAIT = 5  # Chrome 起動後、Selenium 接続までの待機時間 (秒)
 
 
 def format_elapsed(seconds: float) -> str:
