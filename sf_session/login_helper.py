@@ -13,6 +13,21 @@ from .browser import wait_page_load
 
 logger = logging.getLogger(__name__)
 
+# ── 定数 ──────────────────────────────────────────────────
+MFA_TIMEOUT = 600  # seconds (10分)
+MAX_LOGIN_RETRIES = 2  # 初回 + 1回 retry
+
+
+# ── 例外 ──────────────────────────────────────────────────
+
+
+class MfaTimeoutError(TimeoutError):
+    """MFA 待機がタイムアウト。"""
+
+
+class LoginExhaustedError(RuntimeError):
+    """ログイン retry 回数を使い切った。"""
+
 # ── ページ判定 ────────────────────────────────────────────
 
 
@@ -71,14 +86,31 @@ def fill_credentials(driver: WebDriver, username: str, password: str) -> None:
     logger.info("credentials 入力 + Login クリック完了")
 
 
-def wait_until_logged_in(driver: WebDriver, poll: float = 2.0) -> None:
-    """MFA 完了まで待機。timeout なし。Ctrl+C で中断可能。"""
-    logger.info("MFA / ログイン完了を待機中...")
+def wait_until_logged_in(
+    driver: WebDriver,
+    poll: float = 2.0,
+    *,
+    timeout: float = MFA_TIMEOUT,
+) -> None:
+    """MFA 完了まで待機。timeout 超過 or login page 戻りで MfaTimeoutError。"""
+    logger.info("MFA / ログイン完了を待機中... (timeout=%ds)", timeout)
     elapsed = 0.0
     try:
         while not is_logged_in(driver):
             time.sleep(poll)
             elapsed += poll
+
+            # SF が session expire → login page に戻されるケースを検出
+            if is_login_page(driver):
+                raise MfaTimeoutError(
+                    f"MFA 待機中に login page へ戻された ({elapsed:.0f}s経過)"
+                )
+
+            if elapsed >= timeout:
+                raise MfaTimeoutError(
+                    f"MFA 待機が {timeout:.0f}s でタイムアウト"
+                )
+
             if elapsed % 30 < poll:
                 logger.info("MFA 待機中... (%.0f秒経過)", elapsed)
     except KeyboardInterrupt:
@@ -86,8 +118,17 @@ def wait_until_logged_in(driver: WebDriver, poll: float = 2.0) -> None:
         raise
 
 
-def ensure_logged_in(driver: WebDriver, username: str, password: str) -> bool:
+def ensure_logged_in(
+    driver: WebDriver,
+    username: str,
+    password: str,
+    *,
+    max_retries: int = MAX_LOGIN_RETRIES,
+) -> bool:
     """ログイン済みなら False、ログインが必要なら自動入力 + MFA 待ち → True。
+
+    MFA timeout 時は credential 再入力から max_retries 回までリトライ。
+    全 retry 消費で LoginExhaustedError を raise。
 
     Returns:
         True: ログイン処理を実行した
@@ -97,19 +138,37 @@ def ensure_logged_in(driver: WebDriver, username: str, password: str) -> bool:
         logger.info("既にログイン済み — skip")
         return False
 
-    if is_login_page(driver):
-        logger.info("ログインページ検出 — credentials 自動入力")
-        fill_credentials(driver, username, password)
-        wait_page_load(driver)
+    for attempt in range(1, max_retries + 1):
+        try:
+            if is_login_page(driver):
+                logger.info(
+                    "ログインページ検出 — credentials 自動入力 (attempt %d/%d)",
+                    attempt, max_retries,
+                )
+                fill_credentials(driver, username, password)
+                wait_page_load(driver)
 
-    if is_mfa_page(driver):
-        wait_until_logged_in(driver)
-    elif not is_logged_in(driver):
-        # Login 後にリダイレクト待ちが必要なケース
-        wait_until_logged_in(driver)
+            if is_mfa_page(driver):
+                wait_until_logged_in(driver)
+            elif not is_logged_in(driver):
+                wait_until_logged_in(driver)
 
-    logger.info("ログイン完了: %s", driver.current_url)
-    return True
+            logger.info("ログイン完了: %s", driver.current_url)
+            return True
+
+        except MfaTimeoutError:
+            logger.warning(
+                "MFA timeout (attempt %d/%d)", attempt, max_retries,
+            )
+            if attempt >= max_retries:
+                raise LoginExhaustedError(
+                    f"ログイン retry 回数上限 ({max_retries}) に到達"
+                )
+            # loop 先頭に戻り credential 再入力からやり直し
+            continue
+
+    # ここには到達しないが型チェッカー対策
+    raise LoginExhaustedError("unreachable")
 
 
 # ── タブ走査 ──────────────────────────────────────────────

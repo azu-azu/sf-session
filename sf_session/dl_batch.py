@@ -42,7 +42,11 @@ from .browser import (
     try_connect_driver,
     wait_page_load,
 )
-from .login_helper import ensure_logged_in, find_login_tab
+from .login_helper import (
+    LoginExhaustedError,
+    ensure_logged_in,
+    find_login_tab,
+)
 from .macro_book_reader import JobEntry, load_active_jobs
 from .utils import setup_logging
 from ._dl_single import (
@@ -213,7 +217,12 @@ def export_one(
         if find_login_tab(driver):
             logger.info("[%d件目] ログインページ検出 — login recovery 開始", seq)
             username, password = login_credentials
-            ensure_logged_in(driver, username, password)
+            try:
+                ensure_logged_in(driver, username, password)
+            except LoginExhaustedError as e:
+                logger.warning("[%d件目] login recovery 失敗: %s", seq, e)
+                result.error = f"login recovery 失敗: {e}"
+                return result
             logger.info("[%d件目] login recovery 完了 — リトライ", seq)
             result = _run_export(
                 chrome_path, job, download_dir,
@@ -533,7 +542,8 @@ def main(argv: list[str] | None = None) -> int:
                 wait_page_load(driver)
                 ensure_logged_in(driver, *login_creds)
                 logger.info("pre-flight login check 完了")
-            except (WebDriverException, KeyError, TimeoutError) as e:
+            # TimeoutError は MfaTimeoutError (subclass) も含む
+            except (WebDriverException, KeyError, TimeoutError, LoginExhaustedError) as e:
                 logger.warning("pre-flight login check 失敗: %s — export を続行", e)
                 driver = None
                 login_creds = None
