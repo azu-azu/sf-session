@@ -1,4 +1,3 @@
-
 """Salesforce Analytics Reports API の薄いラッパー"""
 
 from __future__ import annotations
