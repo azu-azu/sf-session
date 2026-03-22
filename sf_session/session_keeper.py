@@ -9,6 +9,8 @@ import logging
 import sys
 import time
 
+from selenium.common.exceptions import WebDriverException
+
 from .browser import (
     REMOTE_DEBUGGING_PORT,
     launch_chrome,
@@ -21,7 +23,6 @@ from .login_helper import ensure_logged_in
 logger = logging.getLogger(__name__)
 
 # ── defaults ──────────────────────────────────────────────
-TARGET_URL = SF_HOME_URL
 KEEP_ALIVE_INTERVAL = 480  # seconds
 CHROME_STARTUP_WAIT = 5  # seconds
 
@@ -37,13 +38,10 @@ def format_elapsed(seconds: float) -> str:
 def keep_alive(driver, url: str, interval: int) -> None:
     """定期リロードでセッションを維持。Ctrl-C で停止。"""
     logger.info("keep-alive 開始 (interval=%s, url=%s)", format_elapsed(interval), url)
-    try:
-        while True:
-            time.sleep(interval)
-            driver.get(url)
-            logger.info("reload → %s  title=%s", driver.current_url, driver.title)
-    except KeyboardInterrupt:
-        logger.info("Ctrl-C で停止")
+    while True:
+        time.sleep(interval)
+        driver.get(url)
+        logger.info("reload → %s  title=%s", driver.current_url, driver.title)
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -52,8 +50,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument(
         "--url",
-        default=TARGET_URL,
-        help=f"keep-alive 対象 URL (default: {TARGET_URL})",
+        default=SF_HOME_URL,
+        help=f"keep-alive 対象 URL (default: {SF_HOME_URL})",
     )
     parser.add_argument(
         "--interval",
@@ -122,13 +120,11 @@ def main(argv: list[str] | None = None) -> int:
 
     except KeyboardInterrupt:
         logger.info("Ctrl-C で停止")
-    except Exception as e:
-        if "WebDriver" in type(e).__name__ or "selenium" in type(e).__module__:
-            logger.error("WebDriver エラー: %s", e)
-            return 1
-        raise
     except FileNotFoundError:
         logger.error("Chrome が見つからない: %s", args.chrome_exe)
+        return 1
+    except WebDriverException as e:
+        logger.error("WebDriver エラー: %s", e)
         return 1
     finally:
         if driver:
