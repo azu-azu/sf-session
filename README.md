@@ -7,31 +7,31 @@ API ではなく、ブラウザの export URL (`?export=1`) を使う VBA マク
 
 ```
 ┌──────────────────────────────────────────────────────────┐
-│ Step 1: 01_session.bat                                   │
+│ Step 1: keep_session.bat                                 │
 │   Chrome 起動 → SSO/MFA 手動ログイン → reload 維持            │
 └───────────────────────┬──────────────────────────────────┘
                         │ Chrome がログイン状態を維持
                         ▼
 ┌──────────────────────────────────────────────────────────┐
-│ Step 2: 02_download.bat                                  │
+│ Step 2: download_all.bat                                 │
 │   pre-flight login check → export URL → DL 監視 → 移動    │
 └───────────────────────┬──────────────────────────────────┘
                         │ reportID_*.csv が出力先に集まる
                         ▼
 ┌──────────────────────────────────────────────────────────┐
-│ Step 3: 03_dispatch.bat                                  │
+│ Step 3: 振り分け.bat                                      │
 │   reportID_* ファイルを Box フォルダへ振り分け・リネーム        │
 └───────────────────────┬──────────────────────────────────┘
                         │
                         ▼
 ┌──────────────────────────────────────────────────────────┐
-│ Step 4: 04_collect.bat                                   │
+│ Step 4: py -m sf_session.file_collect                    │
 │   各フォルダから CSV を収集して確認実行用フォルダに集約          │
 └───────────────────────┬──────────────────────────────────┘
                         │
                         ▼
 ┌──────────────────────────────────────────────────────────┐
-│ Step 5: 05_convert.bat                                   │
+│ Step 5: jis_to_utf.bat                                   │
 │   *_jis/ フォルダの CSV を UTF-8 BOM に変換                  │
 └──────────────────────────────────────────────────────────┘
 ```
@@ -42,7 +42,7 @@ API ではなく、ブラウザの export URL (`?export=1`) を使う VBA マク
 
 | スクリプト | 役割 |
 |---|---|
-| `00_setup.bat` | venv 作成 + pip upgrade + 依存パッケージ install（初回のみ実行） |
+| `setup.bat` | venv 作成 + pip upgrade + 依存パッケージ install（初回のみ実行） |
 | `sf_session/session_keeper.py` | Chrome 起動 → 手動ログイン待機（SSO / MFA）→ 定期 reload でセッション維持 |
 | `sf_session/download.py` | pre-flight login check 付きバッチ export。セッション切れ時は手動ログイン待機で復帰 |
 | `sf_session/browser.py` | Chrome 起動・WebDriver 接続の共通モジュール |
@@ -60,7 +60,7 @@ API ではなく、ブラウザの export URL (`?export=1`) を使う VBA マク
 
 ```powershell
 # 初回のみ実行（venv 作成 + 依存 install）
-00_setup.bat
+setup.bat
 ```
 
 依存: `selenium`, `openpyxl`, `simple-salesforce`, `python-dotenv`
@@ -68,7 +68,7 @@ API ではなく、ブラウザの export URL (`?export=1`) を使う VBA マク
 ## 使い方
 
 bat ファイルをダブルクリック、または PowerShell からオプション付きで実行。
-初回は `00_setup.bat` を先に実行すること。
+初回は `setup.bat` を先に実行すること。
 
 ### 起動パターン
 
@@ -77,8 +77,8 @@ bat ファイルをダブルクリック、または PowerShell からオプシ�
 **パターン A: session_keeper + download（推奨）**
 
 ```
-01_session.bat          ← Chrome 起動 + 手動ログイン待機 + セッション維持
-02_download.bat         ← ↑ の Chrome に接続して export
+keep_session.bat        ← Chrome 起動 + 手動ログイン待機 + セッション維持
+download_all.bat        ← ↑ の Chrome に接続して export
 ```
 
 session_keeper がセッションを維持するので、長時間の連続 export でも切れにくい。
@@ -86,7 +86,7 @@ session_keeper がセッションを維持するので、長時間の連続 expo
 **パターン B: download 単独**
 
 ```
-02_download.bat         ← 自前で Chrome を起動 + 手動ログイン待機 + export
+download_all.bat        ← 自前で Chrome を起動 + 手動ログイン待機 + export
 ```
 
 session_keeper なしでも動く。download が専用プロファイルで Chrome を起動し、
@@ -123,7 +123,7 @@ SSO 経由のログインに対応。ログインが必要な場合はユーザ�
 ### 1. セッション確立
 
 ```powershell
-01_session.bat
+keep_session.bat
 # Chrome 起動 → 手動ログイン待機（SSO / MFA）→ 8分ごとに reload
 # Ctrl+C で停止
 ```
@@ -141,19 +141,19 @@ SSO 経由のログインに対応。ログインが必要な場合はユーザ�
 
 ```powershell
 # dry-run でジョブ一覧を確認
-02_download.bat --dry-run
+download_all.bat --dry-run
 
 # 実行 (outputs_csv/ に全ファイル集約)
-02_download.bat
+download_all.bat
 
 # per-job 振り分け先フォルダへ直接コピー
-02_download.bat --direct-deliver
+download_all.bat --direct-deliver
 
 # ids.txt でフィルタ
-02_download.bat --ids-file
+download_ids.bat
 
 # 日付サフィックス付与
-02_download.bat --date-suffix
+download_all.bat --date-suffix
 ```
 
 起動時に pre-flight login check を行い、ログインが必要なら手動ログインを待機する。
@@ -178,13 +178,13 @@ export 中にセッションが切れた場合は、タブを traverse してロ
 
 ```powershell
 # dry-run で振り分け先を確認
-03_dispatch.bat --source-dir outputs_csv --dry-run
+振り分け.bat --source-dir outputs_csv --dry-run
 
 # 実行
-03_dispatch.bat --source-dir outputs_csv
+振り分け.bat --source-dir outputs_csv
 
 # 日付サフィックス + ids.txt フィルタ
-03_dispatch.bat --source-dir outputs_csv --date-suffix --ids-file
+振り分け.bat --source-dir outputs_csv --date-suffix --ids-file
 ```
 
 ## ids.txt — レポート ID フィルタ
@@ -202,7 +202,7 @@ export 中にセッションが切れた場合は、タブを traverse してロ
 00O000000000002AAA
 ```
 
-`02_download.bat` / `03_dispatch.bat` の両方で使える。
+`download_all.bat` / `振り分け.bat` の両方で使える。
 
 ## ジョブ定義
 
@@ -242,6 +242,6 @@ python -m pytest -v
 ## クリーンアップ
 
 ```powershell
-06_clean.bat              # __pycache__, .pyc, .log, .bak 等を削除
-06_clean.bat --dry-run    # 削除せず対象だけ表示
+clean.bat              # __pycache__, .pyc, .log, .bak 等を削除
+clean.bat --dry-run    # 削除せず対象だけ表示
 ```
