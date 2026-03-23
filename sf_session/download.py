@@ -559,15 +559,16 @@ def main(argv: list[str] | None = None) -> int:
         log_summary(results)
         write_success_ids(results)
 
+        ok = sum(1 for r in results if r.success)
         if output_dir is not None:
-            ok = sum(1 for r in results if r.success)
             ng = sum(1 for r in results if not r.success)
             marker = output_dir / f"★完了_成功{ok}件_失敗{ng}件.txt"
             marker.touch()
             logger.info("完了マーカー: %s", marker.name)
 
         # work_dir → CSV_STAGING_DIR に atomic swap（前回分は _prev に退避）
-        if work_dir is not None:
+        # 0 success 時は swap しない（前回の正常な current を保持）
+        if work_dir is not None and ok > 0:
             prev_dir = CSV_STAGING_DIR.with_name(CSV_STAGING_DIR.name + "_prev")
             if prev_dir.is_dir():
                 shutil.rmtree(prev_dir)
@@ -575,9 +576,10 @@ def main(argv: list[str] | None = None) -> int:
                 CSV_STAGING_DIR.rename(prev_dir)
             work_dir.rename(CSV_STAGING_DIR)
             logger.info("swap 完了: %s → %s", work_dir.name, CSV_STAGING_DIR.name)
+        elif work_dir is not None:
+            logger.warning("success 0 件のため swap しない")
 
-        failed = sum(1 for r in results if not r.success)
-        return 1 if failed else 0
+        return 1 if ok < len(results) else 0
     finally:
         # exception 時: work_dir を cleanup、current はそのまま残る
         if work_dir is not None and work_dir.is_dir():

@@ -2,7 +2,7 @@
 cd /d "%~dp0"
 
 if not exist ".venv\Scripts\python.exe" (
-    echo [ERROR] ����ݒ肪�K�v�ł��Bsetup �o�b�`�����s���Ă��������B
+    echo [ERROR] Run 00_setup.bat first.
     pause
     exit /b 1
 )

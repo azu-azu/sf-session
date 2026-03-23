@@ -632,6 +632,29 @@ class TestWorkDirSwap:
         work_dir = staging_dir.with_name(staging_dir.name + "_work")
         assert not work_dir.exists()
 
+    def test_zero_success_no_swap(self, tmp_path, monkeypatch):
+        """全件失敗時は swap せず、前回の current を保持する。"""
+        staging_dir, _ = _stub_main_externals(monkeypatch, tmp_path)
+
+        # 前回分を staging_dir に準備
+        staging_dir.mkdir(parents=True)
+        (staging_dir / "good_report.csv").write_text("previous good data")
+
+        # 全件 timeout させる
+        monkeypatch.setattr(
+            "sf_session.download.wait_for_new_download",
+            lambda *a, **kw: (_ for _ in ()).throw(TimeoutError("timeout")),
+        )
+
+        rc = main(["--no-login-check"])
+
+        assert rc == 1
+        # current は前回分がそのまま
+        assert (staging_dir / "good_report.csv").read_text() == "previous good data"
+        # work_dir は cleanup されている
+        work_dir = staging_dir.with_name(staging_dir.name + "_work")
+        assert not work_dir.exists()
+
     def test_marker_written_to_final_staging_dir(self, tmp_path, monkeypatch):
         """完了マーカーは work_dir に書かれてから swap で CSV_STAGING_DIR に入る。"""
         staging_dir, _ = _stub_main_externals(monkeypatch, tmp_path)
