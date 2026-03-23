@@ -27,7 +27,7 @@ if errorlevel 1 (
     exit /b 1
 )
 
-.venv\Scripts\python.exe -m sf_session.file_dispatch %*
+.venv\Scripts\python.exe -m sf_session.file_deliver %*
 
 if errorlevel 1 (
     echo [ERROR] script failed

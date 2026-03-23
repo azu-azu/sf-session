@@ -402,9 +402,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="前回の success_ids を読み、成功済みを除外して失敗分だけ再実行",
     )
     parser.add_argument(
-        "--box-folder",
+        "--direct-deliver",
         action="store_true",
-        help="Box フォルダに per-job 振り分け (default: outputs_csv/ に全出力)",
+        help="per-job 振り分け先フォルダへ直接コピー (default: outputs_csv/ に全出力)",
     )
     parser.add_argument(
         "--port",
@@ -440,7 +440,7 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     if args.dry_run:
-        if not args.box_folder:
+        if not args.direct_deliver:
             logger.info("Output dir  : %s", CSV_STAGING_DIR)
         logger.info("--- dry-run mode ---")
         dummy_dl = Path("{download}")
@@ -448,7 +448,7 @@ def main(argv: list[str] | None = None) -> int:
             rid = j.report_id or "(なし)"
             enc = j.encode if j.encode else "Shift_JIS"
             url = build_export_url(rid, enc=enc) if j.report_id else "(URL 構築不可)"
-            if not args.box_folder:
+            if not args.direct_deliver:
                 dest = build_destination(
                     j, dummy_dl,
                     date_suffix=args.date_suffix,
@@ -482,7 +482,7 @@ def main(argv: list[str] | None = None) -> int:
         if user_data_dir is not None:
             ensure_exists(user_data_dir, "Chrome user data dir")
 
-    if args.box_folder:
+    if args.direct_deliver:
         output_dir = None
     else:
         output_dir = CSV_STAGING_DIR
@@ -505,7 +505,7 @@ def main(argv: list[str] | None = None) -> int:
     if output_dir:
         logger.info("Output dir  : %s", output_dir)
     else:
-        logger.info("Output mode : box-folder (per-job)")
+        logger.info("Output mode : direct-deliver (per-job)")
 
     # --- pre-flight login check ---
     driver = None

@@ -5,10 +5,10 @@
 リネーム指定がある場合はリネームも行う。
 
 Usage:
-    python sf-session/file_dispatch.py --source-dir outputs_csv
-    python sf-session/file_dispatch.py --source-dir outputs_csv --dry-run
-    python sf-session/file_dispatch.py --source-dir outputs_csv --date-suffix
-    python sf-session/file_dispatch.py --source-dir outputs_csv --ids-file
+    python sf-session/file_deliver.py --source-dir outputs_csv
+    python sf-session/file_deliver.py --source-dir outputs_csv --dry-run
+    python sf-session/file_deliver.py --source-dir outputs_csv --date-suffix
+    python sf-session/file_deliver.py --source-dir outputs_csv --ids-file
 """
 
 from __future__ import annotations
@@ -148,7 +148,7 @@ def log_summary(results: list[DistributeResult]) -> None:
     ng = sum(1 for r in results if not r.success)
 
     logger.info("*" * 50)
-    logger.info("file_dispatch complete >>")
+    logger.info("file_deliver complete >>")
     logger.info("成功 %d 件 / 失敗 %d 件 / 合計 %d 件", ok, ng, len(results))
     logger.info("-" * 50)
 

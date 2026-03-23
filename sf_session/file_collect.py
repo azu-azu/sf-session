@@ -1,6 +1,6 @@
 """macro_book_reader のジョブ定義と success ID で対象 CSV を特定し、日付フォルダへコピーする。
 
-file_dispatch の逆操作: 各フォルダから CSV を収集して CSV_STAGING_DIR に集約する。
+file_deliver の逆操作: 各フォルダから CSV を収集して CSV_STAGING_DIR に集約する。
 
 Usage:
     python -m sf_session.file_collect

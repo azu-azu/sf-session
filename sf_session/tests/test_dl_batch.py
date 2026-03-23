@@ -416,7 +416,7 @@ class TestParseArgs:
         assert args.interval == DEFAULT_INTERVAL
         assert not args.date_suffix
         assert not args.dry_run
-        assert not args.box_folder
+        assert not args.direct_deliver
         assert not args.my_chrome
         assert not args.ids_file
         assert args.user_data_dir == CHROME_USER_DATA_DIR
@@ -432,7 +432,7 @@ class TestParseArgs:
             "--poll", "0.5",
             "--date-suffix",
             "--interval", "5.0",
-            "--box-folder",
+            "--direct-deliver",
             "--ids-file",
             "--dry-run",
             "--my-chrome",
@@ -446,7 +446,7 @@ class TestParseArgs:
         assert args.poll == 0.5
         assert args.date_suffix
         assert args.interval == 5.0
-        assert args.box_folder
+        assert args.direct_deliver
         assert args.ids_file
         assert args.dry_run
         assert args.my_chrome

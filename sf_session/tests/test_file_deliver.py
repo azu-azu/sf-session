@@ -1,4 +1,4 @@
-"""file_dispatch のテスト。"""
+"""file_deliver のテスト。"""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from sf_session.config import MACRO_DIR
-from sf_session.file_dispatch import (
+from sf_session.file_deliver import (
     DistributeResult,
     build_destination,
     build_job_lookup,
@@ -77,7 +77,7 @@ class TestBuildDestination:
         source = tmp_path / "00O123_report.csv"
         source.touch()
 
-        with patch("sf_session.file_dispatch.datetime") as mock_dt:
+        with patch("sf_session.file_deliver.datetime") as mock_dt:
             mock_dt.now.return_value.strftime.return_value = "20260319"
             result = build_destination(job, source, date_suffix=True)
 
@@ -92,7 +92,7 @@ class TestBuildDestination:
         source = tmp_path / "00O123_original.xlsx"
         source.touch()
 
-        with patch("sf_session.file_dispatch.datetime") as mock_dt:
+        with patch("sf_session.file_deliver.datetime") as mock_dt:
             mock_dt.now.return_value.strftime.return_value = "20260319"
             result = build_destination(job, source, date_suffix=True)
 

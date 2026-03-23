@@ -46,8 +46,8 @@ API ではなく、ブラウザの export URL (`?export=1`) を使う VBA マク
 | `sf_session/dl_batch.py` | pre-flight login check 付きバッチ export。セッション切れ時は手動ログイン待機で復帰 |
 | `sf_session/browser.py` | Chrome 起動・WebDriver 接続の共通モジュール |
 | `sf_session/login_helper.py` | ログイン/SSO ページ検出・手動ログイン待機・MFA 完了待ち |
-| `sf_session/file_dispatch.py` | `reportID_*` ファイルをマクロ定義の移動先フォルダへコピー・リネーム |
-| `sf_session/file_collect.py` | 各フォルダから CSV を収集して `CSV_STAGING_DIR` に集約 (file_dispatch の逆) |
+| `sf_session/file_deliver.py` | `reportID_*` ファイルをマクロ定義の移動先フォルダへコピー・リネーム |
+| `sf_session/file_collect.py` | 各フォルダから CSV を収集して `CSV_STAGING_DIR` に集約 (file_deliver の逆) |
 | `sf_session/jis_to_utf8.py` | `CSV_STAGING_DIR` 内の CSV を UTF-8 BOM に変換 → `*_utf/` |
 | `sf_session/macro_to_xlsx.py` | xlsm → `download_jobs.xlsx` 変換。SF API で report_name を取得して列追加 |
 | `sf_session/macro_book_reader.py` | ジョブ定義 (`JobEntry`) の読み取り。xlsm から直接読み取り |
@@ -132,8 +132,8 @@ SSO / ログインページ → 手動でログインしてください（メッ
 # 実行 (outputs_csv/ に全ファイル集約)
 02_download.bat
 
-# Box フォルダへ per-job 振り分け
-02_download.bat --box-folder
+# per-job 振り分け先フォルダへ直接コピー
+02_download.bat --direct-deliver
 
 # ids.txt でフィルタ
 02_download.bat --ids-file
@@ -152,7 +152,7 @@ export 中にセッションが切れた場合は、タブを traverse してロ
 --my-chrome       OS デフォルト Chrome を使用（login check skip、手動ログイン前提）
 --no-login-check  pre-flight login check を skip
 --port            リモートデバッグポート (default: 9222)
---box-folder      各ジョブの src_folder_name へ直接振り分け (default: outputs_csv/ に集約)
+--direct-deliver  各ジョブの src_folder_name へ直接振り分け (default: outputs_csv/ に集約)
 --ids-file        ids.txt の report ID との intersection でフィルタ
 --date-suffix     ファイル名に _YYYYMMDD を付与
 --interval        レポート間 wait 秒 (default: 2.0)

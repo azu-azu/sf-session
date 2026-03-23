@@ -15,8 +15,7 @@ def _load_csv_staging_dir() -> Path:
     import os
     from dotenv import load_dotenv
     load_dotenv()
-    val = os.environ.get("CSV_STAGING_DIR")
-    return Path(val) if val else PROJECT_ROOT / "outputs_csv"
+    return Path(os.environ["CSV_STAGING_DIR"])
 
 CSV_STAGING_DIR = _load_csv_staging_dir()
 OUTPUT_RESULTS_DIR = PROJECT_ROOT / "outputs_result"

@@ -15,7 +15,8 @@ def test_macro_dir():
 
 
 def test_csv_staging_dir():
-    assert CSV_STAGING_DIR == PROJECT_ROOT / "outputs_csv"
+    """CSV_STAGING_DIR が .env の値から Path として読み込まれていること。"""
+    assert isinstance(CSV_STAGING_DIR, Path)
 
 
 def test_default_ids_file():
