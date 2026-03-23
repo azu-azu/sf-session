@@ -33,7 +33,6 @@ from .config import (
     MACRO_DIR,
     OUTPUT_RESULTS_DIR,
     SF_HOME_URL,
-    get_login_credentials,
 )
 from .browser import (
     REMOTE_DEBUGGING_PORT,
@@ -188,12 +187,11 @@ def export_one(
     user_data_dir: Path | None = None,
     profile_directory: str | None = None,
     driver: WebDriver | None = None,
-    login_credentials: tuple[str, str] | None = None,
 ) -> ExportResult:
     """1レポートの export を実行し結果を返す。
 
-    driver と login_credentials が渡されている場合、timeout 後にタブ走査で
-    ログインページを検出し、自動ログイン → 1回だけリトライする。
+    driver が渡されている場合、timeout 後にタブ traverse で
+    ログイン/SSO ページを検出し、手動ログイン待機 → 1回だけリトライする。
     """
     report_id = job.report_id or ""
 
@@ -213,12 +211,11 @@ def export_one(
     )
 
     # timeout 失敗 + driver あり → login recovery を試行（1回限り）
-    if not result.success and driver is not None and login_credentials is not None:
+    if not result.success and driver is not None:
         if find_login_tab(driver):
             logger.info("[%d件目] ログインページ検出 — login recovery 開始", seq)
-            username, password = login_credentials
             try:
-                ensure_logged_in(driver, username, password)
+                ensure_logged_in(driver)
             except LoginExhaustedError as e:
                 logger.warning("[%d件目] login recovery 失敗: %s", seq, e)
                 result.error = f"login recovery 失敗: {e}"
@@ -248,7 +245,6 @@ def export_batch(
     user_data_dir: Path | None = None,
     profile_directory: str | None = None,
     driver: WebDriver | None = None,
-    login_credentials: tuple[str, str] | None = None,
 ) -> list[ExportResult]:
     """ジョブリストを順次 export し、結果リストを返す。"""
     results: list[ExportResult] = []
@@ -261,7 +257,6 @@ def export_batch(
             user_data_dir=user_data_dir,
             profile_directory=profile_directory,
             driver=driver,
-            login_credentials=login_credentials,
         )
 
         if not result.success or result.dest_path is None:
@@ -514,7 +509,6 @@ def main(argv: list[str] | None = None) -> int:
 
     # --- pre-flight login check ---
     driver = None
-    login_creds = None
     chrome_proc = None
 
     if not args.no_login_check:
@@ -537,16 +531,14 @@ def main(argv: list[str] | None = None) -> int:
 
         if driver is not None:
             try:
-                login_creds = get_login_credentials()
                 driver.get(SF_HOME_URL)
                 wait_page_load(driver)
-                ensure_logged_in(driver, *login_creds)
+                ensure_logged_in(driver)
                 logger.info("pre-flight login check 完了")
             # TimeoutError は MfaTimeoutError (subclass) も含む
-            except (WebDriverException, KeyError, TimeoutError, LoginExhaustedError) as e:
+            except (WebDriverException, TimeoutError, LoginExhaustedError) as e:
                 logger.warning("pre-flight login check 失敗: %s — export を続行", e)
                 driver = None
-                login_creds = None
         else:
             logger.info("WebDriver 接続不可 — login check skip")
 
@@ -564,7 +556,6 @@ def main(argv: list[str] | None = None) -> int:
             user_data_dir=user_data_dir,
             profile_directory=args.profile_directory,
             driver=driver,
-            login_credentials=login_creds,
         )
 
         log_summary(results)

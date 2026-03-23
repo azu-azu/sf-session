@@ -1,6 +1,6 @@
 """Salesforce session keeper.
 
-Chrome をリモートデバッグモードで起動し、自動ログイン（MFA は手動待ち）後に
+Chrome をリモートデバッグモードで起動し、手動ログイン待機（SSO / MFA）後に
 定期リロードでセッションを維持する。
 """
 
@@ -17,7 +17,7 @@ from .browser import (
     connect_driver,
     wait_page_load,
 )
-from .config import CHROME_EXE_PATH, CHROME_USER_DATA_DIR, SF_HOME_URL, get_login_credentials
+from .config import CHROME_EXE_PATH, CHROME_USER_DATA_DIR, SF_HOME_URL
 from .login_helper import ensure_logged_in
 
 logger = logging.getLogger(__name__)
@@ -111,9 +111,8 @@ def main(argv: list[str] | None = None) -> int:
             driver.get(args.url)
         wait_page_load(driver)
 
-        # 自動ログイン（MFA は手動待ち）
-        username, password = get_login_credentials()
-        ensure_logged_in(driver, username, password)
+        # ログイン待機（SSO 手動ログイン + MFA 手動待ち）
+        ensure_logged_in(driver)
 
         logger.info("初回遷移: %s", driver.current_url)
 

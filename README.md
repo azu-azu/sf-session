@@ -8,7 +8,7 @@ API ではなく、ブラウザの export URL (`?export=1`) を使う VBA マク
 ```
 ┌──────────────────────────────────────────────────────────┐
 │ Step 1: 01_session.bat                                   │
-│   Chrome 起動 → ID/PW 自動入力 → MFA 手動 → reload 維持     │
+│   Chrome 起動 → SSO/MFA 手動ログイン → reload 維持            │
 └───────────────────────┬──────────────────────────────────┘
                         │ Chrome がログイン状態を維持
                         ▼
@@ -42,16 +42,16 @@ API ではなく、ブラウザの export URL (`?export=1`) を使う VBA マク
 
 | スクリプト | 役割 |
 |---|---|
-| `sf_session/session_keeper.py` | Chrome 起動 → 自動ログイン（MFA は手動待ち）→ 定期 reload でセッション維持 |
-| `sf_session/dl_batch.py` | pre-flight login check 付きバッチ export。セッション切れ時は自動復帰 |
+| `sf_session/session_keeper.py` | Chrome 起動 → 手動ログイン待機（SSO / MFA）→ 定期 reload でセッション維持 |
+| `sf_session/dl_batch.py` | pre-flight login check 付きバッチ export。セッション切れ時は手動ログイン待機で復帰 |
 | `sf_session/browser.py` | Chrome 起動・WebDriver 接続の共通モジュール |
-| `sf_session/login_helper.py` | ログインページ検出・ID/PW 自動入力・MFA 完了待ち |
+| `sf_session/login_helper.py` | ログイン/SSO ページ検出・手動ログイン待機・MFA 完了待ち |
 | `sf_session/file_dispatch.py` | `reportID_*` ファイルをマクロ定義の移動先フォルダへコピー・リネーム |
 | `sf_session/file_collect.py` | 各フォルダから CSV を収集して `CSV_STAGING_DIR` に集約 (file_dispatch の逆) |
 | `sf_session/jis_to_utf8.py` | `CSV_STAGING_DIR` 内の CSV を UTF-8 BOM に変換 → `*_utf/` |
 | `sf_session/macro_to_xlsx.py` | xlsm → `download_jobs.xlsx` 変換。SF API で report_name を取得して列追加 |
 | `sf_session/macro_book_reader.py` | ジョブ定義 (`JobEntry`) の読み取り。xlsm から直接読み取り |
-| `sf_session/config.py` | 共通パス定数 + `read_ids_file()` + `create_sf_client()` + `get_login_credentials()` |
+| `sf_session/config.py` | 共通パス定数 + `read_ids_file()` + `create_sf_client()` |
 | `sf_session/clean.py` | `__pycache__` / `.pyc` / `.log` 等のクリーンアップ |
 | `sf_session/report_filter/` | レポートのメタデータ抽出 (API 経由、データ本体は取らない) |
 
@@ -78,7 +78,7 @@ bat ファイルをダブルクリック、または PowerShell からオプシ�
 **パターン A: session_keeper + dl_batch（推奨）**
 
 ```
-01_session.bat          ← Chrome 起動 + 自動ログイン + セッション維持
+01_session.bat          ← Chrome 起動 + 手動ログイン待機 + セッション維持
 02_download.bat         ← ↑ の Chrome に接続して export
 ```
 
@@ -87,34 +87,22 @@ session_keeper がセッションを維持するので、長時間の連続 expo
 **パターン B: dl_batch 単独**
 
 ```
-02_download.bat         ← 自前で Chrome を起動 + 自動ログイン + export
+02_download.bat         ← 自前で Chrome を起動 + 手動ログイン待機 + export
 ```
 
 session_keeper なしでも動く。dl_batch が専用プロファイルで Chrome を起動し、
 ログインしてから export を開始する。export 完了後に Chrome は自動終了する。
 
-### 自動ログインの仕組み
+### ログインの仕組み
 
-`.env` に認証情報を設定すると、ログインページで ID/PW を自動入力する。
-MFA（多要素認証）が設定されている場合はユーザーが手動で完了するまで待機する。
-
-```ini
-# .env
-SF_USERNAME=user@example.com        # API 用（必須）
-SF_PASSWORD=password                # API 用（必須）
-SF_SECURITY_TOKEN=token             # API 用
-
-# UI ログイン用（省略時は SF_USERNAME / SF_PASSWORD を使用）
-SF_LOGIN_USERNAME=ui-user@example.com
-SF_LOGIN_PASSWORD=ui-password
-```
+SSO 経由のログインに対応。ログインが必要な場合はユーザーが手動で完了するまで待機する。
 
 ログインの flow:
 
 ```
 ログイン済み → skip（即座に処理開始）
-ログインページ → ID/PW 自動入力 → Login click
-  → MFA ページ → 手動で完了するまで待機（timeout なし、Ctrl+C で中断可）
+SSO / ログインページ → 手動でログインしてください（メッセージ表示）
+  → MFA → 手動で完了するまで待機（timeout 10分、Ctrl+C で中断可）
   → SF ホーム画面 → 処理開始
 ```
 
@@ -122,7 +110,7 @@ SF_LOGIN_PASSWORD=ui-password
 
 ```powershell
 01_session.bat
-# Chrome 起動 → 自動ログイン（MFA は手動待ち）→ 8分ごとに reload
+# Chrome 起動 → 手動ログイン待機（SSO / MFA）→ 8分ごとに reload
 # Ctrl+C で停止
 ```
 
@@ -154,9 +142,9 @@ SF_LOGIN_PASSWORD=ui-password
 02_download.bat --date-suffix
 ```
 
-起動時に pre-flight login check を行い、ログインが必要なら自動入力する。
-export 中にセッションが切れた場合は、タブを走査してログインページを検出し、
-自動ログイン → 1 回だけリトライする（無限ループ防止）。
+起動時に pre-flight login check を行い、ログインが必要なら手動ログインを待機する。
+export 中にセッションが切れた場合は、タブを traverse してログイン/SSO ページを検出し、
+手動ログイン待機 → 1 回だけリトライする（無限ループ防止）。
 
 主なオプション:
 

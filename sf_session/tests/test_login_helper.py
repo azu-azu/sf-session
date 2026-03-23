@@ -10,6 +10,7 @@ from sf_session.login_helper import (
     LoginExhaustedError,
     MfaTimeoutError,
     ensure_logged_in,
+    is_sso_page,
     wait_until_logged_in,
 )
 
@@ -21,6 +22,23 @@ def _make_driver(**overrides) -> MagicMock:
     driver = MagicMock()
     driver.current_url = overrides.get("current_url", "https://example.salesforce.com/home")
     return driver
+
+
+# ── is_sso_page ──────────────────────────────────────────
+
+
+class TestIsSsoPage:
+    def test_sso_url_detected(self):
+        driver = _make_driver(current_url="https://company.sso~long-hash.example.com/login")
+        assert is_sso_page(driver) is True
+
+    def test_sf_domain_not_sso(self):
+        driver = _make_driver(current_url="https://example.salesforce.com/home")
+        assert is_sso_page(driver) is False
+
+    def test_sso_in_path(self):
+        driver = _make_driver(current_url="https://auth.example.com/sso/callback")
+        assert is_sso_page(driver) is True
 
 
 # ── wait_until_logged_in ──────────────────────────────────
@@ -69,7 +87,7 @@ class TestWaitUntilLoggedIn:
 
     def test_off_sf_domain_raises_mfa_timeout_error(self):
         """SF ドメイン外に長時間いると MfaTimeoutError (認証キャンセル検出)。"""
-        driver = _make_driver(current_url="https://sso.example.com/error")
+        driver = _make_driver(current_url="https://other.example.com/error")
 
         with (
             patch(f"{MODULE}.is_logged_in", return_value=False),
@@ -79,6 +97,24 @@ class TestWaitUntilLoggedIn:
             pytest.raises(MfaTimeoutError, match="SF ドメインへの遷移なし"),
         ):
             wait_until_logged_in(driver, poll=1.0, timeout=600)
+
+    def test_sso_domain_resets_off_sf_timer(self):
+        """SSO ドメインにいる間は elapsed_off_sf がリセットされる。"""
+        driver = _make_driver(current_url="https://company.sso~hash.example.com/auth")
+        call_count = {"n": 0}
+
+        def logged_in_after_3(_driver):
+            call_count["n"] += 1
+            return call_count["n"] >= 3
+
+        with (
+            patch(f"{MODULE}.is_logged_in", side_effect=logged_in_after_3),
+            patch(f"{MODULE}.is_login_page", return_value=False),
+            patch(f"{MODULE}.is_mfa_page", return_value=False),
+            patch(f"{MODULE}.time.sleep"),
+        ):
+            # SSO domain → is_sso_page=True → elapsed_off_sf reset → no timeout
+            wait_until_logged_in(driver, poll=1.0, timeout=60)
 
     def test_keyboard_interrupt_propagates(self):
         """Ctrl+C は KeyboardInterrupt としてそのまま propagate。"""
@@ -104,9 +140,21 @@ class TestEnsureLoggedIn:
         driver = _make_driver()
 
         with patch(f"{MODULE}.is_logged_in", return_value=True):
-            result = ensure_logged_in(driver, "user", "pass")
+            result = ensure_logged_in(driver)
 
         assert result is False
+
+    def test_manual_login_wait_succeeds(self):
+        """手動ログイン待機 → ログイン完了で True を返す。"""
+        driver = _make_driver()
+
+        with (
+            patch(f"{MODULE}.is_logged_in", return_value=False),
+            patch(f"{MODULE}.wait_until_logged_in"),
+        ):
+            result = ensure_logged_in(driver)
+
+        assert result is True
 
     def test_mfa_timeout_then_retry_succeeds(self):
         """1回目 MFA timeout → 2回目で成功。"""
@@ -120,19 +168,10 @@ class TestEnsureLoggedIn:
             # 2回目は成功（何もしない）
 
         with (
-            patch(f"{MODULE}.is_logged_in", side_effect=[
-                False,   # ensure_logged_in 冒頭の check
-                False,   # 1回目 loop: is_mfa_page の elif
-                False,   # 2回目 loop 冒頭で is_login_page の前の check ではない
-                True,    # 2回目 loop 終了後のチェック（is_logged_in は wait 内で True）
-            ]),
-            patch(f"{MODULE}.is_login_page", return_value=True),
-            patch(f"{MODULE}.is_mfa_page", return_value=False),
-            patch(f"{MODULE}.fill_credentials"),
-            patch(f"{MODULE}.wait_page_load"),
+            patch(f"{MODULE}.is_logged_in", return_value=False),
             patch(f"{MODULE}.wait_until_logged_in", side_effect=mock_wait),
         ):
-            result = ensure_logged_in(driver, "user", "pass", max_retries=2)
+            result = ensure_logged_in(driver, max_retries=2)
 
         assert result is True
         assert attempt["n"] == 2
@@ -143,14 +182,10 @@ class TestEnsureLoggedIn:
 
         with (
             patch(f"{MODULE}.is_logged_in", return_value=False),
-            patch(f"{MODULE}.is_login_page", return_value=True),
-            patch(f"{MODULE}.is_mfa_page", return_value=False),
-            patch(f"{MODULE}.fill_credentials"),
-            patch(f"{MODULE}.wait_page_load"),
             patch(
                 f"{MODULE}.wait_until_logged_in",
                 side_effect=MfaTimeoutError("timeout"),
             ),
             pytest.raises(LoginExhaustedError, match="retry 回数上限"),
         ):
-            ensure_logged_in(driver, "user", "pass", max_retries=2)
+            ensure_logged_in(driver, max_retries=2)

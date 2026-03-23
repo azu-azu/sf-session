@@ -1,4 +1,4 @@
-"""SF ログインページの自動検出・ID/PW 入力・MFA 完了待ち。"""
+"""SF ログイン検出・SSO 手動ログイン待機・MFA 完了待ち。"""
 
 from __future__ import annotations
 
@@ -8,8 +8,6 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from selenium.webdriver.chrome.webdriver import WebDriver
-
-from .browser import wait_page_load
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +50,11 @@ def is_login_page(driver: WebDriver) -> bool:
         return False
 
 
+def is_sso_page(driver: WebDriver) -> bool:
+    """SSO ページか判定。URL に 'sso' を含むかで判定。"""
+    return "sso" in driver.current_url.lower()
+
+
 def is_mfa_page(driver: WebDriver) -> bool:
     """MFA 認証ページか判定。暫定: URL に verify/identity を含むか判定。"""
     url = driver.current_url.lower()
@@ -68,28 +71,7 @@ def is_logged_in(driver: WebDriver) -> bool:
     )
 
 
-# ── ログイン操作 ──────────────────────────────────────────
-
-
-def fill_credentials(driver: WebDriver, username: str, password: str) -> None:
-    """ID/PW を入力して Login ボタンをクリック。"""
-    from selenium.webdriver.common.by import By
-    from selenium.webdriver.support.ui import WebDriverWait
-    from selenium.webdriver.support import expected_conditions as EC
-
-    wait = WebDriverWait(driver, 15)
-
-    user_field = wait.until(EC.presence_of_element_located((By.ID, "username")))
-    user_field.clear()
-    user_field.send_keys(username)
-
-    pass_field = driver.find_element(By.ID, "password")
-    pass_field.clear()
-    pass_field.send_keys(password)
-
-    login_btn = driver.find_element(By.ID, "Login")
-    login_btn.click()
-    logger.info("credentials 入力 + Login クリック完了")
+# ── ログイン待機 ──────────────────────────────────────────
 
 
 def wait_until_logged_in(
@@ -119,7 +101,8 @@ def wait_until_logged_in(
                 )
 
             # SF ドメイン外に長時間いる → 認証キャンセルやエラー
-            if _is_sf_domain(url) or on_mfa:
+            on_sso = "sso" in url
+            if _is_sf_domain(url) or on_mfa or on_sso:
                 elapsed_off_sf = 0.0
             else:
                 elapsed_off_sf += poll
@@ -143,14 +126,13 @@ def wait_until_logged_in(
 
 def ensure_logged_in(
     driver: WebDriver,
-    username: str,
-    password: str,
     *,
     max_retries: int = MAX_LOGIN_RETRIES,
 ) -> bool:
-    """ログイン済みなら False、ログインが必要なら自動入力 + MFA 待ち → True。
+    """ログイン済みなら False、未ログインなら手動ログイン待機 → True。
 
-    MFA timeout 時は credential 再入力から max_retries 回までリトライ。
+    SSO or ログインページ検出時は手動ログインを促し wait_until_logged_in() で待機。
+    MFA timeout 時は max_retries 回までリトライ。
     全 retry 消費で LoginExhaustedError を raise。
 
     Returns:
@@ -163,18 +145,11 @@ def ensure_logged_in(
 
     for attempt in range(1, max_retries + 1):
         try:
-            if is_login_page(driver):
-                logger.info(
-                    "ログインページ検出 — credentials 自動入力 (attempt %d/%d)",
-                    attempt, max_retries,
-                )
-                fill_credentials(driver, username, password)
-                wait_page_load(driver)
-
-            if is_mfa_page(driver):
-                wait_until_logged_in(driver)
-            elif not is_logged_in(driver):
-                wait_until_logged_in(driver)
+            logger.info(
+                "手動でログインしてください (attempt %d/%d)",
+                attempt, max_retries,
+            )
+            wait_until_logged_in(driver)
 
             logger.info("ログイン完了: %s", driver.current_url)
             return True
@@ -187,18 +162,17 @@ def ensure_logged_in(
                 raise LoginExhaustedError(
                     f"ログイン retry 回数上限 ({max_retries}) に到達"
                 )
-            # loop 先頭に戻り credential 再入力からやり直し
             continue
 
     # ここには到達しないが型チェッカー対策
     raise LoginExhaustedError("unreachable")
 
 
-# ── タブ走査 ──────────────────────────────────────────────
+# ── タブ traverse ─────────────────────────────────────────
 
 
 def find_login_tab(driver: WebDriver) -> bool:
-    """全タブを走査してログインページ/MFA ページを探す。
+    """全タブを traverse してログインページ/MFA/SSO ページを探す。
 
     見つかったらそのタブに switch した状態で True を返す。
     見つからなければ元のタブに戻して False を返す。
@@ -206,7 +180,7 @@ def find_login_tab(driver: WebDriver) -> bool:
     original = driver.current_window_handle
     for handle in driver.window_handles:
         driver.switch_to.window(handle)
-        if is_login_page(driver) or is_mfa_page(driver):
+        if is_login_page(driver) or is_mfa_page(driver) or is_sso_page(driver):
             return True
     driver.switch_to.window(original)
     return False
