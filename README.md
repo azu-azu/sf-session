@@ -44,7 +44,7 @@ API ではなく、ブラウザの export URL (`?export=1`) を使う VBA マク
 |---|---|
 | `00_setup.bat` | venv 作成 + pip upgrade + 依存パッケージ install（初回のみ実行） |
 | `sf_session/session_keeper.py` | Chrome 起動 → 手動ログイン待機（SSO / MFA）→ 定期 reload でセッション維持 |
-| `sf_session/dl_batch.py` | pre-flight login check 付きバッチ export。セッション切れ時は手動ログイン待機で復帰 |
+| `sf_session/download.py` | pre-flight login check 付きバッチ export。セッション切れ時は手動ログイン待機で復帰 |
 | `sf_session/browser.py` | Chrome 起動・WebDriver 接続の共通モジュール |
 | `sf_session/login_helper.py` | ログイン/SSO ページ検出・手動ログイン待機・MFA 完了待ち |
 | `sf_session/file_deliver.py` | `reportID_*` ファイルをマクロ定義の移動先フォルダへコピー・リネーム |
@@ -74,7 +74,7 @@ bat ファイルをダブルクリック、または PowerShell からオプシ�
 
 2 通りの使い方がある。
 
-**パターン A: session_keeper + dl_batch（推奨）**
+**パターン A: session_keeper + download（推奨）**
 
 ```
 01_session.bat          ← Chrome 起動 + 手動ログイン待機 + セッション維持
@@ -83,13 +83,13 @@ bat ファイルをダブルクリック、または PowerShell からオプシ�
 
 session_keeper がセッションを維持するので、長時間の連続 export でも切れにくい。
 
-**パターン B: dl_batch 単独**
+**パターン B: download 単独**
 
 ```
 02_download.bat         ← 自前で Chrome を起動 + 手動ログイン待機 + export
 ```
 
-session_keeper なしでも動く。dl_batch が専用プロファイルで Chrome を起動し、
+session_keeper なしでも動く。download が専用プロファイルで Chrome を起動し、
 ログインしてから export を開始する。export 完了後に Chrome は自動終了する。
 
 ### ログインの仕組み

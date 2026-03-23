@@ -1,4 +1,4 @@
-"""dl_batch のテスト。"""
+"""download のテスト。"""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from sf_session.config import CHROME_EXE_PATH, CHROME_USER_DATA_DIR
-from sf_session.dl_batch import (
+from sf_session.download import (
     DEFAULT_POLL,
     DEFAULT_TIMEOUT,
     DEFAULT_INTERVAL,
@@ -16,6 +16,7 @@ from sf_session.dl_batch import (
     export_batch,
     export_one,
     log_summary,
+    main,
     parse_args,
     write_success_ids,
 )
@@ -50,7 +51,7 @@ class TestBuildDestination:
         downloaded = tmp_path / "report.csv"
         downloaded.touch()
 
-        with patch("sf_session.dl_batch.datetime") as mock_dt:
+        with patch("sf_session.download.datetime") as mock_dt:
             mock_dt.now.return_value.strftime.return_value = "20260317"
             result = build_destination(job, downloaded, date_suffix=True)
 
@@ -65,7 +66,7 @@ class TestBuildDestination:
         downloaded = tmp_path / "original.xlsx"
         downloaded.touch()
 
-        with patch("sf_session.dl_batch.datetime") as mock_dt:
+        with patch("sf_session.download.datetime") as mock_dt:
             mock_dt.now.return_value.strftime.return_value = "20260317"
             result = build_destination(job, downloaded, date_suffix=True)
 
@@ -118,7 +119,7 @@ class TestBuildDestination:
         downloaded = tmp_path / "report.csv"
         downloaded.touch()
 
-        with patch("sf_session.dl_batch.datetime") as mock_dt:
+        with patch("sf_session.download.datetime") as mock_dt:
             mock_dt.now.return_value.strftime.return_value = "20260318"
             result = build_destination(
                 job, downloaded, date_suffix=True, output_dir=out_dir,
@@ -138,13 +139,13 @@ class TestExportOne:
         job = make_job()
 
         monkeypatch.setattr(
-            "sf_session.dl_batch.snapshot_files", lambda *a, **kw: {}
+            "sf_session.download.snapshot_files", lambda *a, **kw: {}
         )
         monkeypatch.setattr(
-            "sf_session.dl_batch.subprocess.Popen", lambda cmd: None
+            "sf_session.download.subprocess.Popen", lambda cmd: None
         )
         monkeypatch.setattr(
-            "sf_session.dl_batch.wait_for_new_download",
+            "sf_session.download.wait_for_new_download",
             lambda *a, **kw: (_ for _ in ()).throw(
                 TimeoutError("timeout")
             ),
@@ -160,13 +161,13 @@ class TestExportOne:
         downloaded.write_text("data")
 
         monkeypatch.setattr(
-            "sf_session.dl_batch.snapshot_files", lambda *a, **kw: {}
+            "sf_session.download.snapshot_files", lambda *a, **kw: {}
         )
         monkeypatch.setattr(
-            "sf_session.dl_batch.subprocess.Popen", lambda cmd: None
+            "sf_session.download.subprocess.Popen", lambda cmd: None
         )
         monkeypatch.setattr(
-            "sf_session.dl_batch.wait_for_new_download",
+            "sf_session.download.wait_for_new_download",
             lambda *a, **kw: downloaded,
         )
 
@@ -178,10 +179,10 @@ class TestExportOne:
         job = make_job()
 
         monkeypatch.setattr(
-            "sf_session.dl_batch.snapshot_files", lambda *a, **kw: {}
+            "sf_session.download.snapshot_files", lambda *a, **kw: {}
         )
         monkeypatch.setattr(
-            "sf_session.dl_batch.subprocess.Popen",
+            "sf_session.download.subprocess.Popen",
             lambda cmd: (_ for _ in ()).throw(OSError("not found")),
         )
 
@@ -196,14 +197,14 @@ class TestExportOne:
 
         launched_cmds: list[list[str]] = []
         monkeypatch.setattr(
-            "sf_session.dl_batch.snapshot_files", lambda *a, **kw: {}
+            "sf_session.download.snapshot_files", lambda *a, **kw: {}
         )
         monkeypatch.setattr(
-            "sf_session.dl_batch.subprocess.Popen",
+            "sf_session.download.subprocess.Popen",
             lambda cmd: launched_cmds.append(cmd),
         )
         monkeypatch.setattr(
-            "sf_session.dl_batch.wait_for_new_download",
+            "sf_session.download.wait_for_new_download",
             lambda *a, **kw: downloaded,
         )
 
@@ -231,13 +232,13 @@ class TestExportBatch:
         downloaded.write_text("data")
 
         monkeypatch.setattr(
-            "sf_session.dl_batch.snapshot_files", lambda *a, **kw: {}
+            "sf_session.download.snapshot_files", lambda *a, **kw: {}
         )
         monkeypatch.setattr(
-            "sf_session.dl_batch.subprocess.Popen", lambda cmd: None
+            "sf_session.download.subprocess.Popen", lambda cmd: None
         )
         monkeypatch.setattr(
-            "sf_session.dl_batch.wait_for_new_download",
+            "sf_session.download.wait_for_new_download",
             lambda *a, **kw: downloaded,
         )
 
@@ -265,13 +266,13 @@ class TestExportBatch:
         ]
 
         monkeypatch.setattr(
-            "sf_session.dl_batch.snapshot_files", lambda *a, **kw: {}
+            "sf_session.download.snapshot_files", lambda *a, **kw: {}
         )
         monkeypatch.setattr(
-            "sf_session.dl_batch.subprocess.Popen", lambda cmd: None
+            "sf_session.download.subprocess.Popen", lambda cmd: None
         )
         monkeypatch.setattr(
-            "sf_session.dl_batch.wait_for_new_download", mock_wait
+            "sf_session.download.wait_for_new_download", mock_wait
         )
 
         results = export_batch(
@@ -293,13 +294,13 @@ class TestExportBatch:
         job = make_job(no="1", src_folder_name=str(dest_dir))
 
         monkeypatch.setattr(
-            "sf_session.dl_batch.snapshot_files", lambda *a, **kw: {}
+            "sf_session.download.snapshot_files", lambda *a, **kw: {}
         )
         monkeypatch.setattr(
-            "sf_session.dl_batch.subprocess.Popen", lambda cmd: None
+            "sf_session.download.subprocess.Popen", lambda cmd: None
         )
         monkeypatch.setattr(
-            "sf_session.dl_batch.wait_for_new_download",
+            "sf_session.download.wait_for_new_download",
             lambda *a, **kw: downloaded,
         )
 
@@ -323,13 +324,13 @@ class TestExportBatch:
         job = make_job(no="1", report_id="00O999")
 
         monkeypatch.setattr(
-            "sf_session.dl_batch.snapshot_files", lambda *a, **kw: {}
+            "sf_session.download.snapshot_files", lambda *a, **kw: {}
         )
         monkeypatch.setattr(
-            "sf_session.dl_batch.subprocess.Popen", lambda cmd: None
+            "sf_session.download.subprocess.Popen", lambda cmd: None
         )
         monkeypatch.setattr(
-            "sf_session.dl_batch.wait_for_new_download",
+            "sf_session.download.wait_for_new_download",
             lambda *a, **kw: downloaded,
         )
 
@@ -352,13 +353,13 @@ class TestExportBatch:
         )
 
         monkeypatch.setattr(
-            "sf_session.dl_batch.snapshot_files", lambda *a, **kw: {}
+            "sf_session.download.snapshot_files", lambda *a, **kw: {}
         )
         monkeypatch.setattr(
-            "sf_session.dl_batch.subprocess.Popen", lambda cmd: None
+            "sf_session.download.subprocess.Popen", lambda cmd: None
         )
         monkeypatch.setattr(
-            "sf_session.dl_batch.wait_for_new_download",
+            "sf_session.download.wait_for_new_download",
             lambda *a, **kw: downloaded,
         )
 
@@ -458,14 +459,14 @@ class TestParseArgs:
 
 class TestWriteSuccessIds:
     def test_writes_success_ids(self, tmp_path, monkeypatch):
-        monkeypatch.setattr("sf_session.dl_batch.OUTPUT_RESULTS_DIR", tmp_path)
+        monkeypatch.setattr("sf_session.download.OUTPUT_RESULTS_DIR", tmp_path)
         results = [
             ExportResult(seq=1, report_id="00O001", success=True, elapsed=1.0),
             ExportResult(seq=2, report_id="00O002", success=False, elapsed=2.0),
             ExportResult(seq=3, report_id="00O003", success=True, elapsed=1.5),
         ]
 
-        with patch("sf_session.dl_batch.datetime") as mock_dt:
+        with patch("sf_session.download.datetime") as mock_dt:
             mock_dt.now.return_value.strftime.return_value = "20260321"
             path = write_success_ids(results)
 
@@ -474,7 +475,7 @@ class TestWriteSuccessIds:
         assert lines == ["00O001", "00O003"]
 
     def test_no_success_returns_none(self, tmp_path, monkeypatch):
-        monkeypatch.setattr("sf_session.dl_batch.OUTPUT_RESULTS_DIR", tmp_path)
+        monkeypatch.setattr("sf_session.download.OUTPUT_RESULTS_DIR", tmp_path)
         results = [
             ExportResult(seq=1, report_id="00O001", success=False, elapsed=1.0),
         ]
@@ -482,15 +483,161 @@ class TestWriteSuccessIds:
 
     def test_creates_dir_if_missing(self, tmp_path, monkeypatch):
         out_dir = tmp_path / "outputs_result"
-        monkeypatch.setattr("sf_session.dl_batch.OUTPUT_RESULTS_DIR", out_dir)
+        monkeypatch.setattr("sf_session.download.OUTPUT_RESULTS_DIR", out_dir)
         results = [
             ExportResult(seq=1, report_id="00O001", success=True, elapsed=1.0),
         ]
 
-        with patch("sf_session.dl_batch.datetime") as mock_dt:
+        with patch("sf_session.download.datetime") as mock_dt:
             mock_dt.now.return_value.strftime.return_value = "20260321"
             path = write_success_ids(results)
 
         assert out_dir.is_dir()
         assert path is not None
         assert path.exists()
+
+
+# ── helper: main() の外部依存を全て stub する fixture ──────────
+
+def _stub_main_externals(monkeypatch, tmp_path, *, jobs=None):
+    """main() を軽量に実行するための monkeypatch 群。
+
+    Returns (staging_dir, download_dir) の tuple。
+    """
+    staging_dir = tmp_path / "outputs_csv"
+    download_dir = tmp_path / "downloads"
+    download_dir.mkdir()
+    chrome_path = tmp_path / "chrome"
+    chrome_path.touch()
+
+    if jobs is None:
+        jobs = [make_job(no="1", report_id="00O001")]
+
+    downloaded = download_dir / "report.csv"
+    downloaded.write_text("data")
+
+    monkeypatch.setattr("sf_session.download.CSV_STAGING_DIR", staging_dir)
+    monkeypatch.setattr("sf_session.download.CHROME_EXE_PATH", str(chrome_path))
+    monkeypatch.setattr("sf_session.download.OUTPUT_RESULTS_DIR", tmp_path / "results")
+    monkeypatch.setattr(
+        "sf_session.download.load_active_jobs", lambda *a, **kw: jobs,
+    )
+    monkeypatch.setattr(
+        "sf_session.download.resolve_download_dir", lambda x: download_dir,
+    )
+    monkeypatch.setattr("sf_session.download.ensure_exists", lambda *a: None)
+    monkeypatch.setattr(
+        "sf_session.download.snapshot_files", lambda *a, **kw: {},
+    )
+    monkeypatch.setattr(
+        "sf_session.download.subprocess.Popen", lambda cmd: None,
+    )
+    monkeypatch.setattr(
+        "sf_session.download.wait_for_new_download",
+        lambda *a, **kw: downloaded,
+    )
+    monkeypatch.setattr(
+        "sf_session.download.try_connect_driver", lambda **kw: None,
+    )
+
+    return staging_dir, download_dir
+
+
+class TestWorkDirSwap:
+    """work_dir → CSV_STAGING_DIR への atomic swap テスト。"""
+
+    def test_swap_creates_staging_dir(self, tmp_path, monkeypatch):
+        """正常終了時、work_dir が CSV_STAGING_DIR に rename される。"""
+        staging_dir, _ = _stub_main_externals(monkeypatch, tmp_path)
+
+        rc = main(["--no-login-check"])
+
+        assert rc == 0
+        assert staging_dir.is_dir()
+        # work_dir は swap 後に消えている
+        work_dir = staging_dir.with_name(staging_dir.name + "_work")
+        assert not work_dir.exists()
+
+    def test_swap_creates_prev_backup(self, tmp_path, monkeypatch):
+        """既存 staging_dir がある場合、_prev に退避される。"""
+        staging_dir, _ = _stub_main_externals(monkeypatch, tmp_path)
+
+        # 前回分を staging_dir に準備
+        staging_dir.mkdir(parents=True)
+        prev_file = staging_dir / "old_report.csv"
+        prev_file.write_text("old data")
+
+        rc = main(["--no-login-check"])
+
+        assert rc == 0
+        prev_dir = staging_dir.with_name(staging_dir.name + "_prev")
+        assert prev_dir.is_dir()
+        assert (prev_dir / "old_report.csv").read_text() == "old data"
+        # 新しい staging_dir には今回のファイルがある
+        assert staging_dir.is_dir()
+
+    def test_prev_overwritten_each_run(self, tmp_path, monkeypatch):
+        """_prev は1世代のみ。2回実行すると古い _prev は消える。"""
+        staging_dir, _ = _stub_main_externals(monkeypatch, tmp_path)
+        prev_dir = staging_dir.with_name(staging_dir.name + "_prev")
+
+        # 古い _prev
+        prev_dir.mkdir(parents=True)
+        (prev_dir / "ancient.csv").write_text("ancient")
+
+        # 前回分
+        staging_dir.mkdir(parents=True)
+        (staging_dir / "old_report.csv").write_text("old")
+
+        rc = main(["--no-login-check"])
+
+        assert rc == 0
+        # _prev には前回分が入っている（ancient ではない）
+        assert (prev_dir / "old_report.csv").exists()
+        assert not (prev_dir / "ancient.csv").exists()
+
+    def test_exception_keeps_current_intact(self, tmp_path, monkeypatch):
+        """export 中に exception が発生しても、現行 staging_dir は残る。"""
+        staging_dir, _ = _stub_main_externals(monkeypatch, tmp_path)
+
+        # 前回分を staging_dir に準備
+        staging_dir.mkdir(parents=True)
+        (staging_dir / "precious.csv").write_text("do not lose")
+
+        # export_batch を exception で終了させる
+        monkeypatch.setattr(
+            "sf_session.download.export_batch",
+            lambda *a, **kw: (_ for _ in ()).throw(RuntimeError("boom")),
+        )
+
+        try:
+            main(["--no-login-check"])
+        except RuntimeError:
+            pass
+
+        # current はそのまま残っている
+        assert (staging_dir / "precious.csv").read_text() == "do not lose"
+        # work_dir は cleanup されている
+        work_dir = staging_dir.with_name(staging_dir.name + "_work")
+        assert not work_dir.exists()
+
+    def test_direct_deliver_skips_swap(self, tmp_path, monkeypatch):
+        """--direct-deliver 時は work_dir / swap を使わない。"""
+        staging_dir, _ = _stub_main_externals(monkeypatch, tmp_path)
+
+        rc = main(["--no-login-check", "--direct-deliver"])
+
+        assert rc == 0
+        # staging_dir も work_dir も作成されない
+        work_dir = staging_dir.with_name(staging_dir.name + "_work")
+        assert not work_dir.exists()
+
+    def test_marker_written_to_final_staging_dir(self, tmp_path, monkeypatch):
+        """完了マーカーは work_dir に書かれてから swap で CSV_STAGING_DIR に入る。"""
+        staging_dir, _ = _stub_main_externals(monkeypatch, tmp_path)
+
+        rc = main(["--no-login-check"])
+
+        assert rc == 0
+        markers = [f for f in staging_dir.iterdir() if f.name.startswith("★完了")]
+        assert len(markers) == 1

@@ -1,6 +1,6 @@
 """内部モジュール: ログイン済み Chrome で SF レポートを1件 export し、ダウンロードを検知する。
 
-dl_batch.py から利用される。直接実行は想定していない。
+download.py から利用される。直接実行は想定していない。
 """
 
 from __future__ import annotations

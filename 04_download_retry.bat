@@ -2,10 +2,10 @@
 cd /d "%~dp0"
 
 if not exist ".venv\Scripts\python.exe" (
-    echo [ERROR] ‰‰ñİ’è‚ª•K—v‚Å‚·Bsetup ƒoƒbƒ`‚ğÀs‚µ‚Ä‚­‚¾‚³‚¢B
+    echo [ERROR] ï¿½ï¿½ï¿½ï¿½İ’è‚ªï¿½Kï¿½vï¿½Å‚ï¿½ï¿½Bsetup ï¿½oï¿½bï¿½`ï¿½ï¿½ï¿½ï¿½ï¿½sï¿½ï¿½ï¿½Ä‚ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½B
     pause
     exit /b 1
 )
 
-.venv\Scripts\python.exe -m sf_session.dl_batch --retry %*
+.venv\Scripts\python.exe -m sf_session.download --retry %*
 pause

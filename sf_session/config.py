@@ -11,13 +11,16 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 MACRO_DIR = PROJECT_ROOT / "マクロ格納フォルダ"
 
 # 出力フォルダ
-def _load_csv_staging_dir() -> Path:
+_CSV_STAGING_SUBDIR = "outputs_csv"
+
+def _load_csv_staging_root() -> Path:
     import os
     from dotenv import load_dotenv
     load_dotenv()
-    return Path(os.environ["CSV_STAGING_DIR"])
+    return Path(os.environ["CSV_STAGING_ROOT"])
 
-CSV_STAGING_DIR = _load_csv_staging_dir()
+CSV_STAGING_ROOT = _load_csv_staging_root()
+CSV_STAGING_DIR = CSV_STAGING_ROOT / _CSV_STAGING_SUBDIR
 OUTPUT_RESULTS_DIR = PROJECT_ROOT / "outputs_result"
 OUTPUT_LOG_DIR = PROJECT_ROOT / "outputs_log"
 OUTPUT_ERRORS_DIR = OUTPUT_LOG_DIR / "errors"

@@ -4,9 +4,9 @@
 Downloads フォルダを監視して新規ファイルを移動先にリネーム・コピーする。
 
 Usage:
-    python -m sf_session.dl_batch --dry-run
-    python -m sf_session.dl_batch --ids-file
-    python -m sf_session.dl_batch --retry
+    python -m sf_session.download --dry-run
+    python -m sf_session.download --ids-file
+    python -m sf_session.download --retry
 """
 
 from __future__ import annotations
@@ -48,7 +48,7 @@ from .login_helper import (
 )
 from .macro_book_reader import JobEntry, load_active_jobs
 from .utils import setup_logging
-from ._dl_single import (
+from ._download_single import (
     DOWNLOAD_EXTS,
     build_chrome_command,
     build_export_url,
@@ -301,7 +301,7 @@ def log_summary(results: list[ExportResult]) -> None:
     ng = sum(1 for r in results if not r.success)
 
     logger.info("*" * 50)
-    logger.info("sf_dl_batch complete >>")
+    logger.info("download complete >>")
     logger.info("成功 %d 件 / 失敗 %d 件 / 合計 %d 件", ok, ng, len(results))
     logger.info("-" * 50)
 
@@ -482,17 +482,15 @@ def main(argv: list[str] | None = None) -> int:
         if user_data_dir is not None:
             ensure_exists(user_data_dir, "Chrome user data dir")
 
+    work_dir: Path | None = None
     if args.direct_deliver:
         output_dir = None
     else:
-        output_dir = CSV_STAGING_DIR
-        output_dir.mkdir(parents=True, exist_ok=True)
-        # 既存ファイルを全削除（サブフォルダは残す）
-        removed = [f for f in output_dir.iterdir() if f.is_file()]
-        for f in removed:
-            f.unlink()
-        if removed:
-            logger.info("既存 %d 件を削除: %s", len(removed), output_dir)
+        work_dir = CSV_STAGING_DIR.with_name(CSV_STAGING_DIR.name + "_work")
+        if work_dir.is_dir():
+            shutil.rmtree(work_dir)
+        work_dir.mkdir(parents=True, exist_ok=True)
+        output_dir = work_dir
 
     logger.info("Chrome      : %s", chrome_path)
     logger.info("Downloads   : %s", download_dir)
@@ -503,7 +501,7 @@ def main(argv: list[str] | None = None) -> int:
     logger.info("Timeout     : %ds", args.timeout)
     logger.info("date-suffix : %s", args.date_suffix)
     if output_dir:
-        logger.info("Output dir  : %s", output_dir)
+        logger.info("Output dir  : %s", CSV_STAGING_DIR)
     else:
         logger.info("Output mode : direct-deliver (per-job)")
 
@@ -568,9 +566,22 @@ def main(argv: list[str] | None = None) -> int:
             marker.touch()
             logger.info("完了マーカー: %s", marker.name)
 
+        # work_dir → CSV_STAGING_DIR に atomic swap（前回分は _prev に退避）
+        if work_dir is not None:
+            prev_dir = CSV_STAGING_DIR.with_name(CSV_STAGING_DIR.name + "_prev")
+            if prev_dir.is_dir():
+                shutil.rmtree(prev_dir)
+            if CSV_STAGING_DIR.is_dir():
+                CSV_STAGING_DIR.rename(prev_dir)
+            work_dir.rename(CSV_STAGING_DIR)
+            logger.info("swap 完了: %s → %s", work_dir.name, CSV_STAGING_DIR.name)
+
         failed = sum(1 for r in results if not r.success)
         return 1 if failed else 0
     finally:
+        # exception 時: work_dir を cleanup、current はそのまま残る
+        if work_dir is not None and work_dir.is_dir():
+            shutil.rmtree(work_dir, ignore_errors=True)
         if chrome_proc and chrome_proc.poll() is None:
             logger.info("Chrome プロセス終了 (PID=%d)", chrome_proc.pid)
             chrome_proc.terminate()
