@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 # ── 定数 ──────────────────────────────────────────────────
 MFA_TIMEOUT = 600  # seconds (10分)
 MAX_LOGIN_RETRIES = 2  # 初回 + 1回 retry
+OFF_SF_PATIENCE = 30  # SF ドメイン外での最大待機 (秒)
 
 
 # ── 例外 ──────────────────────────────────────────────────
@@ -29,6 +30,11 @@ class LoginExhaustedError(RuntimeError):
     """ログイン retry 回数を使い切った。"""
 
 # ── ページ判定 ────────────────────────────────────────────
+
+
+def _is_sf_domain(url: str) -> bool:
+    """URL が SF 関連ドメインか判定。"""
+    return "force.com" in url or "salesforce.com" in url
 
 
 def is_login_page(driver: WebDriver) -> bool:
@@ -58,7 +64,7 @@ def is_logged_in(driver: WebDriver) -> bool:
     return (
         not is_login_page(driver)
         and not is_mfa_page(driver)
-        and "salesforce.com" in url
+        and _is_sf_domain(url)
     )
 
 
@@ -95,16 +101,33 @@ def wait_until_logged_in(
     """MFA 完了まで待機。timeout 超過 or login page 戻りで MfaTimeoutError。"""
     logger.info("MFA / ログイン完了を待機中... (timeout=%ds)", timeout)
     elapsed = 0.0
+    elapsed_off_sf = 0.0
     try:
         while not is_logged_in(driver):
             time.sleep(poll)
             elapsed += poll
 
+            # 1回だけ取得して全判定に使い回す (Selenium RPC 削減)
+            url = driver.current_url.lower()
+            on_login = is_login_page(driver)
+            on_mfa = is_mfa_page(driver)
+
             # SF が session expire → login page に戻されるケースを検出
-            if is_login_page(driver):
+            if on_login:
                 raise MfaTimeoutError(
                     f"MFA 待機中に login page へ戻された ({elapsed:.0f}s経過)"
                 )
+
+            # SF ドメイン外に長時間いる → 認証キャンセルやエラー
+            if _is_sf_domain(url) or on_mfa:
+                elapsed_off_sf = 0.0
+            else:
+                elapsed_off_sf += poll
+                if elapsed_off_sf >= OFF_SF_PATIENCE:
+                    raise MfaTimeoutError(
+                        f"SF ドメインへの遷移なし ({elapsed_off_sf:.0f}s): "
+                        f"{driver.current_url}"
+                    )
 
             if elapsed >= timeout:
                 raise MfaTimeoutError(

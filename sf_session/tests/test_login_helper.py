@@ -67,6 +67,19 @@ class TestWaitUntilLoggedIn:
             # 例外なく完了すれば OK
             wait_until_logged_in(driver, poll=1.0, timeout=60)
 
+    def test_off_sf_domain_raises_mfa_timeout_error(self):
+        """SF ドメイン外に長時間いると MfaTimeoutError (認証キャンセル検出)。"""
+        driver = _make_driver(current_url="https://sso.example.com/error")
+
+        with (
+            patch(f"{MODULE}.is_logged_in", return_value=False),
+            patch(f"{MODULE}.is_login_page", return_value=False),
+            patch(f"{MODULE}.is_mfa_page", return_value=False),
+            patch(f"{MODULE}.time.sleep"),
+            pytest.raises(MfaTimeoutError, match="SF ドメインへの遷移なし"),
+        ):
+            wait_until_logged_in(driver, poll=1.0, timeout=600)
+
     def test_keyboard_interrupt_propagates(self):
         """Ctrl+C は KeyboardInterrupt としてそのまま propagate。"""
         driver = _make_driver()

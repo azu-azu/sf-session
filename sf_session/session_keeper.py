@@ -106,7 +106,9 @@ def main(argv: list[str] | None = None) -> int:
         driver = connect_driver(port=args.port)
 
         # 初回遷移 + ページ読み込み待ち
-        driver.get(args.url)
+        # 自前起動の場合は既に args.url に遷移済み → reload しない
+        if args.no_launch:
+            driver.get(args.url)
         wait_page_load(driver)
 
         # 自動ログイン（MFA は手動待ち）
