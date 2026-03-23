@@ -42,6 +42,7 @@ API ではなく、ブラウザの export URL (`?export=1`) を使う VBA マク
 
 | スクリプト | 役割 |
 |---|---|
+| `00_setup.bat` | venv 作成 + pip upgrade + 依存パッケージ install（初回のみ実行） |
 | `sf_session/session_keeper.py` | Chrome 起動 → 手動ログイン待機（SSO / MFA）→ 定期 reload でセッション維持 |
 | `sf_session/dl_batch.py` | pre-flight login check 付きバッチ export。セッション切れ時は手動ログイン待機で復帰 |
 | `sf_session/browser.py` | Chrome 起動・WebDriver 接続の共通モジュール |
@@ -58,11 +59,8 @@ API ではなく、ブラウザの export URL (`?export=1`) を使う VBA マク
 ## セットアップ
 
 ```powershell
-# venv 作成 & 依存 install
-py -m venv .venv
-.\.venv\Scripts\Activate.ps1
-py -m pip install --upgrade pip
-py -m pip install -r sf_session/requirements.txt
+# 初回のみ実行（venv 作成 + 依存 install）
+00_setup.bat
 ```
 
 依存: `selenium`, `openpyxl`, `simple-salesforce`, `python-dotenv`
@@ -70,6 +68,7 @@ py -m pip install -r sf_session/requirements.txt
 ## 使い方
 
 bat ファイルをダブルクリック、または PowerShell からオプション付きで実行。
+初回は `00_setup.bat` を先に実行すること。
 
 ### 起動パターン
 
