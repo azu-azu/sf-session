@@ -59,17 +59,36 @@ class TestWaitUntilLoggedIn:
         ):
             wait_until_logged_in(driver, poll=1.0, timeout=3)
 
-    def test_login_page_detected_raises_login_page_returned_error(self):
-        """poll 中に login page に戻されたら LoginPageReturnedError。"""
+    def test_login_page_returned_after_leaving(self):
+        """login page を離れてから戻されたら LoginPageReturnedError。"""
+        driver = _make_driver()
+        call_count = {"n": 0}
+
+        def is_login_side_effect(_driver):
+            call_count["n"] += 1
+            # 1回目: login page ではない (SSO 等) → seen_non_login = True
+            # 2回目: login page に戻された → error
+            return call_count["n"] >= 2
+
+        with (
+            patch(f"{MODULE}.is_logged_in", return_value=False),
+            patch(f"{MODULE}.is_login_page", side_effect=is_login_side_effect),
+            patch(f"{MODULE}.time.sleep"),
+            pytest.raises(LoginPageReturnedError, match="login page"),
+        ):
+            wait_until_logged_in(driver, poll=1.0, timeout=60)
+
+    def test_initial_login_page_waits_without_error(self):
+        """初回表示が login page なら error にせず timeout まで待機する。"""
         driver = _make_driver()
 
         with (
             patch(f"{MODULE}.is_logged_in", return_value=False),
             patch(f"{MODULE}.is_login_page", return_value=True),
             patch(f"{MODULE}.time.sleep"),
-            pytest.raises(LoginPageReturnedError, match="login page"),
+            pytest.raises(MfaTimeoutError),
         ):
-            wait_until_logged_in(driver, poll=1.0, timeout=60)
+            wait_until_logged_in(driver, poll=1.0, timeout=3)
 
     def test_success_returns_normally(self):
         """is_logged_in が True を返せば正常終了。"""

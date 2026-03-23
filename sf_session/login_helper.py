@@ -98,6 +98,7 @@ def wait_until_logged_in(
     logger.info("MFA / ログイン完了を待機中... (timeout=%ds)", timeout)
     elapsed = 0.0
     elapsed_off_sf = 0.0
+    seen_non_login = False
     try:
         while not is_logged_in(driver):
             time.sleep(poll)
@@ -108,8 +109,13 @@ def wait_until_logged_in(
             on_login = is_login_page(driver)
             on_mfa = is_mfa_page(driver)
 
+            if not on_login:
+                seen_non_login = True
+
             # SF が session expire → login page に戻されるケースを検出
-            if on_login:
+            # 初回ログイン時は login page にいるのが正常なので、
+            # 一度でも login page を離れた後に戻ってきた場合のみ error
+            if on_login and seen_non_login:
                 raise LoginPageReturnedError(
                     f"login page へ戻された ({elapsed:.0f}s経過)"
                 )
