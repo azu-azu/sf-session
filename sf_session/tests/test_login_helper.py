@@ -7,7 +7,9 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from sf_session.login_helper import (
+    AuthFlowLeftError,
     LoginExhaustedError,
+    LoginPageReturnedError,
     MfaTimeoutError,
     ensure_logged_in,
     is_sso_page,
@@ -57,15 +59,15 @@ class TestWaitUntilLoggedIn:
         ):
             wait_until_logged_in(driver, poll=1.0, timeout=3)
 
-    def test_login_page_detected_raises_mfa_timeout_error(self):
-        """poll 中に login page に戻されたら MfaTimeoutError。"""
+    def test_login_page_detected_raises_login_page_returned_error(self):
+        """poll 中に login page に戻されたら LoginPageReturnedError。"""
         driver = _make_driver()
 
         with (
             patch(f"{MODULE}.is_logged_in", return_value=False),
             patch(f"{MODULE}.is_login_page", return_value=True),
             patch(f"{MODULE}.time.sleep"),
-            pytest.raises(MfaTimeoutError, match="login page"),
+            pytest.raises(LoginPageReturnedError, match="login page"),
         ):
             wait_until_logged_in(driver, poll=1.0, timeout=60)
 
@@ -85,8 +87,8 @@ class TestWaitUntilLoggedIn:
             # 例外なく完了すれば OK
             wait_until_logged_in(driver, poll=1.0, timeout=60)
 
-    def test_off_sf_domain_raises_mfa_timeout_error(self):
-        """SF ドメイン外に長時間いると MfaTimeoutError (認証キャンセル検出)。"""
+    def test_off_sf_domain_raises_auth_flow_left_error(self):
+        """SF ドメイン外に長時間いると AuthFlowLeftError (認証キャンセル検出)。"""
         driver = _make_driver(current_url="https://other.example.com/error")
 
         with (
@@ -94,7 +96,7 @@ class TestWaitUntilLoggedIn:
             patch(f"{MODULE}.is_login_page", return_value=False),
             patch(f"{MODULE}.is_mfa_page", return_value=False),
             patch(f"{MODULE}.time.sleep"),
-            pytest.raises(MfaTimeoutError, match="SF ドメインへの遷移なし"),
+            pytest.raises(AuthFlowLeftError, match="認証フロー外に遷移"),
         ):
             wait_until_logged_in(driver, poll=1.0, timeout=600)
 
@@ -189,3 +191,40 @@ class TestEnsureLoggedIn:
             pytest.raises(LoginExhaustedError, match="retry 回数上限"),
         ):
             ensure_logged_in(driver, max_retries=2)
+
+    def test_auth_flow_left_no_retry(self):
+        """AuthFlowLeftError は retry せず即 LoginExhaustedError。"""
+        driver = _make_driver()
+        call_count = {"n": 0}
+
+        def mock_wait(*args, **kwargs):
+            call_count["n"] += 1
+            raise AuthFlowLeftError("認証フロー外に遷移")
+
+        with (
+            patch(f"{MODULE}.is_logged_in", return_value=False),
+            patch(f"{MODULE}.wait_until_logged_in", side_effect=mock_wait),
+            pytest.raises(LoginExhaustedError, match="認証フロー外に遷移"),
+        ):
+            ensure_logged_in(driver, max_retries=3)
+
+        # retry せず1回で打ち切り
+        assert call_count["n"] == 1
+
+    def test_login_page_returned_no_retry(self):
+        """LoginPageReturnedError は retry せず即 LoginExhaustedError。"""
+        driver = _make_driver()
+        call_count = {"n": 0}
+
+        def mock_wait(*args, **kwargs):
+            call_count["n"] += 1
+            raise LoginPageReturnedError("login page へ戻された")
+
+        with (
+            patch(f"{MODULE}.is_logged_in", return_value=False),
+            patch(f"{MODULE}.wait_until_logged_in", side_effect=mock_wait),
+            pytest.raises(LoginExhaustedError, match="login page へ戻された"),
+        ):
+            ensure_logged_in(driver, max_retries=3)
+
+        assert call_count["n"] == 1

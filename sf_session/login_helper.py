@@ -21,7 +21,15 @@ OFF_SF_PATIENCE = 30  # SF ドメイン外での最大待機 (秒)
 
 
 class MfaTimeoutError(TimeoutError):
-    """MFA 待機がタイムアウト。"""
+    """MFA 待機が timeout。retry 対象。"""
+
+
+class AuthFlowLeftError(TimeoutError):
+    """認証フロー外に遷移（SSO キャンセル等）。retry しても無駄。"""
+
+
+class LoginPageReturnedError(TimeoutError):
+    """Login page に戻された（session expire 等）。retry しても無駄。"""
 
 
 class LoginExhaustedError(RuntimeError):
@@ -80,7 +88,13 @@ def wait_until_logged_in(
     *,
     timeout: float = MFA_TIMEOUT,
 ) -> None:
-    """MFA 完了まで待機。timeout 超過 or login page 戻りで MfaTimeoutError。"""
+    """ログイン完了まで待機。
+
+    Raises:
+        MfaTimeoutError: timeout 超過（retry 対象）
+        LoginPageReturnedError: login page に戻された（回復不能）
+        AuthFlowLeftError: 認証フロー外に遷移（回復不能）
+    """
     logger.info("MFA / ログイン完了を待機中... (timeout=%ds)", timeout)
     elapsed = 0.0
     elapsed_off_sf = 0.0
@@ -96,8 +110,8 @@ def wait_until_logged_in(
 
             # SF が session expire → login page に戻されるケースを検出
             if on_login:
-                raise MfaTimeoutError(
-                    f"MFA 待機中に login page へ戻された ({elapsed:.0f}s経過)"
+                raise LoginPageReturnedError(
+                    f"login page へ戻された ({elapsed:.0f}s経過)"
                 )
 
             # SF ドメイン外に長時間いる → 認証キャンセルやエラー
@@ -107,8 +121,8 @@ def wait_until_logged_in(
             else:
                 elapsed_off_sf += poll
                 if elapsed_off_sf >= OFF_SF_PATIENCE:
-                    raise MfaTimeoutError(
-                        f"SF ドメインへの遷移なし ({elapsed_off_sf:.0f}s): "
+                    raise AuthFlowLeftError(
+                        f"認証フロー外に遷移 ({elapsed_off_sf:.0f}s): "
                         f"{driver.current_url}"
                     )
 
@@ -133,7 +147,8 @@ def ensure_logged_in(
 
     SSO or ログインページ検出時は手動ログインを促し wait_until_logged_in() で待機。
     MFA timeout 時は max_retries 回までリトライ。
-    全 retry 消費で LoginExhaustedError を raise。
+    認証フロー離脱・login page 戻りは回復不能として即失敗。
+    全 retry 消費 or 回復不能エラーで LoginExhaustedError を raise。
 
     Returns:
         True: ログイン処理を実行した
@@ -154,14 +169,18 @@ def ensure_logged_in(
             logger.info("ログイン完了: %s", driver.current_url)
             return True
 
-        except MfaTimeoutError:
+        except (AuthFlowLeftError, LoginPageReturnedError) as e:
+            logger.warning("回復不能: %s", e)
+            raise LoginExhaustedError(str(e)) from e
+
+        except MfaTimeoutError as e:
             logger.warning(
-                "MFA timeout (attempt %d/%d)", attempt, max_retries,
+                "auth failed: %s (attempt %d/%d)", e, attempt, max_retries,
             )
             if attempt >= max_retries:
                 raise LoginExhaustedError(
                     f"ログイン retry 回数上限 ({max_retries}) に到達"
-                )
+                ) from e
             continue
 
     # ここには到達しないが型チェッカー対策

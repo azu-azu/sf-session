@@ -535,7 +535,7 @@ def main(argv: list[str] | None = None) -> int:
                 wait_page_load(driver)
                 ensure_logged_in(driver)
                 logger.info("pre-flight login check 完了")
-            # TimeoutError は MfaTimeoutError (subclass) も含む
+            # TimeoutError は MfaTimeoutError / AuthFlowLeftError 等の base
             except (WebDriverException, TimeoutError, LoginExhaustedError) as e:
                 logger.warning("pre-flight login check 失敗: %s — export を続行", e)
                 driver = None
