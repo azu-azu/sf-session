@@ -2,7 +2,7 @@
 cd /d "%~dp0"
 
 if not exist ".venv\Scripts\python.exe" (
-    echo [ERROR] 初回設定が必要です。setup バッチを実行してください。
+    echo [ERROR] Run setup.bat first.
     pause
     exit /b 1
 )
