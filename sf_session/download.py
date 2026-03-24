@@ -29,6 +29,7 @@ from .config import (
     CHROME_EXE_PATH,
     CHROME_USER_DATA_DIR,
     CSV_STAGING_DIR,
+    CSV_STAGING_ROOT,
     DEFAULT_IDS_FILE,
     MACRO_DIR,
     OUTPUT_RESULTS_DIR,
@@ -430,6 +431,12 @@ def main(argv: list[str] | None = None) -> int:
 
     args = parse_args(argv)
 
+    # --- CSV_STAGING_ROOT の存在確認 ---
+    if not args.direct_deliver:
+        if not CSV_STAGING_ROOT.is_dir():
+            logger.error("CSV_STAGING_ROOT が存在しません: %s", CSV_STAGING_ROOT)
+            return 1
+
     # --- setup ---
     try:
         active_jobs = load_active_jobs(
@@ -508,6 +515,7 @@ def main(argv: list[str] | None = None) -> int:
     # --- pre-flight login check ---
     driver = None
     chrome_proc = None
+    self_launched = False
 
     if not args.no_login_check:
         from selenium.common.exceptions import WebDriverException
@@ -516,20 +524,25 @@ def main(argv: list[str] | None = None) -> int:
 
         # 既存 Chrome に接続できなければ自前で起動
         if driver is None and user_data_dir is not None:
+            chrome_proc = launch_chrome(
+                exe=str(chrome_path), port=args.port,
+                user_data_dir=str(user_data_dir),
+                url=SF_HOME_URL,
+            )
+            self_launched = True
+            time.sleep(CHROME_STARTUP_WAIT)
             try:
-                chrome_proc = launch_chrome(
-                    exe=str(chrome_path), port=args.port,
-                    user_data_dir=str(user_data_dir),
-                )
-                time.sleep(CHROME_STARTUP_WAIT)
                 driver = connect_driver(port=args.port)
-            except (OSError, WebDriverException, ImportError) as e:
-                logger.warning("Chrome 起動/接続失敗: %s — login check skip", e)
-                driver = None
+            except Exception:
+                if chrome_proc.poll() is None:
+                    chrome_proc.terminate()
+                    chrome_proc.wait(timeout=5)
+                raise
 
         if driver is not None:
             try:
-                driver.get(SF_HOME_URL)
+                if not self_launched:
+                    driver.get(SF_HOME_URL)
                 wait_page_load(driver)
                 ensure_logged_in(driver)
                 logger.info("pre-flight login check 完了")
