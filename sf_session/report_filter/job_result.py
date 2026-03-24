@@ -17,14 +17,12 @@ class JobResult:
     finished_at: str | None = None
     duration_seconds: float | None = None
     column_count: int | None = None
-    row_count: int | None = None
     discovery_columns: list[str] = field(default_factory=list)
     error: str | None = None
 
     def finish(
         self,
         *,
-        row_count: int | None = None,
         column_count: int | None = None,
         discovery_columns: list[str] | None = None,
         error: str | None = None,
@@ -38,8 +36,6 @@ class JobResult:
             )
         if column_count is not None:
             self.column_count = column_count
-        if row_count is not None:
-            self.row_count = row_count
         if discovery_columns is not None:
             self.discovery_columns = discovery_columns
         if error is not None:

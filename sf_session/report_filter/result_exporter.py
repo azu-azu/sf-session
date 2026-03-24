@@ -32,12 +32,11 @@ _COLUMNS: list[tuple[str, int]] = [
     ("duration", 10),
     ("status", 10),
     ("列数", 10),
-    ("行数", 10),
     ("備考", 80),
 ]
 
 
-def _format_duration(seconds: float | None) -> str:
+def format_duration(seconds: float | None) -> str:
     if seconds is None:
         return "-"
     m, s = divmod(int(seconds), 60)
@@ -45,8 +44,6 @@ def _format_duration(seconds: float | None) -> str:
 
 
 def _status_label(status: str) -> str:
-    if status == "success":
-        return "成功"
     if status == "failed":
         return "失敗"
     if status == "probed":
@@ -58,14 +55,13 @@ def _build_data_row(result: JobResult, idx: int) -> list[object]:
     """JobResult 1件分のデータ行を構築する。"""
     report_id = result.report_id or result.job_id
     report_url = result.report_url or "-"
-    duration = _format_duration(result.duration_seconds)
+    duration = format_duration(result.duration_seconds)
     status = _status_label(result.status)
 
     column_count = result.column_count
     if column_count is None and result.discovery_columns:
         column_count = len(result.discovery_columns)
 
-    rows = result.row_count if result.row_count is not None else "-"
     error = result.error or "-"
 
     return [
@@ -76,7 +72,6 @@ def _build_data_row(result: JobResult, idx: int) -> list[object]:
         duration,
         status,
         column_count if column_count is not None else "-",
-        rows,
         error,
     ]
 
@@ -125,13 +120,13 @@ def write_result_excel(
     ws.title = "probe_result"
 
     # 1行目: 実行日時 + 件数サマリ
-    success_count = sum(1 for s in results if s.status in ("success", "probed"))
+    success_count = sum(1 for s in results if s.status == "probed")
     failed_count = sum(1 for s in results if s.status == "failed")
     summary_parts = [f"成功 {success_count}件", f"失敗 {failed_count}件"]
     elapsed_secs = sum(
         s.duration_seconds for s in results if s.duration_seconds is not None
     )
-    elapsed = _format_duration(elapsed_secs) if elapsed_secs else None
+    elapsed = format_duration(elapsed_secs) if elapsed_secs else None
     elapsed_part = f"（elapsed: {elapsed}）" if elapsed else ""
     ws.append(
         [f"実行開始日時: {ts_display}{elapsed_part}　{'／'.join(summary_parts)}"]

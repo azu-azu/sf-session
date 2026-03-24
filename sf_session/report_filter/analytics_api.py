@@ -41,13 +41,6 @@ def get_report_describe(
     return result
 
 
-def fetch_report_run(sf: Salesforce, report_id: str) -> Any:
-    """analytics/reports/{id} を GET してレポート実行結果の JSON を返す。"""
-    return call_with_retry(
-        sf.restful, f"analytics/reports/{report_id}", method="GET"
-    )
-
-
 def parse_detail_meta(description: dict) -> tuple[list, dict]:
     """describe / run レスポンスから (detail_columns, col_info) を取り出す。
 
