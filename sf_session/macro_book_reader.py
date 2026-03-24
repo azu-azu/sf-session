@@ -201,11 +201,11 @@ def _log_jobs(entries: list[JobEntry]) -> None:
     )
     lines = [header, "-" * len(header)]
 
-    for e in entries:
+    for i, e in enumerate(entries, start=1):
         id_str = e.report_id or "(なし)"
         fn_flag = "True" if e.has_filename else "False"
         lines.append(
-            f"{e.no:<6} {id_str:<20} {fn_flag:<10} "
+            f"{i:<6} {id_str:<20} {fn_flag:<10} "
             f"{e.new_filename:<30} {e.src_folder_name:<30} "
             f"{e.encode:<10} {e.skip:<6}"
         )
