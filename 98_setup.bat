@@ -1,6 +1,17 @@
 @echo off
 cd /d "%~dp0"
 
+if not exist ".env" (
+    if exist "env.txt" (
+        ren "env.txt" ".env"
+        echo Renamed env.txt to .env
+    ) else (
+        echo [ERROR] .env file is required. Create .env or env.txt in %~dp0
+        pause
+        exit /b 1
+    )
+)
+
 if not exist ".venv\Scripts\python.exe" (
     echo Creating venv...
     py -m venv .venv
