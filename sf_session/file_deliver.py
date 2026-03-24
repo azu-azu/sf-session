@@ -5,10 +5,11 @@
 リネーム指定がある場合はリネームも行う。
 
 Usage:
-    python sf-session/file_deliver.py --source-dir outputs_csv
-    python sf-session/file_deliver.py --source-dir outputs_csv --dry-run
-    python sf-session/file_deliver.py --source-dir outputs_csv --date-suffix
-    python sf-session/file_deliver.py --source-dir outputs_csv --ids-file
+    python sf-session/file_deliver.py
+    python sf-session/file_deliver.py --dry-run
+    python sf-session/file_deliver.py --date-suffix
+    python sf-session/file_deliver.py --ids-file
+    python sf-session/file_deliver.py --source-dir /other/path
 """
 
 from __future__ import annotations
@@ -21,7 +22,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
-from .config import DEFAULT_IDS_FILE, MACRO_DIR
+from .config import CSV_STAGING_DIR, DEFAULT_IDS_FILE, MACRO_DIR
 from .macro_book_reader import JobEntry, load_active_jobs
 from .utils import setup_logging
 
@@ -70,6 +71,7 @@ def build_destination(
 
     リネーム指定 (has_filename) があれば new_filename を使い、
     なければファイル名はそのまま維持する。
+    日付 suffix はリネーム指定時は常に付与、それ以外は date_suffix で制御。
     """
     dest_dir = Path(job.src_folder_name)
     ext = source.suffix
@@ -79,7 +81,7 @@ def build_destination(
     else:
         stem = source.stem
 
-    if date_suffix:
+    if job.has_filename or date_suffix:
         today = datetime.now().strftime("%Y%m%d")
         stem = f"{stem}_{today}"
 
@@ -171,8 +173,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--source-dir",
         type=Path,
-        required=True,
-        help="振り分け元フォルダ (reportID_* ファイルがある場所)",
+        default=CSV_STAGING_DIR,
+        help=f"振り分け元フォルダ (default: {CSV_STAGING_DIR})",
     )
     parser.add_argument(
         "--macro-dir",
