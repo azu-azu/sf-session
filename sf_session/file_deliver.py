@@ -241,6 +241,13 @@ def main(argv: list[str] | None = None) -> int:
 
     log_summary(results)
 
+    # 完了マーカー
+    now = datetime.now()
+    time_label = f"{now.month}月{now.day}日{now.hour}時{now.minute}分"
+    marker = source_dir / f"★{time_label}_振り分け完了.txt"
+    marker.touch()
+    logger.info("完了マーカー: %s", marker.name)
+
     failed = sum(1 for r in results if not r.success)
     return 1 if failed else 0
 

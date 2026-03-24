@@ -252,7 +252,7 @@ class TestWorkDirSwap:
         rc = main(["--no-login-check", "--force"])
 
         assert rc == 0
-        markers = [f for f in staging_dir.iterdir() if f.name.startswith("★完了")]
+        markers = [f for f in staging_dir.iterdir() if "dl完了" in f.name]
         assert len(markers) == 1
 
 

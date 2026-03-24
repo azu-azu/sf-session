@@ -145,7 +145,9 @@ def prepare_work_dir(staging_dir: Path) -> Path:
 
 def write_marker(output_dir: Path, ok: int, ng: int) -> Path:
     """完了マーカーファイルを作成して返す。"""
-    marker = output_dir / f"★完了_成功{ok}件_失敗{ng}件.txt"
+    now = datetime.now()
+    time_label = f"{now.month}月{now.day}日{now.hour}時{now.minute}分"
+    marker = output_dir / f"★{time_label}_dl完了_成功{ok}件_失敗{ng}件.txt"
     marker.touch()
     logger.info("完了マーカー: %s", marker.name)
     return marker
