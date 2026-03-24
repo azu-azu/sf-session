@@ -46,7 +46,7 @@ def convert_dir(src: Path) -> Path:
 
     for csv_path in csv_files:
         text = _read_bytes_as_text(csv_path)
-        out_path = dest / csv_path.name
+        out_path = dest / f"{csv_path.stem}_utf{csv_path.suffix}"
         out_path.write_text(text, encoding="utf-8-sig")
 
     logger.info("変換完了: %d files → '%s'", len(csv_files), dest)
