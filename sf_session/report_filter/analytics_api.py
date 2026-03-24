@@ -1,23 +1,20 @@
-"""Salesforce Analytics Reports API の薄いラッパー"""
+"""Salesforce Analytics Reports API wrapper with retry."""
 
 from __future__ import annotations
 
-import logging
 from typing import TYPE_CHECKING, Any
 
-from requests.exceptions import ConnectionError as RequestsConnectionError
-from requests.exceptions import Timeout as RequestsTimeout
-from simple_salesforce.exceptions import SalesforceError
+from .retry import call_with_retry
 
 if TYPE_CHECKING:
     from simple_salesforce import Salesforce
 
-logger = logging.getLogger(__name__)
-
 
 def fetch_report_describe(sf: Salesforce, report_id: str) -> Any:
     """analytics/reports/{id}/describe を GET して JSON を返す。"""
-    return sf.restful(f"analytics/reports/{report_id}/describe", method="GET")
+    return call_with_retry(
+        sf.restful, f"analytics/reports/{report_id}/describe", method="GET"
+    )
 
 
 def get_report_describe(
@@ -44,33 +41,26 @@ def get_report_describe(
     return result
 
 
-def get_object_describe_fields(
-    sf: Salesforce,
-    object_name: str,
-    cache: dict[str, list[dict]] | None = None,
-) -> list[dict]:
-    """Object describe の fields[] をキャッシュ付きで返す。
-
-    失敗時は空リストを返すが、キャッシュしない（一時エラーの固定化を防ぐ）。
-    """
-    if cache is not None and object_name in cache:
-        return cache[object_name]
-    try:
-        described = getattr(sf, object_name).describe()
-    except (SalesforceError, AttributeError, RequestsTimeout, RequestsConnectionError) as exc:
-        logger.debug("object describe failed for %s: %s", object_name, exc)
-        return []
-    if not isinstance(described, dict):
-        return []
-    fields = described.get("fields")
-    if not isinstance(fields, list):
-        return []
-    result = [f for f in fields if isinstance(f, dict)]
-    if cache is not None:
-        cache[object_name] = result
-    return result
-
-
 def fetch_report_run(sf: Salesforce, report_id: str) -> Any:
     """analytics/reports/{id} を GET してレポート実行結果の JSON を返す。"""
-    return sf.restful(f"analytics/reports/{report_id}", method="GET")
+    return call_with_retry(
+        sf.restful, f"analytics/reports/{report_id}", method="GET"
+    )
+
+
+def parse_detail_meta(description: dict) -> tuple[list, dict]:
+    """describe / run レスポンスから (detail_columns, col_info) を取り出す。
+
+    reportMetadata.detailColumns と reportExtendedMetadata.detailColumnInfo を抽出する。
+    どちらのキーも欠損していた場合は空リスト / 空 dict を返す。
+    """
+    report_metadata = description.get("reportMetadata", {}) or {}
+    report_extended = description.get("reportExtendedMetadata", {}) or {}
+    detail_columns: list = report_metadata.get("detailColumns") or []
+    col_info: dict = report_extended.get("detailColumnInfo", {}) or {}
+    return detail_columns, col_info
+
+
+def get_column_label(col_info: dict, col_key: str) -> str:
+    """col_info[col_key]['label'] を返す。エントリが無ければ col_key をそのまま返す。"""
+    return col_info.get(col_key, {}).get("label", col_key)
