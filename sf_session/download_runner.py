@@ -1,6 +1,10 @@
 """download のレポート export 実行エンジン。
 
 ExportResult dataclass と、export_one / export_batch を提供する。
+
+Note: export は Selenium driver 経由ではなく subprocess.Popen で Chrome CLI を叩く方式。
+同一 user_data_dir の Chrome は IPC で既存インスタンスに URL を転送するため、
+pre-flight で確立したログイン済み session 上で export が実行される。
 """
 
 from __future__ import annotations
@@ -62,7 +66,15 @@ def _run_export(
     user_data_dir: Path | None,
     profile_directory: str | None,
 ) -> ExportResult:
-    """1レポートの Chrome 起動 → ダウンロード待機。login recovery なしの内部実装。"""
+    """1レポートの export URL を Chrome で開き、ダウンロード完了を待機する。
+
+    Selenium driver ではなく subprocess.Popen で Chrome コマンドを実行する。
+    同一 user_data_dir を指定すると Chrome は新プロセスを起動せず、
+    既存インスタンスに IPC で URL を転送して新しいタブで開く。
+    これにより pre-flight で確立したログイン済み session 上で export が実行される。
+
+    login recovery は呼び出し元 export_one() が担当する。
+    """
     report_id = job.report_id or ""
     t0 = time.time()
 
