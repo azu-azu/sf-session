@@ -11,20 +11,18 @@ import time
 
 from selenium.common.exceptions import WebDriverException
 
-from .browser import (
-    REMOTE_DEBUGGING_PORT,
-    launch_chrome,
-    connect_driver,
-    wait_page_load,
-)
+from .browser import REMOTE_DEBUGGING_PORT
 from .config import CHROME_EXE_PATH, CHROME_USER_DATA_DIR, SF_HOME_URL
-from .login_helper import ensure_logged_in
+from .sf_browser_session import (
+    BrowserSession,
+    close_browser_session,
+    prepare_salesforce_session,
+)
 
 logger = logging.getLogger(__name__)
 
 # ── defaults ──────────────────────────────────────────────
 KEEP_ALIVE_INTERVAL = 480  # session 維持のための reload 間隔 (秒)
-CHROME_STARTUP_WAIT = 5  # Chrome 起動後、Selenium 接続までの待機時間 (秒)
 
 
 def format_elapsed(seconds: float) -> str:
@@ -91,50 +89,32 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parse_args(argv)
 
-    chrome_proc = None
-    driver = None
+    session: BrowserSession | None = None
     try:
-        # Chrome 起動
-        if not args.no_launch:
-            chrome_proc = launch_chrome(
-                exe=args.chrome_exe, port=args.port,
-                user_data_dir=args.user_data_dir, url=args.url,
-            )
-            time.sleep(CHROME_STARTUP_WAIT)
-
-        # Selenium 接続
-        driver = connect_driver(port=args.port)
-
-        # 初回遷移 + ページ読み込み待ち
-        # 自前起動の場合は既に args.url に遷移済み → reload しない
-        if args.no_launch:
-            driver.get(args.url)
-        wait_page_load(driver)
-
-        # ログイン待機（SSO 手動ログイン + MFA 手動待ち）
-        ensure_logged_in(driver)
-
-        logger.info("初回遷移: %s", driver.current_url)
-
-        # keep-alive ループ
-        keep_alive(driver, args.url, args.interval)
+        session = prepare_salesforce_session(
+            port=args.port,
+            chrome_exe=args.chrome_exe,
+            user_data_dir=args.user_data_dir if not args.no_launch else None,
+            url=args.url,
+            try_existing=args.no_launch,
+        )
+        logger.info("初回遷移: %s", session.driver.current_url)
+        keep_alive(session.driver, args.url, args.interval)
 
     except KeyboardInterrupt:
         logger.info("Ctrl-C で停止")
     except FileNotFoundError:
         logger.error("Chrome が見つからない: %s", args.chrome_exe)
         return 1
+    except RuntimeError as e:
+        logger.error("セッション準備失敗: %s", e)
+        return 1
     except WebDriverException as e:
         logger.error("WebDriver エラー: %s", e)
         return 1
     finally:
-        if driver:
-            logger.info("WebDriver 終了")
-            driver.quit()
-        if chrome_proc and chrome_proc.poll() is None:
-            logger.info("Chrome プロセス終了")
-            chrome_proc.terminate()
-            chrome_proc.wait(timeout=5)
+        if session:
+            close_browser_session(session)
 
     return 0
 

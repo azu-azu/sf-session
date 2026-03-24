@@ -1,3 +1,4 @@
+jpholiday
 openpyxl
 python-dotenv
 selenium
