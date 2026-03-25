@@ -274,29 +274,7 @@ def main(argv: list[str] | None = None) -> int:
 
     user_data_dir = _resolve_user_data_dir(args)
 
-    # --- CSV_STAGING_ROOT probe ---
-    if not args.direct_deliver:
-        if not CSV_STAGING_ROOT.is_dir():
-            logger.error("CSV_STAGING_ROOT が存在しません: %s", CSV_STAGING_ROOT)
-            return 1
-        probe_output_dir(CSV_STAGING_ROOT)
-
-    work_dir: Path | None = None
-    if args.direct_deliver:
-        output_dir = None
-    else:
-        work_dir = prepare_work_dir(CSV_STAGING_DIR)
-        output_dir = work_dir
-
-    _log_run_config(chrome_path, download_dir, user_data_dir, args, output_dir)
-
-    # --- フォルダを開く ---
-    if args.open_download_dir:
-        open_folder(download_dir)
-    if args.open_output_dir:
-        open_folder(output_dir if output_dir else CSV_STAGING_ROOT)
-
-    # --- pre-flight login check ---
+    # --- pre-flight login check (network I/O より先に Chrome を起動) ---
     session: BrowserSession | None = None
 
     if not args.no_login_check:
@@ -316,7 +294,29 @@ def main(argv: list[str] | None = None) -> int:
     driver = session.driver if session else None
 
     # --- execute ---
+    work_dir: Path | None = None
     try:
+        # --- CSV_STAGING_ROOT probe (network drive の場合ここで遅延) ---
+        if not args.direct_deliver:
+            if not CSV_STAGING_ROOT.is_dir():
+                logger.error("CSV_STAGING_ROOT が存在しません: %s", CSV_STAGING_ROOT)
+                return 1
+            probe_output_dir(CSV_STAGING_ROOT)
+
+        if args.direct_deliver:
+            output_dir = None
+        else:
+            work_dir = prepare_work_dir(CSV_STAGING_DIR)
+            output_dir = work_dir
+
+        _log_run_config(chrome_path, download_dir, user_data_dir, args, output_dir)
+
+        # --- フォルダを開く ---
+        if args.open_download_dir:
+            open_folder(download_dir)
+        if args.open_output_dir:
+            open_folder(output_dir if output_dir else CSV_STAGING_ROOT)
+
         results = export_batch(
             chrome_path,
             active_jobs,
