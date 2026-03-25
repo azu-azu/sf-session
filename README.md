@@ -50,7 +50,6 @@ API ではなく、ブラウザの export URL (`?export=1`) を使う VBA マク
 | `sf_session/file_deliver.py` | `reportID_*` ファイルをマクロ定義の移動先フォルダへコピー・リネーム |
 | `sf_session/file_collect.py` | 各フォルダから CSV を収集して `CSV_STAGING_DIR` に集約 (file_deliver の逆) |
 | `sf_session/jis_to_utf8.py` | `CSV_STAGING_DIR` 内の CSV を UTF-8 BOM に変換 → `*_utf/` |
-| `sf_session/macro_to_xlsx.py` | xlsm → `download_jobs.xlsx` 変換。SF API で report_name を取得して列追加 |
 | `sf_session/macro_book_reader.py` | ジョブ定義 (`JobEntry`) の読み取り。xlsm から直接読み取り |
 | `sf_session/config.py` | 共通パス定数 + `read_ids_file()` + `create_sf_client()` |
 | `sf_session/clean.py` | `__pycache__` / `.pyc` / `.log` 等のクリーンアップ |
@@ -218,8 +217,6 @@ export 中にセッションが切れた場合は、タブを traverse してロ
 | AG | skip フラグ (値があればスキップ) |
 
 データは 101 行目から開始。No と URL が両方空になった行で終端。
-
-`macro_to_xlsx.py` で xlsm → `download_jobs.xlsx` を生成することもできる（確認用）。
 
 ## レポートメタデータ抽出 (optional)
 
