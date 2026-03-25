@@ -116,19 +116,21 @@ def probe_output_dir(path: Path) -> None:
 
 
 def open_folder(path: Path) -> None:
-    """フォルダを OS のファイルマネージャで開く。"""
-    path = Path(path).expanduser().resolve()
-    if not path.is_dir():
-        logger.warning("open_folder: ディレクトリが存在しません: %s", path)
-        return
+    """フォルダを OS のファイルマネージャで開く。
 
-    if os.name == "nt":
-        os.startfile(str(path))  # type: ignore[attr-defined]
-    elif sys.platform == "darwin":
-        subprocess.Popen(["open", str(path)])
-    else:
-        subprocess.Popen(["xdg-open", str(path)])
-    logger.info("フォルダを開きました: %s", path)
+    network path (UNC / mapped drive) では Path.is_dir() や resolve() が
+    不安定なため、チェックせず OS に直接委譲する。
+    """
+    try:
+        if os.name == "nt":
+            os.startfile(str(path))  # type: ignore[attr-defined]
+        elif sys.platform == "darwin":
+            subprocess.Popen(["open", str(path)])
+        else:
+            subprocess.Popen(["xdg-open", str(path)])
+        logger.info("フォルダを開きました: %s", path)
+    except OSError as e:
+        logger.warning("open_folder 失敗: %s (%s)", path, e)
 
 
 # ── work_dir 管理 ────────────────────────────────────────
@@ -147,7 +149,7 @@ def write_marker(output_dir: Path, ok: int, ng: int) -> Path:
     """完了マーカーファイルを作成して返す。"""
     now = datetime.now()
     time_label = f"{now.month}月{now.day}日{now.hour}時{now.minute}分"
-    marker = output_dir / f"★{time_label}_dl完了_成功{ok}件_失敗{ng}件.txt"
+    marker = output_dir / f"★{time_label}_成功{ok}件_失敗{ng}件.txt"
     marker.touch()
     logger.info("完了マーカー: %s", marker.name)
     return marker
