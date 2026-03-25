@@ -119,18 +119,13 @@ def write_result_excel(
     ws = wb.active
     ws.title = "probe_result"
 
-    # 1行目: 実行日時 + 件数サマリ
-    success_count = sum(1 for s in results if s.status == "probed")
-    failed_count = sum(1 for s in results if s.status == "failed")
-    summary_parts = [f"成功 {success_count}件", f"失敗 {failed_count}件"]
+    # 1行目: 実行日時
     elapsed_secs = sum(
         s.duration_seconds for s in results if s.duration_seconds is not None
     )
     elapsed = format_duration(elapsed_secs) if elapsed_secs else None
     elapsed_part = f"（elapsed: {elapsed}）" if elapsed else ""
-    ws.append(
-        [f"実行開始日時: {ts_display}{elapsed_part}　{'／'.join(summary_parts)}"]
-    )
+    ws.append([f"実行開始日時: {ts_display}{elapsed_part}"])
 
     # 2行目: ヘッダ
     headers = [h for h, _ in _COLUMNS]
@@ -152,6 +147,39 @@ def write_result_excel(
     data_end_row = ws.max_row
     _style_sheet(ws, data_end_row, len(_COLUMNS))
 
+    # 列名シート
+    _write_columns_sheet(wb, results)
+
     output_path.parent.mkdir(parents=True, exist_ok=True)
     wb.save(output_path)
     return output_path.resolve()
+
+
+def _write_columns_sheet(wb: Workbook, results: list[JobResult]) -> None:
+    """列名一覧シートを追加する。1レポート1列、横方向に並べる。"""
+    probed = [r for r in results if r.discovery_columns]
+    if not probed:
+        return
+
+    ws = wb.create_sheet(title="columns")
+
+    # Row 1: レポート名（ヘッダ）
+    for col_idx, r in enumerate(probed, start=1):
+        cell = ws.cell(row=1, column=col_idx, value=r.report_name or r.report_id)
+        cell.fill = _HEADER_FILL
+        cell.font = _HEADER_FONT
+
+    # Row 2+: 列名を縦に並べる
+    for col_idx, r in enumerate(probed, start=1):
+        for row_idx, col_name in enumerate(r.discovery_columns, start=2):
+            ws.cell(row=row_idx, column=col_idx, value=col_name)
+
+    # 列幅を自動調整
+    for col_idx, r in enumerate(probed, start=1):
+        max_len = max(
+            len(str(r.report_name or r.report_id)),
+            *(len(c) for c in r.discovery_columns),
+        )
+        ws.column_dimensions[get_column_letter(col_idx)].width = max_len + 2
+
+    ws.freeze_panes = "A2"
