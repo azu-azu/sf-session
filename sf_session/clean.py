@@ -56,10 +56,15 @@ def clean_directory(
     skip_dir_names = {".venv", "venv", "env"}
     skip_file_names = {".env"}
 
+    # 常に削除するファイル名（カテゴリ不問）
+    always_remove_files = {".DS_Store"}
+
     # 削除対象
     target_dir_names = set()
     if clean_pycache:
-        target_dir_names.add("__pycache__")
+        target_dir_names.update({
+            "__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache",
+        })
     if clean_ide_configs:
         target_dir_names.update({".vscode", ".idea"})
 
@@ -90,7 +95,9 @@ def clean_directory(
 
             file_path = root_path / file_name
 
-            if file_path.suffix in target_file_suffixes:
+            if file_name in always_remove_files:
+                remove_file(file_path, dry_run=dry_run)
+            elif file_path.suffix in target_file_suffixes:
                 remove_file(file_path, dry_run=dry_run)
 
     logger.info("--- Clean-up complete. ---")
