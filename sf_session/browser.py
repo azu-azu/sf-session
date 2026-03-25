@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import socket
 import subprocess
 from typing import TYPE_CHECKING
 
@@ -51,8 +52,26 @@ def connect_driver(port: int = REMOTE_DEBUGGING_PORT) -> WebDriver:
     return driver
 
 
+def is_port_open(port: int, timeout: float = 1.0) -> bool:
+    """port が listen 中か socket で高速チェック。"""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.settimeout(timeout)
+        try:
+            s.connect(("127.0.0.1", port))
+            return True
+        except (ConnectionRefusedError, socket.timeout, OSError):
+            return False
+
+
 def try_connect_driver(port: int = REMOTE_DEBUGGING_PORT) -> WebDriver | None:
-    """接続を試み、失敗したら None を返す。"""
+    """接続を試み、失敗したら None を返す。
+
+    先に socket で port が open か確認し、閉じていれば即 None を返す。
+    Selenium の TCP timeout (~60秒) を回避するための fast path。
+    """
+    if not is_port_open(port):
+        logger.debug("port %d は閉じている — 接続 skip", port)
+        return None
     _, _, WebDriverException, _ = _import_selenium()
     try:
         return connect_driver(port)

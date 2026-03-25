@@ -109,11 +109,17 @@ def prepare_salesforce_session(
 
 
 def close_browser_session(session: BrowserSession) -> None:
-    """driver.quit() + chrome_proc terminate。"""
+    """driver.quit() + chrome_proc terminate。
+
+    シャットダウン時に呼ばれるため、全例外 (KeyboardInterrupt 含む) を
+    握りつぶして確実に最後まで cleanup を試みる。
+    """
     try:
-        logger.info("WebDriver 終了")
         session.driver.quit()
-    except Exception as e:
+    except BaseException as e:
         logger.debug("driver.quit() failed: %s", e)
 
-    _terminate_proc(session.chrome_proc)
+    try:
+        _terminate_proc(session.chrome_proc)
+    except BaseException as e:
+        logger.debug("_terminate_proc failed: %s", e)

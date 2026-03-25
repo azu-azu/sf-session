@@ -341,6 +341,9 @@ def main(argv: list[str] | None = None) -> int:
             swap_work_to_staging(work_dir, CSV_STAGING_DIR, ok)
 
         return 1 if ok < len(results) else 0
+    except KeyboardInterrupt:
+        logger.info("Ctrl-C で中断")
+        return 130
     finally:
         # exception 時: work_dir を cleanup、current はそのまま残る
         if work_dir is not None and work_dir.is_dir():
