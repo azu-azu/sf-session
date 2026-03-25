@@ -44,10 +44,14 @@ API ではなく、ブラウザの export URL (`?export=1`) を使う VBA マク
 |---|---|
 | `setup.bat` | venv 作成 + pip upgrade + 依存パッケージ install（初回のみ実行） |
 | `sf_session/session_keeper.py` | Chrome 起動 → 手動ログイン待機（SSO / MFA）→ 定期 reload でセッション維持 |
-| `sf_session/download.py` | pre-flight login check 付きバッチ export。セッション切れ時は手動ログイン待機で復帰 |
+| `sf_session/download.py` | 営業日ガード + pre-flight login check 付きバッチ export orchestration |
+| `sf_session/sf_browser_session.py` | Chrome + Selenium session の prepare / close 共通層 (session_keeper / download 共用) |
+| `sf_session/download_runner.py` | レポート export 実行エンジン (`export_one` / `export_batch`) |
+| `sf_session/download_outputs.py` | ファイル移動先パス組み立て、summary ログ、work_dir swap、完了マーカー |
+| `sf_session/business_day.py` | 営業日判定 (土日 + `jpholiday` 祝日) |
 | `sf_session/browser.py` | Chrome 起動・WebDriver 接続の共通モジュール |
 | `sf_session/login_helper.py` | ログイン/SSO ページ検出・手動ログイン待機・MFA 完了待ち |
-| `sf_session/file_deliver.py` | `reportID_*` ファイルをマクロ定義の移動先フォルダへコピー・リネーム |
+| `sf_session/file_deliver.py` | `reportID_*` ファイルをマクロ定義の移動先フォルダへコピー・リネーム + 完了マーカー出力 |
 | `sf_session/file_collect.py` | 各フォルダから CSV を収集して `CSV_STAGING_DIR` に集約 (file_deliver の逆) |
 | `sf_session/jis_to_utf8.py` | `CSV_STAGING_DIR` 内の CSV を UTF-8 BOM に変換 → `*_utf/` |
 | `sf_session/macro_book_reader.py` | ジョブ定義 (`JobEntry`) の読み取り。xlsm から直接読み取り |
@@ -62,7 +66,7 @@ API ではなく、ブラウザの export URL (`?export=1`) を使う VBA マク
 setup.bat
 ```
 
-依存: `selenium`, `openpyxl`, `simple-salesforce`, `python-dotenv`
+依存: `selenium`, `openpyxl`, `simple-salesforce`, `python-dotenv`, `jpholiday`
 
 ## 使い方
 
@@ -155,6 +159,7 @@ download_ids.bat
 download_all.bat --date-suffix
 ```
 
+営業日（平日 + 祝日除外）のみ実行。`--force` で営業日チェックを bypass できる。
 起動時に pre-flight login check を行い、ログインが必要なら手動ログインを待機する。
 export 中にセッションが切れた場合は、タブを traverse してログイン/SSO ページを検出し、
 手動ログイン待機 → 1 回だけリトライする（無限ループ防止）。
@@ -162,15 +167,19 @@ export 中にセッションが切れた場合は、タブを traverse してロ
 主なオプション:
 
 ```
---my-chrome       OS デフォルト Chrome を使用（login check skip、手動ログイン前提）
---no-login-check  pre-flight login check を skip
---port            リモートデバッグポート (default: 9222)
---direct-deliver  各ジョブの src_folder_name へ直接振り分け (default: outputs_csv/ に集約)
---ids-file        ids.txt の report ID との intersection でフィルタ
---date-suffix     ファイル名に _YYYYMMDD を付与
---interval        レポート間 wait 秒 (default: 2.0)
---timeout         per-report タイムアウト秒 (default: 600)
---dry-run         実行せずジョブ一覧を表示
+--force             営業日チェックを skip して強制実行
+--my-chrome         OS デフォルト Chrome を使用（login check skip、手動ログイン前提）
+--no-login-check    pre-flight login check を skip
+--port              リモートデバッグポート (default: 9222)
+--direct-deliver    各ジョブの src_folder_name へ直接振り分け (default: outputs_csv/ に集約)
+--ids-file          ids.txt の report ID との intersection でフィルタ
+--retry             前回の success_ids を読み、失敗分だけ再実行
+--date-suffix       ファイル名に _YYYYMMDD を付与
+--interval          レポート間 wait 秒 (default: 2.0)
+--timeout           per-report タイムアウト秒 (default: 600)
+--open-download-dir Download フォルダを Explorer/Finder で開く
+--open-output-dir   出力先フォルダを Explorer/Finder で開く
+--dry-run           実行せずジョブ一覧を表示
 ```
 
 ### 3. ファイル振り分け (export 後)
@@ -218,17 +227,16 @@ export 中にセッションが切れた場合は、タブを traverse してロ
 
 データは 101 行目から開始。No と URL が両方空になった行で終端。
 
-## レポートメタデータ抽出 (optional)
+## レポート probe (optional)
 
-API 経由でレポートのフィルタ条件・行数・列数・オブジェクト情報を取得する。データ本体はダウンロードしない。
+API 経由でレポートのメタデータ（名前・列数・列名）を取得する。データ本体はダウンロードしない。
 
 ```powershell
 py -m sf_session.report_filter
 ```
 
 - 前提: `.env` に SF 認証情報、`レポートID/ids.txt` に対象 ID を記載
-- 出力: `outputs_log/report_filters/` (JSON) + `pipelines/{report_id}/report_metadata.json`
-- auto/manual 分類: フィルタが SOQL に自動変換可能かどうかで分類
+- 出力: `outputs_result/probe_result_{ts}.xlsx`（probe_result シート + columns シート）
 
 ## テスト
 
