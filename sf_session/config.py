@@ -8,7 +8,13 @@ from .utils import read_ids_file  # noqa: F401 — re-export
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 # マクロ関連
-MACRO_DIR = PROJECT_ROOT / "マクロ格納フォルダ"
+def _load_macro_dir() -> Path:
+    import os
+    from dotenv import load_dotenv
+    load_dotenv()
+    return Path(os.environ["MACRO_STORE_DIR"])
+
+MACRO_DIR = _load_macro_dir()
 
 # 出力フォルダ
 _CSV_STAGING_SUBDIR = "outputs_csv"
