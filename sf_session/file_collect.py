@@ -9,7 +9,6 @@ Usage:
 from __future__ import annotations
 
 import logging
-import re
 import shutil
 import sys
 from datetime import datetime
@@ -17,16 +16,16 @@ from pathlib import Path
 
 from .config import CSV_STAGING_DIR, OUTPUT_RESULTS_DIR
 from .macro_book_reader import JobEntry, read_jobs
-from .utils import find_latest_success_ids, read_ids_file, setup_logging
+from .utils import (
+    find_latest_success_ids,
+    read_ids_file,
+    setup_logging,
+    strip_trailing_date,
+)
 
 logger = logging.getLogger(__name__)
 
 _COLLECT_FOLDER_TEMPLATE = "#_jis"
-
-
-def _strip_date_suffix(name: str) -> str:
-    """末尾の _YYYYMMDD を除去してベースパターンにする。"""
-    return re.sub(r"_\d{8}$", "", name)
 
 
 def _dump_csv_list(csvs: list[Path]) -> None:
@@ -73,7 +72,7 @@ def _find_csv_by_date(source_folder: Path, today_str: str) -> Path | None:
 
     latest = None
     latest_mtime = None
-    today_date = datetime.now().date()
+    today_date = datetime.strptime(today_str, "%Y%m%d").date()
     for p in csvs:
         mod_time = datetime.fromtimestamp(p.stat().st_mtime)
         if mod_time.date() == today_date:
@@ -98,7 +97,7 @@ def _collect_one_job(
         return False
 
     if job.has_filename:
-        base = _strip_date_suffix(job.new_filename)
+        base = strip_trailing_date(job.new_filename, strict=False)
         target = _find_csv_by_name(source_folder, base, today_str)
         if target is None:
             logger.warning("'%s' を含む CSV が %s に見つかりません (No: %s)。スキップ。", base, source_folder, job.no)

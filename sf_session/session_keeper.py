@@ -18,6 +18,7 @@ from .sf_browser_session import (
     close_browser_session,
     prepare_salesforce_session,
 )
+from .utils import format_duration
 
 logger = logging.getLogger(__name__)
 
@@ -25,17 +26,9 @@ logger = logging.getLogger(__name__)
 KEEP_ALIVE_INTERVAL = 480  # session 維持のための reload 間隔 (秒)
 
 
-def format_elapsed(seconds: float) -> str:
-    """秒数を「x分x秒」形式にフォーマットする。60秒未満は小数1桁で表示。"""
-    if seconds < 60:
-        return f"{seconds:.1f}秒"
-    m, s = divmod(int(seconds), 60)
-    return f"{m}分{s}秒"
-
-
 def keep_alive(driver, url: str, interval: int) -> None:
     """定期リロードでセッションを維持。Ctrl-C で停止。"""
-    logger.info("keep-alive 開始 (interval=%s, url=%s)", format_elapsed(interval), url)
+    logger.info("keep-alive 開始 (interval=%s, url=%s)", format_duration(interval), url)
     while True:
         time.sleep(interval)
         driver.get(url)

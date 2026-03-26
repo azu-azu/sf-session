@@ -7,15 +7,14 @@ Usage:
 from __future__ import annotations
 
 import logging
-import re
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
 from openpyxl import load_workbook
 
-from .config import DEFAULT_IDS_FILE, MACRO_DIR, OUTPUT_RESULTS_DIR, read_ids_file
-from .utils import find_latest_success_ids
+from .config import DEFAULT_IDS_FILE, MACRO_DIR, OUTPUT_RESULTS_DIR
+from .utils import find_latest_success_ids, read_ids_file, strip_trailing_date
 
 logger = logging.getLogger(__name__)
 
@@ -88,23 +87,6 @@ def _find_xlsm(directory: Path) -> Path | None:
     return files[0]
 
 
-_RE_TRAILING_DATE = re.compile(r"_(\d{8})$")
-
-
-def _strip_trailing_date(name: str) -> str:
-    """末尾の _YYYYMMDD を除去する。日付として invalid or 今年でなければ何もしない。"""
-    m = _RE_TRAILING_DATE.search(name)
-    if not m:
-        return name
-    try:
-        dt = datetime.strptime(m.group(1), "%Y%m%d")
-    except ValueError:
-        return name
-    if dt.year != datetime.now().year:
-        return name
-    return name[: m.start()]
-
-
 def read_jobs_from_xlsm(xlsm_path: Path) -> list[JobEntry]:
     """指定した xlsm パスからジョブ定義を読み取る。"""
     wb = load_workbook(xlsm_path, read_only=True, data_only=True)
@@ -126,7 +108,7 @@ def read_jobs_from_xlsm(xlsm_path: Path) -> list[JobEntry]:
             no=str(no) if no is not None else "",
             report_id=_extract_id(url),
             has_filename=has_fn,
-            new_filename=_strip_trailing_date(str(raw_filename).strip()) if has_fn else "",
+            new_filename=strip_trailing_date(str(raw_filename).strip()) if has_fn else "",
             src_folder_name=str(_cell(ws, row, _COL_SRC_FOLDER_NAME) or ""),
             encode=str(_cell(ws, row, _COL_ENCODE) or ""),
             skip=str(_cell(ws, row, _COL_SKIP) or ""),

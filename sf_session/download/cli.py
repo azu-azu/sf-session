@@ -27,7 +27,7 @@ from ..config import (
 )
 from ..browser import REMOTE_DEBUGGING_PORT
 from ..business_day import should_run_download
-from ..macro_book_reader import load_active_jobs
+from ..macro_book_reader import JobEntry, load_active_jobs
 from ..utils import setup_logging
 from .single import (
     build_export_url,
@@ -241,66 +241,38 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 # ── main ─────────────────────────────────────────────────
 
 
-def main(argv: list[str] | None = None) -> int:
-    setup_logging()
+def _prepare_session(
+    args: argparse.Namespace,
+    chrome_path: Path,
+    user_data_dir: Path | None,
+) -> BrowserSession | None:
+    """pre-flight login check。失敗時は None ではなく例外を raise。"""
+    if args.no_login_check:
+        return None
+    session = prepare_salesforce_session(
+        port=args.port,
+        chrome_exe=str(chrome_path),
+        user_data_dir=str(user_data_dir) if user_data_dir else None,
+        url=SF_HOME_URL,
+        try_existing=True,
+    )
+    logger.info("pre-flight login check 完了")
+    return session
 
-    args = parse_args(argv)
 
-    # --- 営業日判定 ---
-    if not args.force:
-        should_run, reason = should_run_download()
-        if not should_run:
-            logger.info("非営業日のため skip (%s)", reason)
-            return 0
-
-    # --- setup ---
-    try:
-        active_jobs = load_active_jobs(
-            args.macro_dir, ids_file=args.ids_file, exclude_success=args.retry,
-        )
-    except FileNotFoundError as e:
-        logger.error("%s", e)
-        return 1
-
-    if not active_jobs:
-        logger.info("実行対象のジョブが 0 件のため終了します")
-        return 0
-
-    if args.dry_run:
-        _print_dry_run(args, active_jobs)
-        return 0
-
-    chrome_path = Path(args.chrome_path).expanduser().resolve()
-    ensure_exists(chrome_path, "Chrome")
-
-    download_dir = resolve_download_dir(args.download_dir)
-    ensure_exists(download_dir, "Download directory")
-
-    user_data_dir = _resolve_user_data_dir(args)
-
-    # --- pre-flight login check (network I/O より先に Chrome を起動) ---
-    session: BrowserSession | None = None
-
-    if not args.no_login_check:
-        try:
-            session = prepare_salesforce_session(
-                port=args.port,
-                chrome_exe=str(chrome_path),
-                user_data_dir=str(user_data_dir) if user_data_dir else None,
-                url=SF_HOME_URL,
-                try_existing=True,
-            )
-            logger.info("pre-flight login check 完了")
-        except Exception:
-            logger.exception("pre-flight login check に失敗したため中断します")
-            return 1
-
+def _execute(
+    args: argparse.Namespace,
+    active_jobs: list[JobEntry],
+    chrome_path: Path,
+    download_dir: Path,
+    user_data_dir: Path | None,
+    session: BrowserSession | None,
+) -> int:
+    """Chrome 起動 → export → summary → swap。"""
     driver = session.driver if session else None
-
-    # --- execute ---
     work_dir: Path | None = None
+
     try:
-        # --- CSV_STAGING_ROOT probe (network drive の場合ここで遅延) ---
         if not args.direct_deliver:
             if not CSV_STAGING_ROOT.is_dir():
                 logger.error("CSV_STAGING_ROOT が存在しません: %s", CSV_STAGING_ROOT)
@@ -315,7 +287,6 @@ def main(argv: list[str] | None = None) -> int:
 
         _log_run_config(chrome_path, download_dir, user_data_dir, args, output_dir)
 
-        # --- フォルダを開く ---
         if args.open_download_dir:
             open_folder(download_dir)
         if args.open_output_dir:
@@ -352,8 +323,56 @@ def main(argv: list[str] | None = None) -> int:
         logger.info("Ctrl-C で中断")
         return 130
     finally:
-        # exception 時: work_dir を cleanup、current はそのまま残る
         if work_dir is not None and work_dir.is_dir():
             shutil.rmtree(work_dir, ignore_errors=True)
         if session:
             close_browser_session(session)
+
+
+def main(argv: list[str] | None = None) -> int:
+    setup_logging()
+
+    args = parse_args(argv)
+
+    # --- 営業日判定 ---
+    if not args.force:
+        should_run, reason = should_run_download()
+        if not should_run:
+            logger.info("非営業日のため skip (%s)", reason)
+            return 0
+
+    # --- setup ---
+    try:
+        active_jobs = load_active_jobs(
+            args.macro_dir, ids_file=args.ids_file, exclude_success=args.retry,
+        )
+    except FileNotFoundError as e:
+        logger.error("%s", e)
+        return 1
+
+    if not active_jobs:
+        logger.info("実行対象のジョブが 0 件のため終了します")
+        return 0
+
+    if args.dry_run:
+        _print_dry_run(args, active_jobs)
+        return 0
+
+    # --- resolve paths ---
+    chrome_path = Path(args.chrome_path).expanduser().resolve()
+    ensure_exists(chrome_path, "Chrome")
+
+    download_dir = resolve_download_dir(args.download_dir)
+    ensure_exists(download_dir, "Download directory")
+
+    user_data_dir = _resolve_user_data_dir(args)
+
+    # --- pre-flight login ---
+    try:
+        session = _prepare_session(args, chrome_path, user_data_dir)
+    except Exception:
+        logger.exception("pre-flight login check に失敗したため中断します")
+        return 1
+
+    # --- execute ---
+    return _execute(args, active_jobs, chrome_path, download_dir, user_data_dir, session)

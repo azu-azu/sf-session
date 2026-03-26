@@ -6,22 +6,24 @@ from datetime import datetime
 from sf_session.file_collect import (
     _find_csv_by_date,
     _find_csv_by_name,
-    _strip_date_suffix,
 )
+from sf_session.utils import strip_trailing_date
 
 
-class TestStripDateSuffix:
+class TestStripDateSuffixNonStrict:
+    """strip_trailing_date(strict=False) — file_collect 用途。"""
+
     def test_strip(self):
-        assert _strip_date_suffix("01_RPT_20260313") == "01_RPT"
+        assert strip_trailing_date("01_RPT_20260313", strict=False) == "01_RPT"
 
     def test_no_date(self):
-        assert _strip_date_suffix("01_RPT") == "01_RPT"
+        assert strip_trailing_date("01_RPT", strict=False) == "01_RPT"
 
     def test_date_in_middle_untouched(self):
-        assert _strip_date_suffix("01_20260313_RPT") == "01_20260313_RPT"
+        assert strip_trailing_date("01_20260313_RPT", strict=False) == "01_20260313_RPT"
 
     def test_empty(self):
-        assert _strip_date_suffix("") == ""
+        assert strip_trailing_date("", strict=False) == ""
 
 
 class TestFindCsvByName:
@@ -87,7 +89,7 @@ class TestFindCsvByName:
         assert result == newer
 
     def test_with_stripped_base_picks_today(self, tmp_path):
-        """呼び出し側が _strip_date_suffix 済みの base を渡すケース。"""
+        """呼び出し側が strip_trailing_date 済みの base を渡すケース。"""
         import os
 
         for i, (name, days_ago) in enumerate([
@@ -100,7 +102,7 @@ class TestFindCsvByName:
             ts = datetime(2026, 3, 19 - days_ago, 9, 0).timestamp()
             os.utime(f, (ts, ts))
 
-        base = _strip_date_suffix("01_RPT_20260313")
+        base = strip_trailing_date("01_RPT_20260313", strict=False)
         result = _find_csv_by_name(tmp_path, base, "20260319")
         assert result == tmp_path / "01_RPT_20260319.csv"
 

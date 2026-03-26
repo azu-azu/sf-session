@@ -15,6 +15,7 @@ from openpyxl.styles import Font, PatternFill
 from openpyxl.utils import get_column_letter
 
 from ..config import OUTPUT_RESULTS_DIR
+from ..utils import format_duration
 from .job_result import JobResult
 
 if TYPE_CHECKING:
@@ -34,13 +35,6 @@ _COLUMNS: list[tuple[str, int]] = [
     ("列数", 10),
     ("備考", 80),
 ]
-
-
-def format_duration(seconds: float | None) -> str:
-    if seconds is None:
-        return "-"
-    m, s = divmod(int(seconds), 60)
-    return f"{m}分{s}秒"
 
 
 def _status_label(status: str) -> str:

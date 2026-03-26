@@ -27,7 +27,3 @@ def should_run_download(today: date | None = None) -> tuple[bool, str]:
     return True, "weekday"
 
 
-def is_business_day(today: date | None = None) -> bool:
-    """today が営業日かどうかを返す。"""
-    ok, _ = should_run_download(today)
-    return ok

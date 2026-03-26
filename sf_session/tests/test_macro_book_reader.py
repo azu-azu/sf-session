@@ -5,33 +5,34 @@ import logging
 from datetime import datetime
 from unittest.mock import patch
 
-from sf_session.macro_book_reader import _strip_trailing_date, load_active_jobs
+from sf_session.macro_book_reader import load_active_jobs
+from sf_session.utils import strip_trailing_date
 from sf_session.tests.helpers import make_job
 
 
 class TestStripTrailingDate:
     def test_strip_current_year(self):
         year = datetime.now().year
-        assert _strip_trailing_date(f"01_RPT_{year}0313") == "01_RPT"
+        assert strip_trailing_date(f"01_RPT_{year}0313") == "01_RPT"
 
     def test_no_date(self):
-        assert _strip_trailing_date("01_RPT") == "01_RPT"
+        assert strip_trailing_date("01_RPT") == "01_RPT"
 
     def test_different_year_kept(self):
-        assert _strip_trailing_date("01_RPT_20250313") == "01_RPT_20250313"
+        assert strip_trailing_date("01_RPT_20250313") == "01_RPT_20250313"
 
     def test_invalid_date_kept(self):
-        assert _strip_trailing_date("01_RPT_20261332") == "01_RPT_20261332"
+        assert strip_trailing_date("01_RPT_20261332") == "01_RPT_20261332"
 
     def test_empty(self):
-        assert _strip_trailing_date("") == ""
+        assert strip_trailing_date("") == ""
 
     def test_year_boundary(self):
         """来年の日付も strip しない。"""
-        with patch("sf_session.macro_book_reader.datetime") as mock_dt:
+        with patch("sf_session.utils.datetime") as mock_dt:
             mock_dt.strptime = __import__("datetime").datetime.strptime
             mock_dt.now.return_value = __import__("datetime").datetime(2026, 1, 1)
-            assert _strip_trailing_date("report_20270101") == "report_20270101"
+            assert strip_trailing_date("report_20270101") == "report_20270101"
 
 
 class TestIdsFileEmpty:

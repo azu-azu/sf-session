@@ -16,13 +16,14 @@ from simple_salesforce import Salesforce
 from simple_salesforce.exceptions import SalesforceRefusedRequest
 
 from ..config import SF_BASE_URL
+from ..utils import format_duration
 from .analytics_api import (
     get_column_label,
     get_report_describe,
     parse_detail_meta,
 )
 from .job_result import JobResult, make_result
-from .result_exporter import format_duration, write_result_excel
+from .result_exporter import write_result_excel
 
 logger = logging.getLogger(__name__)
 
