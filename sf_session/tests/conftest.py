@@ -6,6 +6,7 @@ import os
 _TEST_DEFAULTS = {
     "CSV_STAGING_ROOT": ".",
     "SF_BASE_URL": "https://test.salesforce.com",
+    "MACRO_STORE_DIR": ".",
 }
 
 for key, value in _TEST_DEFAULTS.items():

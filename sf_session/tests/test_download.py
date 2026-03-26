@@ -145,11 +145,10 @@ class TestWorkDirSwap:
         assert rc == 0
         assert staging_dir.is_dir()
         # work_dir は swap 後に消えている
-        work_dir = staging_dir.with_name(staging_dir.name + "_work")
-        assert not work_dir.exists()
+        assert not list(tmp_path.glob(f"{staging_dir.name}_work_*"))
 
     def test_swap_creates_prev_backup(self, tmp_path, monkeypatch):
-        """既存 staging_dir がある場合、_prev に退避される。"""
+        """既存 staging_dir がある場合、_prev_{ts} に退避される。"""
         staging_dir, _ = _stub_main_externals(monkeypatch, tmp_path)
 
         # 前回分を staging_dir に準備
@@ -160,20 +159,20 @@ class TestWorkDirSwap:
         rc = main(["--no-login-check", "--force"])
 
         assert rc == 0
-        prev_dir = staging_dir.with_name(staging_dir.name + "_prev")
-        assert prev_dir.is_dir()
-        assert (prev_dir / "old_report.csv").read_text() == "old data"
+        prevs = list(tmp_path.glob(f"{staging_dir.name}_prev_*"))
+        assert len(prevs) == 1
+        assert (prevs[0] / "old_report.csv").read_text() == "old data"
         # 新しい staging_dir には今回のファイルがある
         assert staging_dir.is_dir()
 
-    def test_prev_overwritten_each_run(self, tmp_path, monkeypatch):
-        """_prev は1世代のみ。2回実行すると古い _prev は消える。"""
+    def test_prev_limited_to_two_generations(self, tmp_path, monkeypatch):
+        """古い _prev_* は swap 前に削除され、2世代 (current + prev) に制限される。"""
         staging_dir, _ = _stub_main_externals(monkeypatch, tmp_path)
-        prev_dir = staging_dir.with_name(staging_dir.name + "_prev")
 
-        # 古い _prev
-        prev_dir.mkdir(parents=True)
-        (prev_dir / "ancient.csv").write_text("ancient")
+        # 古い _prev_*
+        old_prev = tmp_path / f"{staging_dir.name}_prev_20260101_000000"
+        old_prev.mkdir(parents=True)
+        (old_prev / "ancient.csv").write_text("ancient")
 
         # 前回分
         staging_dir.mkdir(parents=True)
@@ -182,9 +181,11 @@ class TestWorkDirSwap:
         rc = main(["--no-login-check", "--force"])
 
         assert rc == 0
-        # _prev には前回分が入っている（ancient ではない）
-        assert (prev_dir / "old_report.csv").exists()
-        assert not (prev_dir / "ancient.csv").exists()
+        prevs = list(tmp_path.glob(f"{staging_dir.name}_prev_*"))
+        # 古い prev は消え、今回の prev だけ残る
+        assert len(prevs) == 1
+        assert (prevs[0] / "old_report.csv").exists()
+        assert not (prevs[0] / "ancient.csv").exists()
 
     def test_exception_keeps_current_intact(self, tmp_path, monkeypatch):
         """export 中に exception が発生しても、現行 staging_dir は残る。"""
@@ -208,8 +209,7 @@ class TestWorkDirSwap:
         # current はそのまま残っている
         assert (staging_dir / "precious.csv").read_text() == "do not lose"
         # work_dir は cleanup されている
-        work_dir = staging_dir.with_name(staging_dir.name + "_work")
-        assert not work_dir.exists()
+        assert not list(tmp_path.glob(f"{staging_dir.name}_work_*"))
 
     def test_direct_deliver_skips_swap(self, tmp_path, monkeypatch):
         """--direct-deliver 時は work_dir / swap を使わない。"""
@@ -219,8 +219,7 @@ class TestWorkDirSwap:
 
         assert rc == 0
         # staging_dir も work_dir も作成されない
-        work_dir = staging_dir.with_name(staging_dir.name + "_work")
-        assert not work_dir.exists()
+        assert not list(tmp_path.glob(f"{staging_dir.name}_work_*"))
 
     def test_zero_success_no_swap(self, tmp_path, monkeypatch):
         """全件失敗時は swap せず、前回の current を保持する。"""
@@ -242,8 +241,7 @@ class TestWorkDirSwap:
         # current は前回分がそのまま
         assert (staging_dir / "good_report.csv").read_text() == "previous good data"
         # work_dir は cleanup されている
-        work_dir = staging_dir.with_name(staging_dir.name + "_work")
-        assert not work_dir.exists()
+        assert not list(tmp_path.glob(f"{staging_dir.name}_work_*"))
 
     def test_marker_written_to_final_staging_dir(self, tmp_path, monkeypatch):
         """完了マーカーは work_dir に書かれてから swap で CSV_STAGING_DIR に入る。"""

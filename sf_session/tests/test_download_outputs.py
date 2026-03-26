@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 import logging
+import re
 from pathlib import Path
 from unittest.mock import patch
+
+import pytest
 
 from sf_session.download_outputs import (
     build_destination,
@@ -17,8 +20,6 @@ from sf_session.download_outputs import (
 )
 from sf_session.download_runner import ExportResult
 from sf_session.tests.helpers import make_job
-
-import pytest
 
 
 class TestBuildDestination:
@@ -218,19 +219,8 @@ class TestPrepareWorkDir:
     def test_creates_new(self, tmp_path):
         staging = tmp_path / "outputs_csv"
         work = prepare_work_dir(staging)
-        assert work == staging.with_name("outputs_csv_work")
+        assert re.match(r"outputs_csv_work_\d{8}_\d{6}$", work.name)
         assert work.is_dir()
-
-    def test_cleans_existing(self, tmp_path):
-        staging = tmp_path / "outputs_csv"
-        work = staging.with_name("outputs_csv_work")
-        work.mkdir(parents=True)
-        (work / "old_file.csv").write_text("old")
-
-        result = prepare_work_dir(staging)
-        assert result == work
-        assert work.is_dir()
-        assert not (work / "old_file.csv").exists()
 
 
 class TestWriteMarker:
@@ -244,7 +234,7 @@ class TestWriteMarker:
 class TestSwapWorkToStaging:
     def test_normal_swap(self, tmp_path):
         staging = tmp_path / "outputs_csv"
-        work = tmp_path / "outputs_csv_work"
+        work = tmp_path / "outputs_csv_work_20260326_120000"
         work.mkdir()
         (work / "new.csv").write_text("new")
 
@@ -258,21 +248,44 @@ class TestSwapWorkToStaging:
         staging = tmp_path / "outputs_csv"
         staging.mkdir()
         (staging / "old.csv").write_text("old")
-        work = tmp_path / "outputs_csv_work"
+        work = tmp_path / "outputs_csv_work_20260326_120000"
         work.mkdir()
         (work / "new.csv").write_text("new")
 
         swap_work_to_staging(work, staging, ok_count=1)
 
-        prev = staging.with_name("outputs_csv_prev")
-        assert prev.is_dir()
-        assert (prev / "old.csv").read_text() == "old"
+        prevs = list(tmp_path.glob("outputs_csv_prev_*"))
+        assert len(prevs) == 1
+        assert (prevs[0] / "old.csv").read_text() == "old"
+
+    def test_cleanup_removes_old_prev(self, tmp_path):
+        """古い _prev_* が swap 前に削除される。"""
+        staging = tmp_path / "outputs_csv"
+        staging.mkdir()
+
+        # 古い prev を2つ作成
+        old_prev1 = tmp_path / "outputs_csv_prev_20260101_000000"
+        old_prev1.mkdir()
+        (old_prev1 / "ancient.csv").write_text("ancient")
+        old_prev2 = tmp_path / "outputs_csv_prev_20260201_000000"
+        old_prev2.mkdir()
+
+        work = tmp_path / "outputs_csv_work_20260326_120000"
+        work.mkdir()
+        (work / "new.csv").write_text("new")
+
+        swap_work_to_staging(work, staging, ok_count=1)
+
+        # 古い prev は消えて、今回の prev だけ残る
+        prevs = sorted(tmp_path.glob("outputs_csv_prev_*"))
+        assert len(prevs) == 1
+        assert not (prevs[0] / "ancient.csv").exists()
 
     def test_zero_success_no_swap(self, tmp_path):
         staging = tmp_path / "outputs_csv"
         staging.mkdir()
         (staging / "keep.csv").write_text("keep")
-        work = tmp_path / "outputs_csv_work"
+        work = tmp_path / "outputs_csv_work_20260326_120000"
         work.mkdir()
 
         swap_work_to_staging(work, staging, ok_count=0)

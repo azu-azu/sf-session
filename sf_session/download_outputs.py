@@ -135,12 +135,14 @@ def open_folder(path: Path) -> None:
 
 # ── work_dir 管理 ────────────────────────────────────────
 
+_TS_FMT = "%Y%m%d_%H%M%S"
+
 
 def prepare_work_dir(staging_dir: Path) -> Path:
-    """work_dir を作成して返す。既存があれば rmtree してから作り直す。"""
-    work_dir = staging_dir.with_name(staging_dir.name + "_work")
-    if work_dir.is_dir():
-        shutil.rmtree(work_dir)
+    """timestamp 付きの work_dir を作成して返す。"""
+    _cleanup_old_dirs(staging_dir, "_work_")
+    ts = datetime.now().strftime(_TS_FMT)
+    work_dir = staging_dir.with_name(f"{staging_dir.name}_work_{ts}")
     work_dir.mkdir(parents=True, exist_ok=True)
     return work_dir
 
@@ -161,16 +163,28 @@ def swap_work_to_staging(
     """work_dir → staging_dir に atomic swap。
 
     ok_count=0 なら swap しない（前回の正常な current を保持）。
-    前回分は _prev に退避（1世代のみ）。
+    前回分は _prev_{ts} に退避し、旧世代の _prev_* は事前に削除する（2世代制限）。
     """
     if ok_count == 0:
         logger.warning("success 0 件のため swap しない")
         return
 
-    prev_dir = staging_dir.with_name(staging_dir.name + "_prev")
-    if prev_dir.is_dir():
-        shutil.rmtree(prev_dir)
+    _cleanup_old_dirs(staging_dir, "_prev_")
+
     if staging_dir.is_dir():
+        ts = datetime.now().strftime(_TS_FMT)
+        prev_dir = staging_dir.with_name(f"{staging_dir.name}_prev_{ts}")
         staging_dir.rename(prev_dir)
+
     work_dir.rename(staging_dir)
     logger.info("swap 完了: %s → %s", work_dir.name, staging_dir.name)
+
+
+def _cleanup_old_dirs(staging_dir: Path, infix: str) -> None:
+    """staging_dir と同階層の {staging_dir.name}{infix}* を全削除する。"""
+    parent = staging_dir.parent
+    pattern = f"{staging_dir.name}{infix}*"
+    for d in sorted(parent.glob(pattern)):
+        if d.is_dir():
+            shutil.rmtree(d, ignore_errors=True)
+            logger.info("旧世代削除: %s", d.name)
