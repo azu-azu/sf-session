@@ -7,13 +7,13 @@ API ではなく、ブラウザの export URL (`?export=1`) を使う VBA マク
 
 ```
 ┌──────────────────────────────────────────────────────────┐
-│ Step 0: 90_keep_session.bat                              │
+│ Step 0: ■00_keep_session.bat                              │
 │   Chrome 起動 → SSO/MFA 手動ログイン → reload 維持            │
 └───────────────────────┬──────────────────────────────────┘
                         │ Chrome がログイン状態を維持
                         ▼
 ┌──────────────────────────────────────────────────────────┐
-│ Step 1: ★01_download_all.bat                             │
+│ Step 1: ★01_download.bat                             │
 │   営業日チェック → login check → export URL → DL 監視 → 移動 │
 └───────────────────────┬──────────────────────────────────┘
                         │ reportID_*.csv が出力先に集まる
@@ -31,7 +31,7 @@ API ではなく、ブラウザの export URL (`?export=1`) を使う VBA マク
                         │
                         ▼
 ┌──────────────────────────────────────────────────────────┐
-│ Step 4: 10_jis_to_utf.bat                                │
+│ Step 4: 20_jis_to_utf.bat                                │
 │   *_jis/ フォルダの CSV を UTF-8 BOM に変換                  │
 └──────────────────────────────────────────────────────────┘
 ```
@@ -42,7 +42,7 @@ API ではなく、ブラウザの export URL (`?export=1`) を使う VBA マク
 
 | スクリプト | 役割 |
 |---|---|
-| `98_setup.bat` | venv 作成 + pip upgrade + 依存パッケージ install（初回のみ実行） |
+| `99_setup_初回または設定更新の場合のみ実行する.bat` | venv 作成 + pip upgrade + 依存パッケージ install（初回のみ実行） |
 | `sf_session/session_keeper.py` | Chrome 起動 → 手動ログイン待機（SSO / MFA）→ 定期 reload でセッション維持 |
 | `sf_session/download.py` | 営業日ガード + pre-flight login check 付きバッチ export orchestration |
 | `sf_session/sf_browser_session.py` | Chrome + Selenium session の prepare / close 共通層 (session_keeper / download 共用) |
@@ -63,7 +63,7 @@ API ではなく、ブラウザの export URL (`?export=1`) を使う VBA マク
 
 ```powershell
 # 初回のみ実行（venv 作成 + 依存 install）
-98_setup.bat
+99_setup_初回または設定更新の場合のみ実行する.bat
 ```
 
 依存: `selenium`, `openpyxl`, `simple-salesforce`, `python-dotenv`, `jpholiday`
@@ -71,7 +71,7 @@ API ではなく、ブラウザの export URL (`?export=1`) を使う VBA マク
 ## 使い方
 
 bat ファイルをダブルクリック、または PowerShell からオプション付きで実行。
-初回は `98_setup.bat` を先に実行すること。
+初回は `99_setup_初回または設定更新の場合のみ実行する.bat` を先に実行すること。
 
 ### 起動パターン
 
@@ -80,8 +80,8 @@ bat ファイルをダブルクリック、または PowerShell からオプシ�
 **パターン A: session_keeper + download（推奨）**
 
 ```
-90_keep_session.bat     ← Chrome 起動 + 手動ログイン待機 + セッション維持
-★01_download_all.bat    ← ↑ の Chrome に接続して export
+■00_keep_session.bat     ← Chrome 起動 + 手動ログイン待機 + セッション維持
+★01_download.bat    ← ↑ の Chrome に接続して export
 ```
 
 session_keeper がセッションを維持するので、長時間の連続 export でも切れにくい。
@@ -89,7 +89,7 @@ session_keeper がセッションを維持するので、長時間の連続 expo
 **パターン B: download 単独**
 
 ```
-★01_download_all.bat    ← 自前で Chrome を起動 + 手動ログイン待機 + export
+★01_download.bat    ← 自前で Chrome を起動 + 手動ログイン待機 + export
 ```
 
 session_keeper なしでも動く。download が専用プロファイルで Chrome を起動し、
@@ -126,7 +126,7 @@ SSO 経由のログインに対応。ログインが必要な場合はユーザ�
 ### 1. セッション確立
 
 ```powershell
-90_keep_session.bat
+■00_keep_session.bat
 # Chrome 起動 → 手動ログイン待機（SSO / MFA）→ 8分ごとに reload
 # Ctrl+C で停止
 ```
@@ -144,22 +144,22 @@ SSO 経由のログインに対応。ログインが必要な場合はユーザ�
 
 ```powershell
 # dry-run でジョブ一覧を確認
-★01_download_all.bat --dry-run
+★01_download.bat --dry-run
 
 # 実行 (outputs_csv/ に全ファイル集約)
-★01_download_all.bat
+★01_download.bat
 
 # per-job 振り分け先フォルダへ直接コピー
-★01_download_all.bat --direct-deliver
+★01_download.bat --direct-deliver
 
 # ids.txt でフィルタ
-03_download_ids.bat
+11_download_ids.bat
 
 # 失敗分リトライ
-04_download_retry.bat
+12_download_retry.bat
 
 # 日付サフィックス付与
-★01_download_all.bat --date-suffix
+★01_download.bat --date-suffix
 ```
 
 営業日（平日 + 祝日除外）のみ実行。`--force` で営業日チェックを bypass できる。
@@ -213,7 +213,7 @@ export 中にセッションが切れた場合は、タブを traverse してロ
 00O000000000002AAA
 ```
 
-`★01_download_all.bat` / `★02_振り分け.bat` の両方で使える。
+`★01_download.bat` / `★02_振り分け.bat` の両方で使える。
 
 ## ジョブ定義
 
@@ -250,6 +250,6 @@ python -m pytest -v
 ## クリーンアップ
 
 ```powershell
-99_clean.bat              # __pycache__, .pyc, .log, .bak 等を削除
-99_clean.bat --dry-run    # 削除せず対象だけ表示
+98_clean_cache.bat              # __pycache__, .pyc, .log, .bak 等を削除
+98_clean_cache.bat --dry-run    # 削除せず対象だけ表示
 ```
