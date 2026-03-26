@@ -20,20 +20,20 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from selenium.webdriver.chrome.webdriver import WebDriver
 
-from .login_helper import (
+from ..login_helper import (
     LoginExhaustedError,
     ensure_logged_in,
     find_login_tab,
 )
-from .macro_book_reader import JobEntry
-from ._download_single import (
+from ..macro_book_reader import JobEntry
+from .single import (
     DOWNLOAD_EXTS,
     build_chrome_command,
     build_export_url,
     snapshot_files,
     wait_for_new_download,
 )
-from .download_outputs import build_destination
+from .outputs import build_destination
 
 logger = logging.getLogger(__name__)
 

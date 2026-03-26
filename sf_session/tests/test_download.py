@@ -7,7 +7,7 @@ from sf_session.download import (
     main,
     parse_args,
 )
-from sf_session.download_runner import (
+from sf_session.download.runner import (
     DEFAULT_POLL,
     DEFAULT_TIMEOUT,
     DEFAULT_INTERVAL,
@@ -101,33 +101,33 @@ def _stub_main_externals(monkeypatch, tmp_path, *, jobs=None):
     downloaded = download_dir / "report.csv"
     downloaded.write_text("data")
 
-    monkeypatch.setattr("sf_session.download.CSV_STAGING_DIR", staging_dir)
-    monkeypatch.setattr("sf_session.download.CHROME_EXE_PATH", str(chrome_path))
+    monkeypatch.setattr("sf_session.download.cli.CSV_STAGING_DIR", staging_dir)
+    monkeypatch.setattr("sf_session.download.cli.CHROME_EXE_PATH", str(chrome_path))
     monkeypatch.setattr(
-        "sf_session.download_outputs.OUTPUT_RESULTS_DIR", tmp_path / "results",
+        "sf_session.download.outputs.OUTPUT_RESULTS_DIR", tmp_path / "results",
     )
     monkeypatch.setattr(
-        "sf_session.download.load_active_jobs", lambda *a, **kw: jobs,
+        "sf_session.download.cli.load_active_jobs", lambda *a, **kw: jobs,
     )
     monkeypatch.setattr(
-        "sf_session.download.resolve_download_dir", lambda x: download_dir,
+        "sf_session.download.cli.resolve_download_dir", lambda x: download_dir,
     )
-    monkeypatch.setattr("sf_session.download.ensure_exists", lambda *a: None)
+    monkeypatch.setattr("sf_session.download.cli.ensure_exists", lambda *a: None)
     monkeypatch.setattr(
-        "sf_session.download_runner.snapshot_files", lambda *a, **kw: {},
-    )
-    monkeypatch.setattr(
-        "sf_session.download_runner.subprocess.Popen", lambda cmd: None,
+        "sf_session.download.runner.snapshot_files", lambda *a, **kw: {},
     )
     monkeypatch.setattr(
-        "sf_session.download_runner.wait_for_new_download",
+        "sf_session.download.runner.subprocess.Popen", lambda cmd: None,
+    )
+    monkeypatch.setattr(
+        "sf_session.download.runner.wait_for_new_download",
         lambda *a, **kw: downloaded,
     )
     monkeypatch.setattr(
-        "sf_session.download.should_run_download", lambda *a: (True, "weekday"),
+        "sf_session.download.cli.should_run_download", lambda *a: (True, "weekday"),
     )
     monkeypatch.setattr(
-        "sf_session.download.probe_output_dir", lambda *a: None,
+        "sf_session.download.cli.probe_output_dir", lambda *a: None,
     )
 
     return staging_dir, download_dir
@@ -197,7 +197,7 @@ class TestWorkDirSwap:
 
         # export_batch を exception で終了させる
         monkeypatch.setattr(
-            "sf_session.download.export_batch",
+            "sf_session.download.cli.export_batch",
             lambda *a, **kw: (_ for _ in ()).throw(RuntimeError("boom")),
         )
 
@@ -231,7 +231,7 @@ class TestWorkDirSwap:
 
         # 全件 timeout させる
         monkeypatch.setattr(
-            "sf_session.download_runner.wait_for_new_download",
+            "sf_session.download.runner.wait_for_new_download",
             lambda *a, **kw: (_ for _ in ()).throw(TimeoutError("timeout")),
         )
 
@@ -261,7 +261,7 @@ class TestBusinessDayGuard:
         """非営業日は skip して return 0。"""
         staging_dir, _ = _stub_main_externals(monkeypatch, tmp_path)
         monkeypatch.setattr(
-            "sf_session.download.should_run_download",
+            "sf_session.download.cli.should_run_download",
             lambda *a: (False, "weekend"),
         )
 
@@ -275,7 +275,7 @@ class TestBusinessDayGuard:
         """--force で営業日チェックを bypass。"""
         staging_dir, _ = _stub_main_externals(monkeypatch, tmp_path)
         monkeypatch.setattr(
-            "sf_session.download.should_run_download",
+            "sf_session.download.cli.should_run_download",
             lambda *a: (False, "weekend"),
         )
 
@@ -292,7 +292,7 @@ class TestPreflightFailFast:
         """pre-flight 失敗で return 1 (続行しない)。"""
         staging_dir, _ = _stub_main_externals(monkeypatch, tmp_path)
         monkeypatch.setattr(
-            "sf_session.download.prepare_salesforce_session",
+            "sf_session.download.cli.prepare_salesforce_session",
             lambda **kw: (_ for _ in ()).throw(RuntimeError("Chrome 起動失敗")),
         )
 
@@ -321,7 +321,7 @@ class TestEmptyJobs:
 
         # export_batch が呼ばれたら fail させる
         monkeypatch.setattr(
-            "sf_session.download.export_batch",
+            "sf_session.download.cli.export_batch",
             lambda *a, **kw: (_ for _ in ()).throw(
                 AssertionError("export_batch should not be called")
             ),

@@ -9,7 +9,7 @@ from unittest.mock import patch
 
 import pytest
 
-from sf_session.download_outputs import (
+from sf_session.download.outputs import (
     build_destination,
     log_summary,
     probe_output_dir,
@@ -19,7 +19,7 @@ from sf_session.download_outputs import (
     write_start_marker,
     write_success_ids,
 )
-from sf_session.download_runner import ExportResult
+from sf_session.download.runner import ExportResult
 from sf_session.tests.helpers import make_job
 
 
@@ -49,7 +49,7 @@ class TestBuildDestination:
         downloaded = tmp_path / "report.csv"
         downloaded.touch()
 
-        with patch("sf_session.download_outputs.datetime") as mock_dt:
+        with patch("sf_session.download.outputs.datetime") as mock_dt:
             mock_dt.now.return_value.strftime.return_value = "20260317"
             result = build_destination(job, downloaded, date_suffix=True)
 
@@ -64,7 +64,7 @@ class TestBuildDestination:
         downloaded = tmp_path / "original.xlsx"
         downloaded.touch()
 
-        with patch("sf_session.download_outputs.datetime") as mock_dt:
+        with patch("sf_session.download.outputs.datetime") as mock_dt:
             mock_dt.now.return_value.strftime.return_value = "20260317"
             result = build_destination(job, downloaded, date_suffix=True)
 
@@ -117,7 +117,7 @@ class TestBuildDestination:
         downloaded = tmp_path / "report.csv"
         downloaded.touch()
 
-        with patch("sf_session.download_outputs.datetime") as mock_dt:
+        with patch("sf_session.download.outputs.datetime") as mock_dt:
             mock_dt.now.return_value.strftime.return_value = "20260318"
             result = build_destination(
                 job, downloaded, date_suffix=True, output_dir=out_dir,
@@ -157,14 +157,14 @@ class TestLogSummary:
 
 class TestWriteSuccessIds:
     def test_writes_success_ids(self, tmp_path, monkeypatch):
-        monkeypatch.setattr("sf_session.download_outputs.OUTPUT_RESULTS_DIR", tmp_path)
+        monkeypatch.setattr("sf_session.download.outputs.OUTPUT_RESULTS_DIR", tmp_path)
         results = [
             ExportResult(seq=1, report_id="00O001", success=True, elapsed=1.0),
             ExportResult(seq=2, report_id="00O002", success=False, elapsed=2.0),
             ExportResult(seq=3, report_id="00O003", success=True, elapsed=1.5),
         ]
 
-        with patch("sf_session.download_outputs.datetime") as mock_dt:
+        with patch("sf_session.download.outputs.datetime") as mock_dt:
             mock_dt.now.return_value.strftime.return_value = "20260321"
             path = write_success_ids(results)
 
@@ -173,7 +173,7 @@ class TestWriteSuccessIds:
         assert lines == ["00O001", "00O003"]
 
     def test_no_success_returns_none(self, tmp_path, monkeypatch):
-        monkeypatch.setattr("sf_session.download_outputs.OUTPUT_RESULTS_DIR", tmp_path)
+        monkeypatch.setattr("sf_session.download.outputs.OUTPUT_RESULTS_DIR", tmp_path)
         results = [
             ExportResult(seq=1, report_id="00O001", success=False, elapsed=1.0),
         ]
@@ -181,12 +181,12 @@ class TestWriteSuccessIds:
 
     def test_creates_dir_if_missing(self, tmp_path, monkeypatch):
         out_dir = tmp_path / "outputs_result"
-        monkeypatch.setattr("sf_session.download_outputs.OUTPUT_RESULTS_DIR", out_dir)
+        monkeypatch.setattr("sf_session.download.outputs.OUTPUT_RESULTS_DIR", out_dir)
         results = [
             ExportResult(seq=1, report_id="00O001", success=True, elapsed=1.0),
         ]
 
-        with patch("sf_session.download_outputs.datetime") as mock_dt:
+        with patch("sf_session.download.outputs.datetime") as mock_dt:
             mock_dt.now.return_value.strftime.return_value = "20260321"
             path = write_success_ids(results)
 

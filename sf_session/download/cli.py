@@ -14,10 +14,9 @@ from __future__ import annotations
 import argparse
 import logging
 import shutil
-import sys
 from pathlib import Path
 
-from .config import (
+from ..config import (
     CHROME_EXE_PATH,
     CHROME_USER_DATA_DIR,
     CSV_STAGING_DIR,
@@ -26,22 +25,22 @@ from .config import (
     MACRO_DIR,
     SF_HOME_URL,
 )
-from .browser import REMOTE_DEBUGGING_PORT
-from .business_day import should_run_download
-from .macro_book_reader import load_active_jobs
-from .utils import setup_logging
-from ._download_single import (
+from ..browser import REMOTE_DEBUGGING_PORT
+from ..business_day import should_run_download
+from ..macro_book_reader import load_active_jobs
+from ..utils import setup_logging
+from .single import (
     build_export_url,
     ensure_exists,
     resolve_download_dir,
 )
-from .download_runner import (
+from .runner import (
     DEFAULT_TIMEOUT,
     DEFAULT_POLL,
     DEFAULT_INTERVAL,
     export_batch,
 )
-from .download_outputs import (
+from .outputs import (
     build_destination,
     log_summary,
     open_folder,
@@ -52,7 +51,7 @@ from .download_outputs import (
     write_start_marker,
     write_success_ids,
 )
-from .sf_browser_session import (
+from ..sf_browser_session import (
     BrowserSession,
     close_browser_session,
     prepare_salesforce_session,
@@ -358,7 +357,3 @@ def main(argv: list[str] | None = None) -> int:
             shutil.rmtree(work_dir, ignore_errors=True)
         if session:
             close_browser_session(session)
-
-
-if __name__ == "__main__":
-    sys.exit(main())

@@ -44,10 +44,11 @@ API ではなく、ブラウザの export URL (`?export=1`) を使う VBA マク
 |---|---|
 | `99_setup_初回または設定更新の場合のみ実行する.bat` | venv 作成 + pip upgrade + 依存パッケージ install（初回のみ実行） |
 | `sf_session/session_keeper.py` | Chrome 起動 → 手動ログイン待機（SSO / MFA）→ 定期 reload でセッション維持 |
-| `sf_session/download.py` | 営業日ガード + pre-flight login check 付きバッチ export orchestration |
+| `sf_session/download/cli.py` | 営業日ガード + pre-flight login check 付きバッチ export orchestration |
+| `sf_session/download/runner.py` | レポート export 実行エンジン (export_one / export_batch) |
+| `sf_session/download/outputs.py` | ファイル移動先パス組み立て、summary ログ、work_dir swap、完了マーカー |
+| `sf_session/download/single.py` | Chrome CLI 実行 + ダウンロード監視 |
 | `sf_session/sf_browser_session.py` | Chrome + Selenium session の prepare / close 共通層 (session_keeper / download 共用) |
-| `sf_session/download_runner.py` | レポート export 実行エンジン (`export_one` / `export_batch`) |
-| `sf_session/download_outputs.py` | ファイル移動先パス組み立て、summary ログ、work_dir swap、完了マーカー |
 | `sf_session/business_day.py` | 営業日判定 (土日 + `jpholiday` 祝日) |
 | `sf_session/browser.py` | Chrome 起動・WebDriver 接続の共通モジュール |
 | `sf_session/login_helper.py` | ログイン/SSO ページ検出・手動ログイン待機・MFA 完了待ち |

@@ -16,10 +16,11 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from .download_runner import ExportResult
+    from .runner import ExportResult
 
-from .config import OUTPUT_RESULTS_DIR
-from .macro_book_reader import JobEntry
+from ..config import OUTPUT_RESULTS_DIR
+from ..macro_book_reader import JobEntry
+from ..utils import time_label
 
 logger = logging.getLogger(__name__)
 
@@ -145,12 +146,6 @@ def prepare_work_dir(staging_dir: Path) -> Path:
     work_dir = staging_dir.with_name(f"{staging_dir.name}_work_{ts}")
     work_dir.mkdir(parents=True, exist_ok=True)
     return work_dir
-
-
-def time_label() -> str:
-    """マーカーファイル用の日時ラベルを返す。"""
-    now = datetime.now()
-    return f"{now.month}月{now.day}日{now.hour}時{now.minute}分"
 
 
 def write_start_marker(output_dir: Path, total: int) -> Path:

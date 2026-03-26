@@ -23,9 +23,8 @@ from datetime import datetime
 from pathlib import Path
 
 from .config import CSV_STAGING_DIR, DEFAULT_IDS_FILE, MACRO_DIR
-from .download_outputs import time_label
 from .macro_book_reader import JobEntry, load_active_jobs
-from .utils import setup_logging
+from .utils import setup_logging, time_label
 
 logger = logging.getLogger(__name__)
 

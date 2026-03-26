@@ -1,6 +1,7 @@
-"""内部モジュール: ログイン済み Chrome で SF レポートを1件 export し、ダウンロードを検知する。
+"""Chrome CLI 実行 + ダウンロード監視。
 
-download.py から利用される。直接実行は想定していない。
+runner.py / cli.py から利用される export URL 構築、
+ファイルスナップショット、ダウンロード完了待機を提供する。
 """
 
 from __future__ import annotations
@@ -9,7 +10,7 @@ import logging
 import time
 from pathlib import Path
 
-from .config import SF_BASE_URL
+from ..config import SF_BASE_URL
 
 logger = logging.getLogger(__name__)
 

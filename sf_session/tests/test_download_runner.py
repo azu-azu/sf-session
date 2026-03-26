@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from sf_session.download_runner import (
+from sf_session.download.runner import (
     export_batch,
     export_one,
 )
@@ -22,13 +22,13 @@ class TestExportOne:
         job = make_job()
 
         monkeypatch.setattr(
-            "sf_session.download_runner.snapshot_files", lambda *a, **kw: {}
+            "sf_session.download.runner.snapshot_files", lambda *a, **kw: {}
         )
         monkeypatch.setattr(
-            "sf_session.download_runner.subprocess.Popen", lambda cmd: None
+            "sf_session.download.runner.subprocess.Popen", lambda cmd: None
         )
         monkeypatch.setattr(
-            "sf_session.download_runner.wait_for_new_download",
+            "sf_session.download.runner.wait_for_new_download",
             lambda *a, **kw: (_ for _ in ()).throw(
                 TimeoutError("timeout")
             ),
@@ -44,13 +44,13 @@ class TestExportOne:
         downloaded.write_text("data")
 
         monkeypatch.setattr(
-            "sf_session.download_runner.snapshot_files", lambda *a, **kw: {}
+            "sf_session.download.runner.snapshot_files", lambda *a, **kw: {}
         )
         monkeypatch.setattr(
-            "sf_session.download_runner.subprocess.Popen", lambda cmd: None
+            "sf_session.download.runner.subprocess.Popen", lambda cmd: None
         )
         monkeypatch.setattr(
-            "sf_session.download_runner.wait_for_new_download",
+            "sf_session.download.runner.wait_for_new_download",
             lambda *a, **kw: downloaded,
         )
 
@@ -62,10 +62,10 @@ class TestExportOne:
         job = make_job()
 
         monkeypatch.setattr(
-            "sf_session.download_runner.snapshot_files", lambda *a, **kw: {}
+            "sf_session.download.runner.snapshot_files", lambda *a, **kw: {}
         )
         monkeypatch.setattr(
-            "sf_session.download_runner.subprocess.Popen",
+            "sf_session.download.runner.subprocess.Popen",
             lambda cmd: (_ for _ in ()).throw(OSError("not found")),
         )
 
@@ -80,14 +80,14 @@ class TestExportOne:
 
         launched_cmds: list[list[str]] = []
         monkeypatch.setattr(
-            "sf_session.download_runner.snapshot_files", lambda *a, **kw: {}
+            "sf_session.download.runner.snapshot_files", lambda *a, **kw: {}
         )
         monkeypatch.setattr(
-            "sf_session.download_runner.subprocess.Popen",
+            "sf_session.download.runner.subprocess.Popen",
             lambda cmd: launched_cmds.append(cmd),
         )
         monkeypatch.setattr(
-            "sf_session.download_runner.wait_for_new_download",
+            "sf_session.download.runner.wait_for_new_download",
             lambda *a, **kw: downloaded,
         )
 
@@ -115,13 +115,13 @@ class TestExportBatch:
         downloaded.write_text("data")
 
         monkeypatch.setattr(
-            "sf_session.download_runner.snapshot_files", lambda *a, **kw: {}
+            "sf_session.download.runner.snapshot_files", lambda *a, **kw: {}
         )
         monkeypatch.setattr(
-            "sf_session.download_runner.subprocess.Popen", lambda cmd: None
+            "sf_session.download.runner.subprocess.Popen", lambda cmd: None
         )
         monkeypatch.setattr(
-            "sf_session.download_runner.wait_for_new_download",
+            "sf_session.download.runner.wait_for_new_download",
             lambda *a, **kw: downloaded,
         )
 
@@ -149,13 +149,13 @@ class TestExportBatch:
         ]
 
         monkeypatch.setattr(
-            "sf_session.download_runner.snapshot_files", lambda *a, **kw: {}
+            "sf_session.download.runner.snapshot_files", lambda *a, **kw: {}
         )
         monkeypatch.setattr(
-            "sf_session.download_runner.subprocess.Popen", lambda cmd: None
+            "sf_session.download.runner.subprocess.Popen", lambda cmd: None
         )
         monkeypatch.setattr(
-            "sf_session.download_runner.wait_for_new_download", mock_wait
+            "sf_session.download.runner.wait_for_new_download", mock_wait
         )
 
         results = export_batch(
@@ -177,13 +177,13 @@ class TestExportBatch:
         job = make_job(no="1", src_folder_name=str(dest_dir))
 
         monkeypatch.setattr(
-            "sf_session.download_runner.snapshot_files", lambda *a, **kw: {}
+            "sf_session.download.runner.snapshot_files", lambda *a, **kw: {}
         )
         monkeypatch.setattr(
-            "sf_session.download_runner.subprocess.Popen", lambda cmd: None
+            "sf_session.download.runner.subprocess.Popen", lambda cmd: None
         )
         monkeypatch.setattr(
-            "sf_session.download_runner.wait_for_new_download",
+            "sf_session.download.runner.wait_for_new_download",
             lambda *a, **kw: downloaded,
         )
 
@@ -207,13 +207,13 @@ class TestExportBatch:
         job = make_job(no="1", report_id="00O999")
 
         monkeypatch.setattr(
-            "sf_session.download_runner.snapshot_files", lambda *a, **kw: {}
+            "sf_session.download.runner.snapshot_files", lambda *a, **kw: {}
         )
         monkeypatch.setattr(
-            "sf_session.download_runner.subprocess.Popen", lambda cmd: None
+            "sf_session.download.runner.subprocess.Popen", lambda cmd: None
         )
         monkeypatch.setattr(
-            "sf_session.download_runner.wait_for_new_download",
+            "sf_session.download.runner.wait_for_new_download",
             lambda *a, **kw: downloaded,
         )
 
@@ -236,13 +236,13 @@ class TestExportBatch:
         )
 
         monkeypatch.setattr(
-            "sf_session.download_runner.snapshot_files", lambda *a, **kw: {}
+            "sf_session.download.runner.snapshot_files", lambda *a, **kw: {}
         )
         monkeypatch.setattr(
-            "sf_session.download_runner.subprocess.Popen", lambda cmd: None
+            "sf_session.download.runner.subprocess.Popen", lambda cmd: None
         )
         monkeypatch.setattr(
-            "sf_session.download_runner.wait_for_new_download",
+            "sf_session.download.runner.wait_for_new_download",
             lambda *a, **kw: downloaded,
         )
 
