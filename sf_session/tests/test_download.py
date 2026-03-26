@@ -310,3 +310,25 @@ class TestPreflightFailFast:
 
         assert rc == 0
         assert staging_dir.is_dir()
+
+
+class TestEmptyJobs:
+    """active_jobs が 0 件の場合の early exit テスト。"""
+
+    def test_ids_file_empty_no_execution(self, tmp_path, monkeypatch):
+        """--ids-file + 空 ids.txt → return 0、export 未実行。"""
+        staging_dir, _ = _stub_main_externals(monkeypatch, tmp_path, jobs=[])
+
+        # export_batch が呼ばれたら fail させる
+        monkeypatch.setattr(
+            "sf_session.download.export_batch",
+            lambda *a, **kw: (_ for _ in ()).throw(
+                AssertionError("export_batch should not be called")
+            ),
+        )
+
+        rc = main(["--no-login-check", "--force", "--ids-file"])
+
+        assert rc == 0
+        # staging_dir は作られない (export skip)
+        assert not staging_dir.exists()

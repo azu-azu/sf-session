@@ -169,6 +169,9 @@ def load_active_jobs(
 
     if ids_file:
         target_ids = read_ids_file(DEFAULT_IDS_FILE)
+        if not target_ids:
+            logger.warning("ids-file に ID の記載が 0 件です — %s", DEFAULT_IDS_FILE)
+            return []
         before = len(active)
         active = [j for j in active if j.report_id in target_ids]
         logger.info(

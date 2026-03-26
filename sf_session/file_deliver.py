@@ -217,6 +217,10 @@ def main(argv: list[str] | None = None) -> int:
         logger.error("%s", e)
         return 1
 
+    if not active_jobs:
+        logger.info("実行対象のジョブが 0 件のため終了します")
+        return 0
+
     lookup = build_job_lookup(active_jobs)
 
     if args.dry_run:
