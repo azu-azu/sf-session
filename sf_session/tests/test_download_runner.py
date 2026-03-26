@@ -8,6 +8,7 @@ from sf_session.download.runner import (
     export_batch,
     export_one,
 )
+from sf_session.login_helper import LoginExhaustedError
 from sf_session.tests.helpers import make_job
 
 
@@ -253,3 +254,103 @@ class TestExportBatch:
         assert results[0].success
         # 移動できず Downloads のまま
         assert results[0].dest_path == downloaded
+
+
+# ── login recovery in export_one() ───────────────────────
+
+
+def _stub_export_common(monkeypatch, tmp_path):
+    """login recovery テスト用の共通 stub。"""
+    monkeypatch.setattr(
+        "sf_session.download.runner.snapshot_files", lambda *a, **kw: {},
+    )
+    monkeypatch.setattr(
+        "sf_session.download.runner.subprocess.Popen", lambda cmd: None,
+    )
+
+
+class TestLoginRecovery:
+    """driver が truthy なときの login recovery branch をテストする。"""
+
+    def test_login_recovery_succeeds(self, tmp_path, monkeypatch):
+        """timeout → find_login_tab=True → ensure_logged_in OK → retry 成功。"""
+        _stub_export_common(monkeypatch, tmp_path)
+
+        downloaded = tmp_path / "report.csv"
+        downloaded.write_text("data")
+        call_count = {"n": 0}
+
+        def mock_wait(*a, **kw):
+            call_count["n"] += 1
+            if call_count["n"] == 1:
+                raise TimeoutError("timeout")
+            return downloaded
+
+        monkeypatch.setattr(
+            "sf_session.download.runner.wait_for_new_download", mock_wait,
+        )
+        monkeypatch.setattr(
+            "sf_session.download.runner.find_login_tab", lambda driver: True,
+        )
+        monkeypatch.setattr(
+            "sf_session.download.runner.ensure_logged_in", lambda driver: None,
+        )
+
+        job = make_job()
+        result = export_one(
+            Path("/dummy/chrome"), job, tmp_path,
+            seq=1, driver=object(),
+        )
+        assert result.success
+        assert call_count["n"] == 2
+
+    def test_login_exhausted_returns_failure(self, tmp_path, monkeypatch):
+        """timeout → find_login_tab=True → LoginExhaustedError → error message。"""
+        _stub_export_common(monkeypatch, tmp_path)
+
+        monkeypatch.setattr(
+            "sf_session.download.runner.wait_for_new_download",
+            lambda *a, **kw: (_ for _ in ()).throw(TimeoutError("timeout")),
+        )
+        monkeypatch.setattr(
+            "sf_session.download.runner.find_login_tab", lambda driver: True,
+        )
+        monkeypatch.setattr(
+            "sf_session.download.runner.ensure_logged_in",
+            lambda driver: (_ for _ in ()).throw(
+                LoginExhaustedError("retry exhausted")
+            ),
+        )
+
+        job = make_job()
+        result = export_one(
+            Path("/dummy/chrome"), job, tmp_path,
+            seq=1, driver=object(),
+        )
+        assert not result.success
+        assert "login recovery 失敗" in result.error
+
+    def test_no_login_tab_skips_recovery(self, tmp_path, monkeypatch):
+        """timeout → find_login_tab=False → retry なし (wait 呼び出し1回)。"""
+        _stub_export_common(monkeypatch, tmp_path)
+
+        wait_calls = {"n": 0}
+
+        def mock_wait(*a, **kw):
+            wait_calls["n"] += 1
+            raise TimeoutError("timeout")
+
+        monkeypatch.setattr(
+            "sf_session.download.runner.wait_for_new_download", mock_wait,
+        )
+        monkeypatch.setattr(
+            "sf_session.download.runner.find_login_tab", lambda driver: False,
+        )
+
+        job = make_job()
+        result = export_one(
+            Path("/dummy/chrome"), job, tmp_path,
+            seq=1, driver=object(),
+        )
+        assert not result.success
+        assert wait_calls["n"] == 1

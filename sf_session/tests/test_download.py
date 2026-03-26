@@ -2,11 +2,16 @@
 
 from __future__ import annotations
 
+import argparse
+import logging
+from unittest.mock import MagicMock
+
 from sf_session.config import CHROME_EXE_PATH, CHROME_USER_DATA_DIR
 from sf_session.download import (
     main,
     parse_args,
 )
+from sf_session.download.cli import _resolve_user_data_dir
 from sf_session.download.runner import (
     DEFAULT_POLL,
     DEFAULT_TIMEOUT,
@@ -332,3 +337,117 @@ class TestEmptyJobs:
         assert rc == 0
         # staging_dir は作られない (export skip)
         assert not staging_dir.exists()
+
+
+# ── Gap 3: _print_dry_run via main() ─────────────────────
+
+
+class TestDryRun:
+    def test_dry_run_shows_report_info(self, tmp_path, monkeypatch, caplog):
+        _stub_main_externals(monkeypatch, tmp_path)
+        with caplog.at_level(logging.INFO):
+            rc = main(["--dry-run", "--force"])
+        assert rc == 0
+        assert "00O001" in caplog.text
+        assert "UTF-8" in caplog.text
+        # URL が表示される
+        assert "isdtp=p1" in caplog.text
+
+    def test_dry_run_direct_deliver(self, tmp_path, monkeypatch, caplog):
+        _stub_main_externals(monkeypatch, tmp_path)
+        with caplog.at_level(logging.INFO):
+            rc = main(["--dry-run", "--force", "--direct-deliver"])
+        assert rc == 0
+        # direct-deliver 時は src_folder_name が表示される
+        assert "/tmp/dest" in caplog.text
+
+    def test_dry_run_no_report_id(self, tmp_path, monkeypatch, caplog):
+        _stub_main_externals(
+            monkeypatch, tmp_path,
+            jobs=[make_job(no="1", report_id=None)],
+        )
+        with caplog.at_level(logging.INFO):
+            rc = main(["--dry-run", "--force"])
+        assert rc == 0
+        assert "URL 構築不可" in caplog.text
+
+
+# ── Gap 4: _resolve_user_data_dir ────────────────────────
+
+
+class TestResolveUserDataDir:
+    def _make_ns(self, **overrides):
+        defaults = dict(
+            my_chrome=False,
+            user_data_dir=CHROME_USER_DATA_DIR,
+        )
+        defaults.update(overrides)
+        return argparse.Namespace(**defaults)
+
+    def test_my_chrome_returns_none(self):
+        ns = self._make_ns(my_chrome=True)
+        assert _resolve_user_data_dir(ns) is None
+
+    def test_my_chrome_warns_on_custom_user_data_dir(self, caplog, monkeypatch):
+        monkeypatch.setattr(
+            "sf_session.download.cli.ensure_exists", lambda *a: None,
+        )
+        ns = self._make_ns(my_chrome=True, user_data_dir="/other")
+        with caplog.at_level(logging.WARNING):
+            result = _resolve_user_data_dir(ns)
+        assert result is None
+        assert "無視" in caplog.text
+
+    def test_existing_user_data_dir(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(
+            "sf_session.download.cli.ensure_exists", lambda *a: None,
+        )
+        ns = self._make_ns(user_data_dir=str(tmp_path))
+        result = _resolve_user_data_dir(ns)
+        assert result == tmp_path.resolve()
+
+    def test_empty_user_data_dir(self):
+        ns = self._make_ns(user_data_dir="")
+        assert _resolve_user_data_dir(ns) is None
+
+
+# ── Gap 5: close_browser_session finally block ───────────
+
+
+class TestSessionCleanup:
+    def _stub_session(self, monkeypatch):
+        """prepare/close を mock し (mock_session, closed) を返す。"""
+        mock_session = MagicMock()
+        monkeypatch.setattr(
+            "sf_session.download.cli.prepare_salesforce_session",
+            lambda **kw: mock_session,
+        )
+        closed = []
+        monkeypatch.setattr(
+            "sf_session.download.cli.close_browser_session",
+            lambda s: closed.append(s),
+        )
+        return mock_session, closed
+
+    def test_close_called_on_success(self, tmp_path, monkeypatch):
+        _stub_main_externals(monkeypatch, tmp_path)
+        mock_session, closed = self._stub_session(monkeypatch)
+
+        rc = main(["--force"])
+        assert rc == 0
+        assert closed == [mock_session]
+
+    def test_close_called_on_exception(self, tmp_path, monkeypatch):
+        _stub_main_externals(monkeypatch, tmp_path)
+        mock_session, closed = self._stub_session(monkeypatch)
+        monkeypatch.setattr(
+            "sf_session.download.cli.export_batch",
+            lambda *a, **kw: (_ for _ in ()).throw(RuntimeError("boom")),
+        )
+
+        try:
+            main(["--force"])
+        except RuntimeError:
+            pass
+
+        assert closed == [mock_session]
