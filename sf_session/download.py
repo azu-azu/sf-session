@@ -49,6 +49,7 @@ from .download_outputs import (
     probe_output_dir,
     swap_work_to_staging,
     write_marker,
+    write_start_marker,
     write_success_ids,
 )
 from .sf_browser_session import (
@@ -320,6 +321,9 @@ def main(argv: list[str] | None = None) -> int:
             open_folder(download_dir)
         if args.open_output_dir:
             open_folder(output_dir if output_dir else CSV_STAGING_ROOT)
+
+        if output_dir is not None:
+            write_start_marker(output_dir, len(active_jobs))
 
         results = export_batch(
             chrome_path,

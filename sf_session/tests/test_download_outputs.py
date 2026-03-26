@@ -16,6 +16,7 @@ from sf_session.download_outputs import (
     prepare_work_dir,
     swap_work_to_staging,
     write_marker,
+    write_start_marker,
     write_success_ids,
 )
 from sf_session.download_runner import ExportResult
@@ -221,6 +222,14 @@ class TestPrepareWorkDir:
         work = prepare_work_dir(staging)
         assert re.match(r"outputs_csv_work_\d{8}_\d{6}$", work.name)
         assert work.is_dir()
+
+
+class TestWriteStartMarker:
+    def test_creates_start_marker(self, tmp_path):
+        marker = write_start_marker(tmp_path, 5)
+        assert marker.exists()
+        assert "START" in marker.name
+        assert "5件の予定" in marker.name
 
 
 class TestWriteMarker:

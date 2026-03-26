@@ -23,6 +23,7 @@ from datetime import datetime
 from pathlib import Path
 
 from .config import CSV_STAGING_DIR, DEFAULT_IDS_FILE, MACRO_DIR
+from .download_outputs import time_label
 from .macro_book_reader import JobEntry, load_active_jobs
 from .utils import setup_logging
 
@@ -246,9 +247,7 @@ def main(argv: list[str] | None = None) -> int:
     log_summary(results)
 
     # 完了マーカー
-    now = datetime.now()
-    time_label = f"{now.month}月{now.day}日{now.hour}時{now.minute}分"
-    marker = source_dir / f"★{time_label}_振り分け完了.txt"
+    marker = source_dir / f"★{time_label()}_振り分け完了.txt"
     marker.touch()
     logger.info("完了マーカー: %s", marker.name)
 
