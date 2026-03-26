@@ -48,7 +48,7 @@ def connect_driver(port: int = REMOTE_DEBUGGING_PORT) -> WebDriver:
     opts = Options()
     opts.add_experimental_option("debuggerAddress", f"127.0.0.1:{port}")
     driver = webdriver.Chrome(options=opts)
-    logger.info("WebDriver 接続完了: %s", driver.current_url)
+    logger.info("WebDriver 接続完了")
     return driver
 
 
