@@ -230,7 +230,7 @@ def main(argv: list[str] | None = None) -> int:
     log_summary(results)
 
     # 完了マーカー
-    marker = source_dir / f"★{time_label()}_振り分け完了.txt"
+    marker = source_dir / f"_{time_label()}_振り分け完了.txt"
     marker.touch()
     logger.info("完了マーカー: %s", marker.name)
 

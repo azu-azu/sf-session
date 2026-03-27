@@ -80,9 +80,9 @@ def write_pipeline_status(
     outputs_dir.mkdir(parents=True, exist_ok=True)
     phases_to_clear = [phase] + (clear_phases or [])
     for p in phases_to_clear:
-        for old in outputs_dir.glob(f"★{pipeline}_{p}_*.txt"):
+        for old in outputs_dir.glob(f"_{pipeline}_{p}_*.txt"):
             old.unlink()
-    marker = outputs_dir / f"★{pipeline}_{phase}_{label}.txt"
+    marker = outputs_dir / f"_{pipeline}_{phase}_{label}.txt"
     marker.touch()
     logger.info("pipeline status: %s", marker.name)
     return marker
