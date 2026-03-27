@@ -19,8 +19,8 @@ from pathlib import Path
 from ..config import (
     CHROME_EXE_PATH,
     CHROME_USER_DATA_DIR,
-    CSV_STAGING_DIR,
-    CSV_STAGING_ROOT,
+    ARCHIVE_CSV_DIR,
+    OUTPUT_STAGING_ROOT,
     DEFAULT_IDS_FILE,
     MACRO_DIR,
     SF_HOME_URL,
@@ -104,7 +104,7 @@ def _log_run_config(
 def _print_dry_run(args: argparse.Namespace, jobs) -> None:
     """dry-run モードのジョブ一覧表示。"""
     if not args.direct_deliver:
-        logger.info("Output dir  : %s", CSV_STAGING_DIR)
+        logger.info("Output dir  : %s", ARCHIVE_CSV_DIR)
     logger.info("--- dry-run mode ---")
     dummy_dl = Path("{download}")
     for i, j in enumerate(jobs, 1):
@@ -115,7 +115,7 @@ def _print_dry_run(args: argparse.Namespace, jobs) -> None:
             dest = build_destination(
                 j, dummy_dl,
                 date_suffix=args.date_suffix,
-                output_dir=CSV_STAGING_DIR,
+                output_dir=ARCHIVE_CSV_DIR,
             )
         else:
             dest = j.src_folder_name
@@ -202,7 +202,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--direct-deliver",
         action="store_true",
-        help="per-job 振り分け先フォルダへ直接コピー (default: outputs_csv/ に全出力)",
+        help="per-job 振り分け先フォルダへ直接コピー (default: outputs/archive/csv/ に全出力)",
     )
     parser.add_argument(
         "--port",
@@ -274,15 +274,15 @@ def _execute(
 
     try:
         if not args.direct_deliver:
-            if not CSV_STAGING_ROOT.is_dir():
-                logger.error("CSV_STAGING_ROOT が存在しません: %s", CSV_STAGING_ROOT)
+            if not OUTPUT_STAGING_ROOT.is_dir():
+                logger.error("OUTPUT_STAGING_ROOT が存在しません: %s", OUTPUT_STAGING_ROOT)
                 return 1
-            probe_output_dir(CSV_STAGING_ROOT)
+            probe_output_dir(OUTPUT_STAGING_ROOT)
 
         if args.direct_deliver:
             output_dir = None
         else:
-            work_dir = prepare_work_dir(CSV_STAGING_DIR)
+            work_dir = prepare_work_dir(ARCHIVE_CSV_DIR)
             output_dir = work_dir
 
         _log_run_config(chrome_path, download_dir, user_data_dir, args, output_dir)
@@ -290,7 +290,7 @@ def _execute(
         if args.open_download_dir:
             open_folder(download_dir)
         if args.open_output_dir:
-            open_folder(output_dir if output_dir else CSV_STAGING_ROOT)
+            open_folder(output_dir if output_dir else OUTPUT_STAGING_ROOT)
 
         if output_dir is not None:
             write_start_marker(output_dir, len(active_jobs))
@@ -316,7 +316,7 @@ def _execute(
             write_marker(output_dir, ok, ng)
 
         if work_dir is not None:
-            swap_work_to_staging(work_dir, CSV_STAGING_DIR, ok)
+            swap_work_to_staging(work_dir, ARCHIVE_CSV_DIR, ok)
 
         return 1 if ok < len(results) else 0
     except KeyboardInterrupt:

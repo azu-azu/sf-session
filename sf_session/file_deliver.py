@@ -22,7 +22,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
-from .config import CSV_STAGING_DIR, DEFAULT_IDS_FILE, MACRO_DIR
+from .config import ARCHIVE_CSV_DIR, DEFAULT_IDS_FILE, MACRO_DIR
 from .macro_book_reader import JobEntry, load_active_jobs
 from .utils import setup_logging, time_label
 
@@ -173,8 +173,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--source-dir",
         type=Path,
-        default=CSV_STAGING_DIR,
-        help=f"振り分け元フォルダ (default: {CSV_STAGING_DIR})",
+        default=ARCHIVE_CSV_DIR,
+        help=f"振り分け元フォルダ (default: {ARCHIVE_CSV_DIR})",
     )
     parser.add_argument(
         "--macro-dir",

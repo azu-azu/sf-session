@@ -1,6 +1,6 @@
-"""CSV_STAGING_DIR 直下の CSV を UTF-8 BOM に変換する。
+"""ARCHIVE_CSV_DIR 直下の CSV を UTF-8 BOM に変換する。
 
-変換先は CSV_STAGING_DIR/utf/ サブフォルダ。
+変換先は ARCHIVE_CSV_DIR/utf/ サブフォルダ。
 
 Usage:
     python sf-session/jis_to_utf8.py
@@ -12,7 +12,7 @@ import logging
 import sys
 from pathlib import Path
 
-from .config import CSV_STAGING_DIR
+from .config import ARCHIVE_CSV_DIR
 from .utils import setup_logging
 
 logger = logging.getLogger(__name__)
@@ -56,11 +56,11 @@ def convert_dir(src: Path) -> Path:
 def main() -> int:
     setup_logging()
 
-    if not CSV_STAGING_DIR.is_dir():
-        logger.error("'%s' が見つかりません。", CSV_STAGING_DIR)
+    if not ARCHIVE_CSV_DIR.is_dir():
+        logger.error("'%s' が見つかりません。", ARCHIVE_CSV_DIR)
         return 1
 
-    convert_dir(CSV_STAGING_DIR)
+    convert_dir(ARCHIVE_CSV_DIR)
     return 0
 
 

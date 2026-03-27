@@ -147,7 +147,7 @@ SSO 経由のログインに対応。ログインが必要な場合はユーザ�
 # dry-run でジョブ一覧を確認
 ★01_download.bat --dry-run
 
-# 実行 (outputs_csv/ に全ファイル集約)
+# 実行 (outputs/archive/csv/ に全ファイル集約)
 ★01_download.bat
 
 # per-job 振り分け先フォルダへ直接コピー
@@ -175,7 +175,7 @@ export 中にセッションが切れた場合は、タブを traverse してロ
 --my-chrome         OS デフォルト Chrome を使用（login check skip、手動ログイン前提）
 --no-login-check    pre-flight login check を skip
 --port              リモートデバッグポート (default: 9222)
---direct-deliver    各ジョブの src_folder_name へ直接振り分け (default: outputs_csv/ に集約)
+--direct-deliver    各ジョブの src_folder_name へ直接振り分け (default: outputs/archive/csv/ に集約)
 --ids-file          ids.txt の report ID との intersection でフィルタ
 --retry             前回の success_ids を読み、失敗分だけ再実行
 --date-suffix       ファイル名に _YYYYMMDD を付与
@@ -190,13 +190,13 @@ export 中にセッションが切れた場合は、タブを traverse してロ
 
 ```powershell
 # dry-run で振り分け先を確認
-★02_振り分け.bat --source-dir outputs_csv --dry-run
+★02_振り分け.bat --source-dir outputs/archive/csv --dry-run
 
 # 実行
-★02_振り分け.bat --source-dir outputs_csv
+★02_振り分け.bat --source-dir outputs/archive/csv
 
 # 日付サフィックス + ids.txt フィルタ
-★02_振り分け.bat --source-dir outputs_csv --date-suffix --ids-file
+★02_振り分け.bat --source-dir outputs/archive/csv --date-suffix --ids-file
 ```
 
 ## ids.txt — レポート ID フィルタ
@@ -240,7 +240,7 @@ py -m sf_session.report_filter
 ```
 
 - 前提: `.env` に SF 認証情報、`レポートID/ids.txt` に対象 ID を記載
-- 出力: `outputs_result/probe_result_{ts}.xlsx`（probe_result シート + columns シート）
+- 出力: `outputs/archive/result/probe_result_{ts}.xlsx`（probe_result シート + columns シート）
 
 ## テスト
 

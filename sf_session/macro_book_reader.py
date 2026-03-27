@@ -13,7 +13,7 @@ from pathlib import Path
 
 from openpyxl import load_workbook
 
-from .config import DEFAULT_IDS_FILE, MACRO_DIR, OUTPUT_RESULTS_DIR
+from .config import DEFAULT_IDS_FILE, MACRO_DIR, ARCHIVE_RESULT_DIR
 from .utils import find_latest_success_ids, read_ids_file, strip_trailing_date
 
 logger = logging.getLogger(__name__)
@@ -162,7 +162,7 @@ def load_active_jobs(
         )
 
     if exclude_success:
-        ids_path = find_latest_success_ids(OUTPUT_RESULTS_DIR)
+        ids_path = find_latest_success_ids(ARCHIVE_RESULT_DIR)
         if ids_path is None:
             logger.warning("success_ids ファイルが見つかりません。除外なしで続行。")
         else:

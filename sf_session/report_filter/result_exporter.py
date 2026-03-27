@@ -14,7 +14,7 @@ from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill
 from openpyxl.utils import get_column_letter
 
-from ..config import OUTPUT_RESULTS_DIR
+from ..config import ARCHIVE_RESULT_DIR
 from ..utils import format_duration
 from .job_result import JobResult
 
@@ -96,11 +96,11 @@ def write_result_excel(
 ) -> Path:
     """JobResult リストを Excel ファイルに書き出す。
 
-    Output: outputs_result/probe_result_{ts}.xlsx
+    Output: outputs/archive/result/probe_result_{ts}.xlsx
     """
     if output_path is None:
         ts = run_ts or datetime.now().strftime("%Y%m%d_%H%M%S")
-        output_path = OUTPUT_RESULTS_DIR / f"probe_result_{ts}.xlsx"
+        output_path = ARCHIVE_RESULT_DIR / f"probe_result_{ts}.xlsx"
 
     # タイムスタンプ表示用変換
     if run_ts:

@@ -1,6 +1,6 @@
 """macro_book_reader のジョブ定義と success ID で対象 CSV を特定し、日付フォルダへコピーする。
 
-file_deliver の逆操作: 各フォルダから CSV を収集して CSV_STAGING_DIR に集約する。
+file_deliver の逆操作: 各フォルダから CSV を収集して ARCHIVE_CSV_DIR に集約する。
 
 Usage:
     python -m sf_session.file_collect
@@ -14,7 +14,7 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-from .config import CSV_STAGING_DIR, OUTPUT_RESULTS_DIR
+from .config import ARCHIVE_CSV_DIR, ARCHIVE_RESULT_DIR
 from .macro_book_reader import JobEntry, read_jobs
 from .utils import (
     find_latest_success_ids,
@@ -135,7 +135,7 @@ def main() -> int:
         logger.error("%s", e)
         return 1
 
-    ids_path = find_latest_success_ids(OUTPUT_RESULTS_DIR)
+    ids_path = find_latest_success_ids(ARCHIVE_RESULT_DIR)
     if ids_path is None:
         logger.error("success_ids ファイルが見つかりません。")
         return 1
@@ -145,7 +145,7 @@ def main() -> int:
 
     today_str = datetime.now().strftime("%Y%m%d")
     new_folder_name = _COLLECT_FOLDER_TEMPLATE.replace("#", today_str)
-    daily_output_folder = CSV_STAGING_DIR / new_folder_name
+    daily_output_folder = ARCHIVE_CSV_DIR / new_folder_name
 
     if daily_output_folder.is_dir():
         removed = [f for f in daily_output_folder.iterdir() if f.is_file()]

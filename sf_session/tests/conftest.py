@@ -4,7 +4,7 @@ import os
 # config.py が import 時に os.environ[] で参照する必須変数。
 # .env がないテスト環境でも import が通るようにデフォルト値を設定する。
 _TEST_DEFAULTS = {
-    "CSV_STAGING_ROOT": ".",
+    "OUTPUT_STAGING_ROOT": ".",
     "SF_BASE_URL": "https://test.salesforce.com",
     "MACRO_STORE_DIR": ".",
 }

@@ -14,13 +14,15 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 MACRO_DIR = Path(os.environ["MACRO_STORE_DIR"])
 
 # 出力フォルダ
-_CSV_STAGING_SUBDIR = "outputs_csv"
+OUTPUT_STAGING_ROOT = Path(os.environ["OUTPUT_STAGING_ROOT"])
+_OUTPUTS_DIR = OUTPUT_STAGING_ROOT / "outputs"
+_ARCHIVE_DIR = _OUTPUTS_DIR / "archive"
 
-CSV_STAGING_ROOT = Path(os.environ["CSV_STAGING_ROOT"])
-CSV_STAGING_DIR = CSV_STAGING_ROOT / _CSV_STAGING_SUBDIR
-OUTPUT_RESULTS_DIR = PROJECT_ROOT / "outputs_result"
-OUTPUT_LOG_DIR = PROJECT_ROOT / "outputs_log"
-OUTPUT_ERRORS_DIR = OUTPUT_LOG_DIR / "errors"
+_CSV_SUBDIR = "csv"
+_RESULT_SUBDIR = "result"
+
+ARCHIVE_CSV_DIR = _ARCHIVE_DIR / _CSV_SUBDIR
+ARCHIVE_RESULT_DIR = _ARCHIVE_DIR / _RESULT_SUBDIR
 
 # Chrome
 CHROME_EXE_PATH = r"C:\Program Files\Google\Chrome\Application\chrome.exe"

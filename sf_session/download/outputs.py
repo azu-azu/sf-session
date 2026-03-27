@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from .runner import ExportResult
 
-from ..config import OUTPUT_RESULTS_DIR
+from ..config import ARCHIVE_RESULT_DIR
 from ..macro_book_reader import JobEntry
 from ..utils import time_label
 
@@ -83,14 +83,14 @@ def log_summary(results: list[ExportResult]) -> tuple[int, int]:
 
 
 def write_success_ids(results: list[ExportResult]) -> Path | None:
-    """成功した report_id を OUTPUT_RESULTS_DIR/success_ids_YYYYMMDD.txt に書き出す。"""
+    """成功した report_id を ARCHIVE_RESULT_DIR/success_ids_YYYYMMDD.txt に書き出す。"""
     ids = [r.report_id for r in results if r.success and r.report_id]
     if not ids:
         return None
 
-    OUTPUT_RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+    ARCHIVE_RESULT_DIR.mkdir(parents=True, exist_ok=True)
     today = datetime.now().strftime("%Y%m%d")
-    path = OUTPUT_RESULTS_DIR / f"success_ids_{today}.txt"
+    path = ARCHIVE_RESULT_DIR / f"success_ids_{today}.txt"
     path.write_text("\n".join(ids) + "\n", encoding="utf-8")
     logger.info("success_ids を書き出し: %s (%d 件)", path.name, len(ids))
     return path

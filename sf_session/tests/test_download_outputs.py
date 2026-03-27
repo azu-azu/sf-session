@@ -157,7 +157,7 @@ class TestLogSummary:
 
 class TestWriteSuccessIds:
     def test_writes_success_ids(self, tmp_path, monkeypatch):
-        monkeypatch.setattr("sf_session.download.outputs.OUTPUT_RESULTS_DIR", tmp_path)
+        monkeypatch.setattr("sf_session.download.outputs.ARCHIVE_RESULT_DIR", tmp_path)
         results = [
             ExportResult(seq=1, report_id="00O001", success=True, elapsed=1.0),
             ExportResult(seq=2, report_id="00O002", success=False, elapsed=2.0),
@@ -173,7 +173,7 @@ class TestWriteSuccessIds:
         assert lines == ["00O001", "00O003"]
 
     def test_no_success_returns_none(self, tmp_path, monkeypatch):
-        monkeypatch.setattr("sf_session.download.outputs.OUTPUT_RESULTS_DIR", tmp_path)
+        monkeypatch.setattr("sf_session.download.outputs.ARCHIVE_RESULT_DIR", tmp_path)
         results = [
             ExportResult(seq=1, report_id="00O001", success=False, elapsed=1.0),
         ]
@@ -181,7 +181,7 @@ class TestWriteSuccessIds:
 
     def test_creates_dir_if_missing(self, tmp_path, monkeypatch):
         out_dir = tmp_path / "outputs_result"
-        monkeypatch.setattr("sf_session.download.outputs.OUTPUT_RESULTS_DIR", out_dir)
+        monkeypatch.setattr("sf_session.download.outputs.ARCHIVE_RESULT_DIR", out_dir)
         results = [
             ExportResult(seq=1, report_id="00O001", success=True, elapsed=1.0),
         ]

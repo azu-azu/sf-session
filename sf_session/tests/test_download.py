@@ -106,10 +106,10 @@ def _stub_main_externals(monkeypatch, tmp_path, *, jobs=None):
     downloaded = download_dir / "report.csv"
     downloaded.write_text("data")
 
-    monkeypatch.setattr("sf_session.download.cli.CSV_STAGING_DIR", staging_dir)
+    monkeypatch.setattr("sf_session.download.cli.ARCHIVE_CSV_DIR", staging_dir)
     monkeypatch.setattr("sf_session.download.cli.CHROME_EXE_PATH", str(chrome_path))
     monkeypatch.setattr(
-        "sf_session.download.outputs.OUTPUT_RESULTS_DIR", tmp_path / "results",
+        "sf_session.download.outputs.ARCHIVE_RESULT_DIR", tmp_path / "results",
     )
     monkeypatch.setattr(
         "sf_session.download.cli.load_active_jobs", lambda *a, **kw: jobs,
@@ -139,10 +139,10 @@ def _stub_main_externals(monkeypatch, tmp_path, *, jobs=None):
 
 
 class TestWorkDirSwap:
-    """work_dir → CSV_STAGING_DIR への atomic swap テスト。"""
+    """work_dir → ARCHIVE_CSV_DIR への atomic swap テスト。"""
 
     def test_swap_creates_staging_dir(self, tmp_path, monkeypatch):
-        """正常終了時、work_dir が CSV_STAGING_DIR に rename される。"""
+        """正常終了時、work_dir が ARCHIVE_CSV_DIR に rename される。"""
         staging_dir, _ = _stub_main_externals(monkeypatch, tmp_path)
 
         rc = main(["--no-login-check", "--force"])
@@ -249,7 +249,7 @@ class TestWorkDirSwap:
         assert not list(tmp_path.glob(f"{staging_dir.name}_work_*"))
 
     def test_marker_written_to_final_staging_dir(self, tmp_path, monkeypatch):
-        """完了マーカーは work_dir に書かれてから swap で CSV_STAGING_DIR に入る。"""
+        """完了マーカーは work_dir に書かれてから swap で ARCHIVE_CSV_DIR に入る。"""
         staging_dir, _ = _stub_main_externals(monkeypatch, tmp_path)
 
         rc = main(["--no-login-check", "--force"])
