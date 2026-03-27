@@ -20,7 +20,7 @@ from ..config import (
     CHROME_EXE_PATH,
     CHROME_USER_DATA_DIR,
     ARCHIVE_CSV_DIR,
-    OUTPUT_STAGING_ROOT,
+    DEPLOY_ROOT,
     PROJECT_ROOT,
     ARCHIVE_IDS_FILE,
     ARCHIVE_MACRO_DIR,
@@ -196,7 +196,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--direct-deliver",
         action="store_true",
-        help="per-job 振り分け先フォルダへ直接コピー (default: outputs/archive/csv/ に全出力)",
+        help="per-job 振り分け先フォルダへ直接コピー (default: pipelines/archive/csv/ に全出力)",
     )
     parser.add_argument(
         "--port",
@@ -268,10 +268,10 @@ def _execute(
 
     try:
         if not args.direct_deliver:
-            if not OUTPUT_STAGING_ROOT.is_dir():
-                logger.error("OUTPUT_STAGING_ROOT が存在しません: %s", OUTPUT_STAGING_ROOT)
+            if not DEPLOY_ROOT.is_dir():
+                logger.error("DEPLOY_ROOT が存在しません: %s", DEPLOY_ROOT)
                 return 1
-            probe_output_dir(OUTPUT_STAGING_ROOT)
+            probe_output_dir(DEPLOY_ROOT)
 
         if args.direct_deliver:
             output_dir = None
@@ -284,7 +284,7 @@ def _execute(
         if args.open_download_dir:
             open_folder(download_dir)
         if args.open_output_dir:
-            open_folder(output_dir if output_dir else OUTPUT_STAGING_ROOT)
+            open_folder(output_dir if output_dir else DEPLOY_ROOT)
 
         if output_dir is not None:
             write_start_marker(output_dir, len(active_jobs))

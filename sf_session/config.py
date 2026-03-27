@@ -11,8 +11,8 @@ load_dotenv()
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 # ── 共通 ──────────────────────────────────────────────
-OUTPUT_STAGING_ROOT = Path(os.environ["OUTPUT_STAGING_ROOT"])
-_OUTPUTS_DIR = OUTPUT_STAGING_ROOT / "outputs"
+DEPLOY_ROOT = Path(os.environ["DEPLOY_ROOT"])
+_PIPELINES_DIR = DEPLOY_ROOT / "pipelines"
 
 _CSV_SUBDIR = "csv"
 _RESULT_SUBDIR = "result"
@@ -27,7 +27,7 @@ SF_BASE_URL = os.environ["SF_BASE_URL"]
 SF_HOME_URL = f"{SF_BASE_URL}/home/home.jsp"
 
 # ── archive pipeline ─────────────────────────────────
-_ARCHIVE_DIR = _OUTPUTS_DIR / "archive"
+_ARCHIVE_DIR = _PIPELINES_DIR / "archive"
 
 ARCHIVE_MACRO_DIR = Path(os.environ["ARCHIVE_MACRO_DIR"])
 ARCHIVE_CSV_DIR = _ARCHIVE_DIR / _CSV_SUBDIR
