@@ -42,7 +42,7 @@ API ではなく、ブラウザの export URL (`?export=1`) を使う VBA マク
 
 | スクリプト | 役割 |
 |---|---|
-| `99_setup_初回または設定更新の場合のみ実行する.bat` | venv 作成 + pip upgrade + 依存パッケージ install（初回のみ実行） |
+| `98_setup_初回または設定更新の場合のみ実行する.bat` | venv 作成 + pip upgrade + 依存パッケージ install（初回のみ実行） |
 | `sf_session/session_keeper.py` | Chrome 起動 → 手動ログイン待機（SSO / MFA）→ 定期 reload でセッション維持 |
 | `sf_session/download/cli.py` | 営業日ガード + pre-flight login check 付きバッチ export orchestration |
 | `sf_session/download/runner.py` | レポート export 実行エンジン (export_one / export_batch) |
@@ -58,13 +58,14 @@ API ではなく、ブラウザの export URL (`?export=1`) を使う VBA マク
 | `sf_session/macro_book_reader.py` | ジョブ定義 (`JobEntry`) の読み取り。xlsm から直接読み取り |
 | `sf_session/config.py` | 共通パス定数 + `create_sf_client()` |
 | `sf_session/clean.py` | `__pycache__` / `.pyc` / `.log` 等のクリーンアップ |
+| `sf_session/init_pipeline.py` | 新規 pipeline の scaffolding（ディレクトリ・bat・.env を一括生成） |
 | `sf_session/report_filter/` | レポートのメタデータ抽出 (API 経由、データ本体は取らない) |
 
 ## セットアップ
 
 ```powershell
 # 初回のみ実行（venv 作成 + 依存 install）
-99_setup_初回または設定更新の場合のみ実行する.bat
+98_setup_初回または設定更新の場合のみ実行する.bat
 ```
 
 依存: `selenium`, `openpyxl`, `simple-salesforce`, `python-dotenv`, `jpholiday`
@@ -72,7 +73,7 @@ API ではなく、ブラウザの export URL (`?export=1`) を使う VBA マク
 ## 使い方
 
 bat ファイルをダブルクリック、または PowerShell からオプション付きで実行。
-初回は `99_setup_初回または設定更新の場合のみ実行する.bat` を先に実行すること。
+初回は `98_setup_初回または設定更新の場合のみ実行する.bat` を先に実行すること。
 
 ### 起動パターン
 
@@ -252,6 +253,19 @@ python -m pytest -v
 ## クリーンアップ
 
 ```powershell
-98_clean_cache.bat              # __pycache__, .pyc, .log, .bak 等を削除
-98_clean_cache.bat --dry-run    # 削除せず対象だけ表示
+97_clean_cache.bat              # __pycache__, .pyc, .log, .bak 等を削除
+97_clean_cache.bat --dry-run    # 削除せず対象だけ表示
 ```
+
+## 新規 pipeline の追加
+
+```powershell
+99_new_pipeline.bat
+```
+
+対話形式で pipeline 名を入力すると、以下を一括生成する:
+
+1. `.env` の `PIPELINES` に追加
+2. `pipelines/<name>/` + サブディレクトリ (`csv/`, `result/`, `id_filter/`)
+3. `pipelines/archive/` の bat ファイルをコピー（pipeline 名を置換）
+4. `MACRO_ROOT/<name>/` ディレクトリを作成
