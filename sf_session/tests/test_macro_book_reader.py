@@ -5,6 +5,7 @@ import logging
 from datetime import datetime
 from unittest.mock import patch
 
+from sf_session.config import PipelineConfig
 from sf_session.macro_book_reader import load_active_jobs
 from sf_session.utils import strip_trailing_date
 from sf_session.tests.helpers import make_job
@@ -40,19 +41,22 @@ class TestIdsFileEmpty:
 
     def test_ids_file_empty_returns_empty(self, tmp_path, monkeypatch, caplog):
         """ids.txt がコメントのみ → 空リスト + warning ログ。"""
-        ids_file = tmp_path / "ids.txt"
+        # _PIPELINES_DIR を tmp_path に向ける → pipeline.ids_file が tmp_path 配下になる
+        monkeypatch.setattr("sf_session.config._PIPELINES_DIR", tmp_path)
+
+        pipeline = PipelineConfig(name="test", macro_dir=tmp_path)
+        # pipeline.ids_file = tmp_path / "test" / "id_filter" / "ids.txt"
+        ids_file = pipeline.ids_file
+        ids_file.parent.mkdir(parents=True)
         ids_file.write_text("# コメントだけ\n# もう1行\n")
 
-        monkeypatch.setattr(
-            "sf_session.macro_book_reader.ARCHIVE_IDS_FILE", ids_file,
-        )
         monkeypatch.setattr(
             "sf_session.macro_book_reader.read_jobs",
             lambda *a, **kw: [make_job()],
         )
 
         with caplog.at_level(logging.WARNING):
-            result = load_active_jobs(tmp_path, ids_file=True)
+            result = load_active_jobs(pipeline, ids_file=True)
 
         assert result == []
         assert "0 件" in caplog.text

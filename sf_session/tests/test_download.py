@@ -8,7 +8,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from sf_session.config import CHROME_EXE_PATH, CHROME_USER_DATA_DIR
+from sf_session.config import CHROME_EXE_PATH, CHROME_USER_DATA_DIR, PipelineConfig
 from sf_session.download import (
     main,
     parse_args,
@@ -50,6 +50,7 @@ class TestParseArgs:
         assert not args.force
         assert not args.open_download_dir
         assert not args.open_output_dir
+        assert args.macro_dir is None
 
     def test_all_flags(self):
         args = parse_args([
@@ -102,8 +103,12 @@ def _stub_main_externals(monkeypatch, tmp_path, *, jobs=None):
     """main() を軽量に実行するための monkeypatch 群。
 
     Returns (staging_dir, download_dir) の tuple。
+    staging_dir = pipeline.csv_dir = _PIPELINES_DIR / "archive" / "csv"
     """
-    staging_dir = tmp_path / "outputs_csv"
+    # _PIPELINES_DIR を tmp_path 配下に向ける → PipelineConfig の derived paths が追従
+    pipelines_dir = tmp_path / "pipelines"
+    monkeypatch.setattr("sf_session.config._PIPELINES_DIR", pipelines_dir)
+
     download_dir = tmp_path / "downloads"
     download_dir.mkdir()
     chrome_path = tmp_path / "chrome"
@@ -115,11 +120,12 @@ def _stub_main_externals(monkeypatch, tmp_path, *, jobs=None):
     downloaded = download_dir / "report.csv"
     downloaded.write_text("data")
 
-    monkeypatch.setattr("sf_session.download.cli.ARCHIVE_CSV_DIR", staging_dir)
-    monkeypatch.setattr("sf_session.download.cli.CHROME_EXE_PATH", str(chrome_path))
+    fake_pipeline = PipelineConfig(name="archive", macro_dir=tmp_path / "macro")
     monkeypatch.setattr(
-        "sf_session.download.outputs.ARCHIVE_RESULT_DIR", tmp_path / "results",
+        "sf_session.download.cli.PIPELINES", {"archive": fake_pipeline},
     )
+
+    monkeypatch.setattr("sf_session.download.cli.CHROME_EXE_PATH", str(chrome_path))
     monkeypatch.setattr(
         "sf_session.download.cli.load_active_jobs", lambda *a, **kw: jobs,
     )
@@ -144,14 +150,15 @@ def _stub_main_externals(monkeypatch, tmp_path, *, jobs=None):
         "sf_session.download.cli.probe_output_dir", lambda *a: None,
     )
 
+    staging_dir = fake_pipeline.csv_dir  # pipelines_dir / "archive" / "csv"
     return staging_dir, download_dir
 
 
 class TestWorkDirSwap:
-    """work_dir → ARCHIVE_CSV_DIR への atomic swap テスト。"""
+    """work_dir → csv_dir への atomic swap テスト。"""
 
     def test_swap_creates_staging_dir(self, tmp_path, monkeypatch):
-        """正常終了時、work_dir が ARCHIVE_CSV_DIR に rename される。"""
+        """正常終了時、work_dir が csv_dir に rename される。"""
         staging_dir, _ = _stub_main_externals(monkeypatch, tmp_path)
 
         rc = main(["archive", "--no-login-check", "--force"])
@@ -159,7 +166,7 @@ class TestWorkDirSwap:
         assert rc == 0
         assert staging_dir.is_dir()
         # work_dir は swap 後に消えている
-        assert not list(tmp_path.glob(f"{staging_dir.name}_work_*"))
+        assert not list(staging_dir.parent.glob(f"{staging_dir.name}_work_*"))
 
     def test_swap_creates_prev_backup(self, tmp_path, monkeypatch):
         """既存 staging_dir がある場合、_prev_{ts} に退避される。"""
@@ -173,7 +180,7 @@ class TestWorkDirSwap:
         rc = main(["archive", "--no-login-check", "--force"])
 
         assert rc == 0
-        prevs = list(tmp_path.glob(f"{staging_dir.name}_prev_*"))
+        prevs = list(staging_dir.parent.glob(f"{staging_dir.name}_prev_*"))
         assert len(prevs) == 1
         assert (prevs[0] / "old_report.csv").read_text() == "old data"
         # 新しい staging_dir には今回のファイルがある
@@ -184,18 +191,19 @@ class TestWorkDirSwap:
         staging_dir, _ = _stub_main_externals(monkeypatch, tmp_path)
 
         # 古い _prev_*
-        old_prev = tmp_path / f"{staging_dir.name}_prev_20260101_000000"
+        staging_dir.parent.mkdir(parents=True, exist_ok=True)
+        old_prev = staging_dir.parent / f"{staging_dir.name}_prev_20260101_000000"
         old_prev.mkdir(parents=True)
         (old_prev / "ancient.csv").write_text("ancient")
 
         # 前回分
-        staging_dir.mkdir(parents=True)
+        staging_dir.mkdir(parents=True, exist_ok=True)
         (staging_dir / "old_report.csv").write_text("old")
 
         rc = main(["archive", "--no-login-check", "--force"])
 
         assert rc == 0
-        prevs = list(tmp_path.glob(f"{staging_dir.name}_prev_*"))
+        prevs = list(staging_dir.parent.glob(f"{staging_dir.name}_prev_*"))
         # 古い prev は消え、今回の prev だけ残る
         assert len(prevs) == 1
         assert (prevs[0] / "old_report.csv").exists()
@@ -223,7 +231,7 @@ class TestWorkDirSwap:
         # current はそのまま残っている
         assert (staging_dir / "precious.csv").read_text() == "do not lose"
         # work_dir は cleanup されている
-        assert not list(tmp_path.glob(f"{staging_dir.name}_work_*"))
+        assert not list(staging_dir.parent.glob(f"{staging_dir.name}_work_*"))
 
     def test_direct_deliver_skips_swap(self, tmp_path, monkeypatch):
         """--direct-deliver 時は work_dir / swap を使わない。"""
@@ -233,7 +241,7 @@ class TestWorkDirSwap:
 
         assert rc == 0
         # staging_dir も work_dir も作成されない
-        assert not list(tmp_path.glob(f"{staging_dir.name}_work_*"))
+        assert not list(staging_dir.parent.glob(f"{staging_dir.name}_work_*"))
 
     def test_zero_success_no_swap(self, tmp_path, monkeypatch):
         """全件失敗時は swap せず、前回の current を保持する。"""
@@ -255,10 +263,10 @@ class TestWorkDirSwap:
         # current は前回分がそのまま
         assert (staging_dir / "good_report.csv").read_text() == "previous good data"
         # work_dir は cleanup されている
-        assert not list(tmp_path.glob(f"{staging_dir.name}_work_*"))
+        assert not list(staging_dir.parent.glob(f"{staging_dir.name}_work_*"))
 
     def test_marker_written_to_final_staging_dir(self, tmp_path, monkeypatch):
-        """完了マーカーは work_dir に書かれてから swap で ARCHIVE_CSV_DIR に入る。"""
+        """完了マーカーは work_dir に書かれてから swap で csv_dir に入る。"""
         staging_dir, _ = _stub_main_externals(monkeypatch, tmp_path)
 
         rc = main(["archive", "--no-login-check", "--force"])

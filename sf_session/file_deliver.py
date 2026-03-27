@@ -17,12 +17,13 @@ import argparse
 import logging
 import shutil
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, replace as _dc_replace
 from pathlib import Path
 
-from .config import ARCHIVE_CSV_DIR, ARCHIVE_IDS_FILE, ARCHIVE_MACRO_DIR, PROJECT_ROOT, VALID_PIPELINES
+from .config import PIPELINES, PROJECT_ROOT, VALID_PIPELINES
+from .download.outputs import build_destination
 from .macro_book_reader import JobEntry, load_active_jobs
-from .utils import build_output_stem, setup_logging, time_label, write_pipeline_status
+from .utils import setup_logging, time_label, write_pipeline_status
 
 logger = logging.getLogger(__name__)
 
@@ -57,23 +58,6 @@ def match_file_to_job(
         if filename.startswith(f"{report_id}_"):
             return job
     return None
-
-
-def build_destination(
-    job: JobEntry,
-    source: Path,
-) -> Path:
-    """振り分け先パスを組み立てる。
-
-    ファイル名は {report_id}_{YYYYMMDD}_{stem}{ext} 形式。
-    リネーム指定 (has_filename) があれば stem = new_filename、なければ元ファイル名。
-    """
-    dest_dir = Path(job.src_folder_name)
-    ext = source.suffix
-    raw_stem = job.new_filename if job.has_filename else source.stem
-    stem = build_output_stem(job.report_id, raw_stem)
-
-    return dest_dir / f"{stem}{ext}"
 
 
 def distribute_files(
@@ -164,20 +148,20 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--source-dir",
         type=Path,
-        default=ARCHIVE_CSV_DIR,
-        help=f"振り分け元フォルダ (default: {ARCHIVE_CSV_DIR})",
+        default=None,
+        help="振り分け元フォルダ (default: pipeline config)",
     )
     parser.add_argument(
         "--macro-dir",
         type=Path,
-        default=ARCHIVE_MACRO_DIR,
-        help=f"マクロ格納フォルダ path (default: {ARCHIVE_MACRO_DIR})",
+        default=None,
+        help="マクロ格納フォルダ path (default: pipeline config)",
     )
     parser.add_argument(
         "--ids-file",
         action="store_true",
         default=False,
-        help=f"{ARCHIVE_IDS_FILE} から report ID を読み取り、intersection でフィルタ",
+        help="ids.txt から report ID を読み取り、intersection でフィルタ",
     )
     parser.add_argument(
         "--dry-run",
@@ -191,14 +175,16 @@ def main(argv: list[str] | None = None) -> int:
     setup_logging()
 
     args = parse_args(argv)
+    pipeline = PIPELINES[args.pipeline]
 
-    source_dir = args.source_dir.expanduser().resolve()
+    source_dir = (args.source_dir or pipeline.csv_dir).expanduser().resolve()
     if not source_dir.is_dir():
         logger.error("source-dir が存在しません: %s", source_dir)
         return 1
 
+    effective = _dc_replace(pipeline, macro_dir=args.macro_dir) if args.macro_dir else pipeline
     try:
-        active_jobs = load_active_jobs(args.macro_dir, ids_file=args.ids_file)
+        active_jobs = load_active_jobs(effective, ids_file=args.ids_file)
     except FileNotFoundError as e:
         logger.error("%s", e)
         return 1

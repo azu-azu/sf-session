@@ -12,6 +12,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import dataclasses
 import logging
 import shutil
 from pathlib import Path
@@ -19,10 +20,8 @@ from pathlib import Path
 from ..config import (
     CHROME_EXE_PATH,
     CHROME_USER_DATA_DIR,
-    ARCHIVE_CSV_DIR,
+    PIPELINES,
     PROJECT_ROOT,
-    ARCHIVE_IDS_FILE,
-    ARCHIVE_MACRO_DIR,
     SF_HOME_URL,
     VALID_PIPELINES,
 )
@@ -101,10 +100,10 @@ def _log_run_config(
         logger.info("Output mode : direct-deliver (per-job)")
 
 
-def _print_dry_run(args: argparse.Namespace, jobs) -> None:
+def _print_dry_run(args: argparse.Namespace, jobs, *, csv_dir: Path) -> None:
     """dry-run モードのジョブ一覧表示。"""
     if not args.direct_deliver:
-        logger.info("Output dir  : %s", ARCHIVE_CSV_DIR)
+        logger.info("Output dir  : %s", csv_dir)
     logger.info("--- dry-run mode ---")
     dummy_dl = Path("{download}")
     for i, j in enumerate(jobs, 1):
@@ -114,7 +113,7 @@ def _print_dry_run(args: argparse.Namespace, jobs) -> None:
         if not args.direct_deliver:
             dest = build_destination(
                 j, dummy_dl,
-                output_dir=ARCHIVE_CSV_DIR,
+                output_dir=csv_dir,
             )
         else:
             dest = j.src_folder_name
@@ -183,14 +182,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--macro-dir",
         type=Path,
-        default=ARCHIVE_MACRO_DIR,
-        help=f"マクロ格納フォルダ path (default: {ARCHIVE_MACRO_DIR})",
+        default=None,
+        help="マクロ格納フォルダ path (default: pipeline config)",
     )
     parser.add_argument(
         "--ids-file",
         action="store_true",
         default=False,
-        help=f"{ARCHIVE_IDS_FILE} から report ID を読み取り、ジョブ定義との intersection でフィルタ",
+        help="ids.txt から report ID を読み取り、ジョブ定義との intersection でフィルタ",
     )
     parser.add_argument(
         "--retry",
@@ -201,7 +200,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--direct-deliver",
         action="store_true",
-        help="per-job 振り分け先フォルダへ直接コピー (default: pipelines/archive/csv/ に全出力)",
+        help="per-job 振り分け先フォルダへ直接コピー (default: pipeline の csv_dir に全出力)",
     )
     parser.add_argument(
         "--port",
@@ -259,6 +258,33 @@ def _prepare_session(
     return session
 
 
+def _finalize(
+    args: argparse.Namespace,
+    results: list,
+    *,
+    work_dir: Path | None,
+    csv_dir: Path,
+    result_dir: Path,
+) -> int:
+    """結果出力 + swap + status marker。return code を返す。"""
+    ok, ng = log_summary(results)
+    write_success_ids(results, result_dir=result_dir)
+
+    if work_dir is not None:
+        write_marker(work_dir, ok, ng)
+        swap_work_to_staging(work_dir, csv_dir, ok)
+
+    phase = "direct" if args.direct_deliver else "dl"
+    other = "dl" if phase == "direct" else "direct"
+    write_pipeline_status(
+        PROJECT_ROOT, args.pipeline, phase,
+        f"{time_label()}_成功{ok}件_失敗{ng}件",
+        clear_phases=[other, "dv"],
+    )
+
+    return 1 if ok < len(results) else 0
+
+
 def _execute(
     args: argparse.Namespace,
     active_jobs: list[JobEntry],
@@ -266,8 +292,11 @@ def _execute(
     download_dir: Path,
     user_data_dir: Path | None,
     session: BrowserSession | None,
+    *,
+    csv_dir: Path,
+    result_dir: Path,
 ) -> int:
-    """Chrome 起動 → export → summary → swap。"""
+    """Chrome 起動 → export → finalize。"""
     driver = session.driver if session else None
     work_dir: Path | None = None
 
@@ -281,7 +310,7 @@ def _execute(
         if args.direct_deliver:
             output_dir = None
         else:
-            work_dir = prepare_work_dir(ARCHIVE_CSV_DIR)
+            work_dir = prepare_work_dir(csv_dir)
             output_dir = work_dir
 
         _log_run_config(chrome_path, download_dir, user_data_dir, args, output_dir)
@@ -307,24 +336,10 @@ def _execute(
             driver=driver,
         )
 
-        ok, ng = log_summary(results)
-        write_success_ids(results)
-
-        if output_dir is not None:
-            write_marker(output_dir, ok, ng)
-
-        if work_dir is not None:
-            swap_work_to_staging(work_dir, ARCHIVE_CSV_DIR, ok)
-
-        phase = "direct" if args.direct_deliver else "dl"
-        other = "dl" if phase == "direct" else "direct"
-        write_pipeline_status(
-            PROJECT_ROOT, args.pipeline, phase,
-            f"{time_label()}_成功{ok}件_失敗{ng}件",
-            clear_phases=[other, "dv"],
+        return _finalize(
+            args, results,
+            work_dir=work_dir, csv_dir=csv_dir, result_dir=result_dir,
         )
-
-        return 1 if ok < len(results) else 0
     except KeyboardInterrupt:
         logger.info("Ctrl-C で中断")
         return 130
@@ -339,6 +354,7 @@ def main(argv: list[str] | None = None) -> int:
     setup_logging()
 
     args = parse_args(argv)
+    pipeline = PIPELINES[args.pipeline]
 
     # --- 営業日判定 ---
     if not args.force:
@@ -349,8 +365,9 @@ def main(argv: list[str] | None = None) -> int:
 
     # --- setup ---
     try:
+        effective = dataclasses.replace(pipeline, macro_dir=args.macro_dir) if args.macro_dir else pipeline
         active_jobs = load_active_jobs(
-            args.macro_dir, ids_file=args.ids_file, exclude_success=args.retry,
+            effective, ids_file=args.ids_file, exclude_success=args.retry,
         )
     except FileNotFoundError as e:
         logger.error("%s", e)
@@ -361,7 +378,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.dry_run:
-        _print_dry_run(args, active_jobs)
+        _print_dry_run(args, active_jobs, csv_dir=pipeline.csv_dir)
         return 0
 
     # --- resolve paths ---
@@ -376,9 +393,12 @@ def main(argv: list[str] | None = None) -> int:
     # --- pre-flight login ---
     try:
         session = _prepare_session(args, chrome_path, user_data_dir)
-    except Exception:
+    except Exception:  # Chrome + Selenium + SF login — 例外が多岐にわたるため broad catch
         logger.exception("pre-flight login check に失敗したため中断します")
         return 1
 
     # --- execute ---
-    return _execute(args, active_jobs, chrome_path, download_dir, user_data_dir, session)
+    return _execute(
+        args, active_jobs, chrome_path, download_dir, user_data_dir, session,
+        csv_dir=pipeline.csv_dir, result_dir=pipeline.result_dir,
+    )

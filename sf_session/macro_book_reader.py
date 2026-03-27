@@ -9,12 +9,11 @@ from __future__ import annotations
 import argparse
 import logging
 from dataclasses import dataclass
-from datetime import datetime
 from pathlib import Path
 
 from openpyxl import load_workbook
 
-from .config import ARCHIVE_IDS_FILE, ARCHIVE_MACRO_DIR, ARCHIVE_RESULT_DIR, VALID_PIPELINES
+from .config import PIPELINES, PipelineConfig, VALID_PIPELINES
 from .utils import find_latest_success_ids, read_ids_file, strip_trailing_date
 
 logger = logging.getLogger(__name__)
@@ -27,7 +26,7 @@ _COL_SRC_FOLDER_NAME = "AD"
 _COL_ENCODE = "AE"
 _COL_SKIP = "AG"
 
-_SHEET_NAME = "SalseForce"
+_SHEET_NAME = "SalseForce"  # Excel シート名と一致（原文の typo）
 
 # データ開始行（100 = ヘッダ、101〜 = データ）
 _DATA_START_ROW = 101
@@ -119,7 +118,7 @@ def read_jobs_from_xlsm(xlsm_path: Path) -> list[JobEntry]:
     return entries
 
 
-def read_jobs(macro_dir: Path = ARCHIVE_MACRO_DIR) -> list[JobEntry]:
+def read_jobs(macro_dir: Path) -> list[JobEntry]:
     """マクロ格納フォルダの xlsm からジョブ定義を読み取る。"""
     if not macro_dir.is_dir():
         raise FileNotFoundError(f"'{macro_dir}' が見つかりません。")
@@ -135,13 +134,13 @@ def read_jobs(macro_dir: Path = ARCHIVE_MACRO_DIR) -> list[JobEntry]:
 
 
 def load_active_jobs(
-    macro_dir: Path = ARCHIVE_MACRO_DIR,
+    pipeline: PipelineConfig,
     *,
     ids_file: bool = False,
     exclude_success: bool = False,
 ) -> list[JobEntry]:
     """ジョブ定義を読み込み、skip / ids-file / success 除外でフィルタして返す。"""
-    jobs = read_jobs(macro_dir)
+    jobs = read_jobs(pipeline.macro_dir)
     logger.info("ジョブ定義: %d 件読み取り", len(jobs))
 
     active = [j for j in jobs if not j.skip]
@@ -151,9 +150,9 @@ def load_active_jobs(
     )
 
     if ids_file:
-        target_ids = read_ids_file(ARCHIVE_IDS_FILE)
+        target_ids = read_ids_file(pipeline.ids_file)
         if not target_ids:
-            logger.warning("ids-file に ID の記載が 0 件です — %s", ARCHIVE_IDS_FILE)
+            logger.warning("ids-file に ID の記載が 0 件です — %s", pipeline.ids_file)
             return []
         before = len(active)
         active = [j for j in active if j.report_id in target_ids]
@@ -163,7 +162,7 @@ def load_active_jobs(
         )
 
     if exclude_success:
-        ids_path = find_latest_success_ids(ARCHIVE_RESULT_DIR)
+        ids_path = find_latest_success_ids(pipeline.result_dir)
         if ids_path is None:
             logger.warning("success_ids ファイルが見つかりません。除外なしで続行。")
         else:
@@ -213,16 +212,19 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 
 if __name__ == "__main__":
+    from datetime import datetime as _dt
+
     from .utils import setup_logging
 
     setup_logging()
-    parse_args()
+    _args = parse_args()
+    _pipeline = PIPELINES[_args.pipeline]
 
-    xlsm_path = _find_xlsm(ARCHIVE_MACRO_DIR)
+    xlsm_path = _find_xlsm(_pipeline.macro_dir)
     if xlsm_path is None:
-        logger.error("'%s/' に .xlsm がありません。", ARCHIVE_MACRO_DIR.name)
+        logger.error("'%s/' に .xlsm がありません。", _pipeline.macro_dir.name)
     else:
-        mtime = datetime.fromtimestamp(xlsm_path.stat().st_mtime)
+        mtime = _dt.fromtimestamp(xlsm_path.stat().st_mtime)
         logger.info("ファイル: %s (更新: %s)", xlsm_path.name, mtime.strftime("%Y-%m-%d %H:%M"))
         jobs = read_jobs_from_xlsm(xlsm_path)
         _log_jobs(jobs)

@@ -1,6 +1,6 @@
-"""ARCHIVE_CSV_DIR 直下の CSV を UTF-8 BOM に変換する。
+"""pipeline の csv_dir 直下の CSV を UTF-8 BOM に変換する。
 
-変換先は ARCHIVE_CSV_DIR/utf/ サブフォルダ。
+変換先は csv_dir/utf/ サブフォルダ。
 
 Usage:
     python -m sf_session.jis_to_utf8 archive
@@ -13,7 +13,7 @@ import logging
 import sys
 from pathlib import Path
 
-from .config import ARCHIVE_CSV_DIR, VALID_PIPELINES
+from .config import PIPELINES, VALID_PIPELINES
 from .utils import setup_logging
 
 logger = logging.getLogger(__name__)
@@ -56,7 +56,7 @@ def convert_dir(src: Path) -> Path:
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="ARCHIVE_CSV_DIR 直下の CSV を UTF-8 BOM に変換する",
+        description="csv_dir 直下の CSV を UTF-8 BOM に変換する",
     )
     parser.add_argument(
         "pipeline",
@@ -69,12 +69,13 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 def main(argv: list[str] | None = None) -> int:
     setup_logging()
     args = parse_args(argv)
+    pipeline = PIPELINES[args.pipeline]
 
-    if not ARCHIVE_CSV_DIR.is_dir():
-        logger.error("'%s' が見つかりません。", ARCHIVE_CSV_DIR)
+    if not pipeline.csv_dir.is_dir():
+        logger.error("'%s' が見つかりません。", pipeline.csv_dir)
         return 1
 
-    convert_dir(ARCHIVE_CSV_DIR)
+    convert_dir(pipeline.csv_dir)
     return 0
 
 

@@ -1,20 +1,21 @@
 """macro_book_reader のジョブ定義と success ID で対象 CSV を特定し、日付フォルダへコピーする。
 
-file_deliver の逆操作: 各フォルダから CSV を収集して ARCHIVE_CSV_DIR に集約する。
+file_deliver の逆操作: 各フォルダから CSV を収集して pipeline の csv_dir に集約する。
 
 Usage:
-    python -m sf_session.file_collect
+    python -m sf_session.file_collect archive
 """
 
 from __future__ import annotations
 
+import argparse
 import logging
 import shutil
 import sys
 from datetime import datetime
 from pathlib import Path
 
-from .config import ARCHIVE_CSV_DIR, ARCHIVE_RESULT_DIR
+from .config import PIPELINES, VALID_PIPELINES
 from .macro_book_reader import JobEntry, read_jobs
 from .utils import (
     build_output_stem,
@@ -161,17 +162,32 @@ def _collect_one_job(
         return False
 
 
-def main() -> int:
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="ジョブ定義と success ID で対象 CSV を収集する",
+    )
+    parser.add_argument(
+        "pipeline",
+        choices=VALID_PIPELINES,
+        help="実行対象の pipeline 名",
+    )
+    return parser.parse_args(argv)
+
+
+def main(argv: list[str] | None = None) -> int:
     setup_logging()
+
+    args = parse_args(argv)
+    pipeline = PIPELINES[args.pipeline]
 
     # --- setup ---
     try:
-        jobs = read_jobs()
+        jobs = read_jobs(pipeline.macro_dir)
     except FileNotFoundError as e:
         logger.error("%s", e)
         return 1
 
-    ids_path = find_latest_success_ids(ARCHIVE_RESULT_DIR)
+    ids_path = find_latest_success_ids(pipeline.result_dir)
     if ids_path is None:
         logger.error("success_ids ファイルが見つかりません。")
         return 1
@@ -181,7 +197,7 @@ def main() -> int:
 
     today_str = datetime.now().strftime("%Y%m%d")
     new_folder_name = _COLLECT_FOLDER_TEMPLATE.replace("#", today_str)
-    daily_output_folder = ARCHIVE_CSV_DIR / new_folder_name
+    daily_output_folder = pipeline.csv_dir / new_folder_name
 
     if daily_output_folder.is_dir():
         removed = [f for f in daily_output_folder.iterdir() if f.is_file()]

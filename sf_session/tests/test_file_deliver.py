@@ -8,10 +8,9 @@ from unittest.mock import patch
 
 import pytest
 
-from sf_session.config import ARCHIVE_MACRO_DIR
+from sf_session.download.outputs import build_destination
 from sf_session.file_deliver import (
     DistributeResult,
-    build_destination,
     build_job_lookup,
     distribute_files,
     log_summary,
@@ -255,7 +254,8 @@ class TestParseArgs:
         assert args.pipeline == "archive"
         assert not args.dry_run
         assert not args.ids_file
-        assert args.macro_dir == ARCHIVE_MACRO_DIR
+        assert args.macro_dir is None
+        assert args.source_dir is None
 
     def test_all_flags(self):
         args = parse_args([

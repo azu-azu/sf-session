@@ -137,8 +137,8 @@ class TestLogSummary:
 
 
 class TestWriteSuccessIds:
-    def test_writes_success_ids(self, tmp_path, monkeypatch):
-        monkeypatch.setattr("sf_session.download.outputs.ARCHIVE_RESULT_DIR", tmp_path)
+    def test_writes_success_ids(self, tmp_path):
+        result_dir = tmp_path / "result"
         results = [
             ExportResult(seq=1, report_id="00O001", success=True, elapsed=1.0),
             ExportResult(seq=2, report_id="00O002", success=False, elapsed=2.0),
@@ -147,31 +147,30 @@ class TestWriteSuccessIds:
 
         with patch("sf_session.download.outputs.datetime") as mock_dt:
             mock_dt.now.return_value.strftime.return_value = "20260321"
-            path = write_success_ids(results)
+            path = write_success_ids(results, result_dir=result_dir)
 
-        assert path == tmp_path / "success_ids_20260321.txt"
+        assert path == result_dir / "success_ids_20260321.txt"
         lines = path.read_text(encoding="utf-8").strip().splitlines()
         assert lines == ["00O001", "00O003"]
 
-    def test_no_success_returns_none(self, tmp_path, monkeypatch):
-        monkeypatch.setattr("sf_session.download.outputs.ARCHIVE_RESULT_DIR", tmp_path)
+    def test_no_success_returns_none(self, tmp_path):
+        result_dir = tmp_path / "result"
         results = [
             ExportResult(seq=1, report_id="00O001", success=False, elapsed=1.0),
         ]
-        assert write_success_ids(results) is None
+        assert write_success_ids(results, result_dir=result_dir) is None
 
-    def test_creates_dir_if_missing(self, tmp_path, monkeypatch):
-        out_dir = tmp_path / "outputs_result"
-        monkeypatch.setattr("sf_session.download.outputs.ARCHIVE_RESULT_DIR", out_dir)
+    def test_creates_dir_if_missing(self, tmp_path):
+        result_dir = tmp_path / "outputs_result"
         results = [
             ExportResult(seq=1, report_id="00O001", success=True, elapsed=1.0),
         ]
 
         with patch("sf_session.download.outputs.datetime") as mock_dt:
             mock_dt.now.return_value.strftime.return_value = "20260321"
-            path = write_success_ids(results)
+            path = write_success_ids(results, result_dir=result_dir)
 
-        assert out_dir.is_dir()
+        assert result_dir.is_dir()
         assert path is not None
         assert path.exists()
 

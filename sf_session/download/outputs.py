@@ -18,7 +18,6 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from .runner import ExportResult
 
-from ..config import ARCHIVE_RESULT_DIR
 from ..macro_book_reader import JobEntry
 from ..utils import build_output_stem, time_label
 
@@ -76,15 +75,15 @@ def log_summary(results: list[ExportResult]) -> tuple[int, int]:
     return ok, ng
 
 
-def write_success_ids(results: list[ExportResult]) -> Path | None:
-    """成功した report_id を ARCHIVE_RESULT_DIR/success_ids_YYYYMMDD.txt に書き出す。"""
+def write_success_ids(results: list[ExportResult], *, result_dir: Path) -> Path | None:
+    """成功した report_id を result_dir/success_ids_YYYYMMDD.txt に書き出す。"""
     ids = [r.report_id for r in results if r.success and r.report_id]
     if not ids:
         return None
 
-    ARCHIVE_RESULT_DIR.mkdir(parents=True, exist_ok=True)
+    result_dir.mkdir(parents=True, exist_ok=True)
     today = datetime.now().strftime("%Y%m%d")
-    path = ARCHIVE_RESULT_DIR / f"success_ids_{today}.txt"
+    path = result_dir / f"success_ids_{today}.txt"
     path.write_text("\n".join(ids) + "\n", encoding="utf-8")
     logger.info("success_ids を書き出し: %s (%d 件)", path.name, len(ids))
     return path
