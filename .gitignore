@@ -24,6 +24,7 @@ Thumbs.db
 .env
 
 # Data (ローカル固有)
+outputs/
 マクロ格納フォルダ/
 レポートID/
 
