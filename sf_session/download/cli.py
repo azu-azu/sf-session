@@ -21,8 +21,8 @@ from ..config import (
     CHROME_USER_DATA_DIR,
     ARCHIVE_CSV_DIR,
     OUTPUT_STAGING_ROOT,
-    DEFAULT_IDS_FILE,
-    MACRO_DIR,
+    ARCHIVE_IDS_FILE,
+    ARCHIVE_MACRO_DIR,
     SF_HOME_URL,
 )
 from ..browser import REMOTE_DEBUGGING_PORT
@@ -184,14 +184,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--macro-dir",
         type=Path,
-        default=MACRO_DIR,
-        help=f"マクロ格納フォルダ path (default: {MACRO_DIR})",
+        default=ARCHIVE_MACRO_DIR,
+        help=f"マクロ格納フォルダ path (default: {ARCHIVE_MACRO_DIR})",
     )
     parser.add_argument(
         "--ids-file",
         action="store_true",
         default=False,
-        help=f"{DEFAULT_IDS_FILE} から report ID を読み取り、ジョブ定義との intersection でフィルタ",
+        help=f"{ARCHIVE_IDS_FILE} から report ID を読み取り、ジョブ定義との intersection でフィルタ",
     )
     parser.add_argument(
         "--retry",

@@ -44,7 +44,7 @@ class TestIdsFileEmpty:
         ids_file.write_text("# コメントだけ\n# もう1行\n")
 
         monkeypatch.setattr(
-            "sf_session.macro_book_reader.DEFAULT_IDS_FILE", ids_file,
+            "sf_session.macro_book_reader.ARCHIVE_IDS_FILE", ids_file,
         )
         monkeypatch.setattr(
             "sf_session.macro_book_reader.read_jobs",

@@ -22,7 +22,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
-from .config import ARCHIVE_CSV_DIR, DEFAULT_IDS_FILE, MACRO_DIR
+from .config import ARCHIVE_CSV_DIR, ARCHIVE_IDS_FILE, ARCHIVE_MACRO_DIR
 from .macro_book_reader import JobEntry, load_active_jobs
 from .utils import setup_logging, time_label
 
@@ -179,8 +179,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--macro-dir",
         type=Path,
-        default=MACRO_DIR,
-        help=f"マクロ格納フォルダ path (default: {MACRO_DIR})",
+        default=ARCHIVE_MACRO_DIR,
+        help=f"マクロ格納フォルダ path (default: {ARCHIVE_MACRO_DIR})",
     )
     parser.add_argument(
         "--date-suffix",
@@ -191,7 +191,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--ids-file",
         action="store_true",
         default=False,
-        help=f"{DEFAULT_IDS_FILE} から report ID を読み取り、intersection でフィルタ",
+        help=f"{ARCHIVE_IDS_FILE} から report ID を読み取り、intersection でフィルタ",
     )
     parser.add_argument(
         "--dry-run",

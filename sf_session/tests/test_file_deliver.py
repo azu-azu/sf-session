@@ -6,7 +6,7 @@ import logging
 from pathlib import Path
 from unittest.mock import patch
 
-from sf_session.config import MACRO_DIR
+from sf_session.config import ARCHIVE_MACRO_DIR
 from sf_session.file_deliver import (
     DistributeResult,
     build_destination,
@@ -258,7 +258,7 @@ class TestParseArgs:
         assert not args.date_suffix
         assert not args.dry_run
         assert not args.ids_file
-        assert args.macro_dir == MACRO_DIR
+        assert args.macro_dir == ARCHIVE_MACRO_DIR
 
     def test_all_flags(self):
         args = parse_args([

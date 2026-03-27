@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from sf_session.config import ARCHIVE_CSV_DIR, OUTPUT_STAGING_ROOT, DEFAULT_IDS_FILE, MACRO_DIR, PROJECT_ROOT
+from sf_session.config import ARCHIVE_CSV_DIR, OUTPUT_STAGING_ROOT, ARCHIVE_IDS_FILE, ARCHIVE_MACRO_DIR, PROJECT_ROOT
 
 
 def test_project_root_is_sf_session():
@@ -11,7 +11,7 @@ def test_project_root_is_sf_session():
 
 
 def test_macro_dir():
-    assert MACRO_DIR == PROJECT_ROOT / "マクロ格納フォルダ"
+    assert ARCHIVE_MACRO_DIR == PROJECT_ROOT / "マクロ格納フォルダ"
 
 
 def test_csv_staging_root():
@@ -24,5 +24,5 @@ def test_csv_staging_dir():
     assert ARCHIVE_CSV_DIR == OUTPUT_STAGING_ROOT / "outputs" / "archive" / "csv"
 
 
-def test_default_ids_file():
-    assert DEFAULT_IDS_FILE == Path("レポートID/ids.txt")
+def test_archive_ids_file():
+    assert ARCHIVE_IDS_FILE == OUTPUT_STAGING_ROOT / "outputs" / "archive" / "id_filter" / "ids.txt"

@@ -6,7 +6,7 @@ import os
 _TEST_DEFAULTS = {
     "OUTPUT_STAGING_ROOT": ".",
     "SF_BASE_URL": "https://test.salesforce.com",
-    "MACRO_STORE_DIR": ".",
+    "ARCHIVE_MACRO_DIR": ".",
 }
 
 for key, value in _TEST_DEFAULTS.items():

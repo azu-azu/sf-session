@@ -13,7 +13,7 @@ from pathlib import Path
 
 from openpyxl import load_workbook
 
-from .config import DEFAULT_IDS_FILE, MACRO_DIR, ARCHIVE_RESULT_DIR
+from .config import ARCHIVE_IDS_FILE, ARCHIVE_MACRO_DIR, ARCHIVE_RESULT_DIR
 from .utils import find_latest_success_ids, read_ids_file, strip_trailing_date
 
 logger = logging.getLogger(__name__)
@@ -118,7 +118,7 @@ def read_jobs_from_xlsm(xlsm_path: Path) -> list[JobEntry]:
     return entries
 
 
-def read_jobs(macro_dir: Path = MACRO_DIR) -> list[JobEntry]:
+def read_jobs(macro_dir: Path = ARCHIVE_MACRO_DIR) -> list[JobEntry]:
     """マクロ格納フォルダの xlsm からジョブ定義を読み取る。"""
     if not macro_dir.is_dir():
         raise FileNotFoundError(f"'{macro_dir}' が見つかりません。")
@@ -134,7 +134,7 @@ def read_jobs(macro_dir: Path = MACRO_DIR) -> list[JobEntry]:
 
 
 def load_active_jobs(
-    macro_dir: Path = MACRO_DIR,
+    macro_dir: Path = ARCHIVE_MACRO_DIR,
     *,
     ids_file: bool = False,
     exclude_success: bool = False,
@@ -150,9 +150,9 @@ def load_active_jobs(
     )
 
     if ids_file:
-        target_ids = read_ids_file(DEFAULT_IDS_FILE)
+        target_ids = read_ids_file(ARCHIVE_IDS_FILE)
         if not target_ids:
-            logger.warning("ids-file に ID の記載が 0 件です — %s", DEFAULT_IDS_FILE)
+            logger.warning("ids-file に ID の記載が 0 件です — %s", ARCHIVE_IDS_FILE)
             return []
         before = len(active)
         active = [j for j in active if j.report_id in target_ids]
@@ -203,9 +203,9 @@ if __name__ == "__main__":
     from .utils import setup_logging
 
     setup_logging()
-    xlsm_path = _find_xlsm(MACRO_DIR)
+    xlsm_path = _find_xlsm(ARCHIVE_MACRO_DIR)
     if xlsm_path is None:
-        logger.error("'%s/' に .xlsm がありません。", MACRO_DIR.name)
+        logger.error("'%s/' に .xlsm がありません。", ARCHIVE_MACRO_DIR.name)
     else:
         mtime = datetime.fromtimestamp(xlsm_path.stat().st_mtime)
         logger.info("ファイル: %s (更新: %s)", xlsm_path.name, mtime.strftime("%Y-%m-%d %H:%M"))
