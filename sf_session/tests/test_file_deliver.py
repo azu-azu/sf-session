@@ -224,22 +224,23 @@ class TestLogSummary:
     def test_all_success(self, caplog):
         results = [
             DistributeResult(
-                seq=1, report_id="00O1", source_name="00O1_r.csv",
-                success=True, dest_path=Path("/out/r.csv"),
+                seq=1, report_id="00O1",
+                success=True, elapsed=1.5, dest_path=Path("/out/r.csv"),
             ),
         ]
         with caplog.at_level(logging.INFO):
             log_summary(results)
         assert "成功 1 件" in caplog.text
+        assert "1.5s" in caplog.text
 
     def test_with_failures(self, caplog):
         results = [
             DistributeResult(
-                seq=1, report_id="00O1", source_name="00O1_r.csv",
-                success=True, dest_path=Path("/out/r.csv"),
+                seq=1, report_id="00O1",
+                success=True, elapsed=1.5, dest_path=Path("/out/r.csv"),
             ),
             DistributeResult(
-                seq=2, report_id="00O2", source_name="00O2_r.csv",
+                seq=2, report_id="00O2",
                 success=False, error="振り分け先フォルダが存在しません",
             ),
         ]
@@ -268,14 +269,58 @@ class TestMainProbeFailure:
         assert rc == 1
 
 
+class TestMainMkdirFlag:
+    def test_mkdir_creates_dest_and_succeeds(self, tmp_path, monkeypatch):
+        """--mkdir 付きで移動先が存在しない場合、親があれば自動作成して probe 通過。"""
+        source_dir = tmp_path / "source"
+        source_dir.mkdir()
+        (source_dir / "00O123_report.csv").write_text("data")
+
+        dest_dir = tmp_path / "new_dest"
+        jobs = [make_job(
+            report_id="00O123",
+            src_folder_name=str(dest_dir),
+        )]
+
+        monkeypatch.setattr(
+            "sf_session.file_deliver.load_active_jobs", lambda *a, **kw: jobs,
+        )
+        rc = main(["archive", "--source-dir", str(source_dir), "--mkdir"])
+        assert dest_dir.is_dir()
+        assert rc == 0
+
+    def test_mkdir_parent_missing_returns_1(self, tmp_path, monkeypatch):
+        """--mkdir でも親フォルダがなければ従来通り error。"""
+        source_dir = tmp_path / "source"
+        source_dir.mkdir()
+        (source_dir / "00O123_report.csv").write_text("data")
+
+        dest_dir = tmp_path / "no_parent" / "child"
+        jobs = [make_job(
+            report_id="00O123",
+            src_folder_name=str(dest_dir),
+        )]
+
+        monkeypatch.setattr(
+            "sf_session.file_deliver.load_active_jobs", lambda *a, **kw: jobs,
+        )
+        rc = main(["archive", "--source-dir", str(source_dir), "--mkdir"])
+        assert rc == 1
+
+
 class TestParseArgs:
     def test_defaults(self):
         args = parse_args(["archive"])
         assert args.pipeline == "archive"
         assert not args.dry_run
         assert not args.ids_file
+        assert not args.mkdir
         assert args.macro_dir is None
         assert args.source_dir is None
+
+    def test_mkdir_flag(self):
+        args = parse_args(["archive", "--mkdir"])
+        assert args.mkdir
 
     def test_all_flags(self):
         args = parse_args([

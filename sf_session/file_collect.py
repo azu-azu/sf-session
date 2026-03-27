@@ -12,6 +12,8 @@ import argparse
 import logging
 import shutil
 import sys
+import time
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
@@ -28,6 +30,18 @@ from .utils import (
 logger = logging.getLogger(__name__)
 
 _COLLECT_FOLDER_TEMPLATE = "#_jis"
+
+
+@dataclass
+class CollectResult:
+    """1ファイルの収集結果。"""
+
+    seq: int
+    report_id: str
+    success: bool
+    elapsed: float = 0.0
+    source_path: Path | None = None
+    error: str = ""
 
 
 def _extract_raw_stem(stem: str, report_id: str | None, today_str: str) -> str:
@@ -129,25 +143,39 @@ def _collect_one_job(
     job: JobEntry,
     today_str: str,
     daily_output_folder: Path,
-) -> bool:
-    """1ジョブ分の CSV を検索・コピーする。成功なら True。"""
+    *,
+    seq: int,
+) -> CollectResult:
+    """1ジョブ分の CSV を検索・コピーする。"""
+    report_id = job.report_id or job.no
     source_folder = Path(job.src_folder_name)
+    t0 = time.monotonic()
+
     if not source_folder.is_dir():
         logger.warning("フォルダが見つかりません: %s (No: %s)。スキップ。", source_folder, job.no)
-        return False
+        return CollectResult(
+            seq=seq, report_id=report_id, success=False,
+            elapsed=time.monotonic() - t0, error="フォルダが見つかりません",
+        )
 
     if job.has_filename:
         base = strip_trailing_date(job.new_filename, strict=False)
         target = _find_csv_by_name(source_folder, base, today_str, job.report_id)
         if target is None:
             logger.warning("'%s' を含む CSV が %s に見つかりません (No: %s)。スキップ。", base, source_folder, job.no)
-            return False
+            return CollectResult(
+                seq=seq, report_id=report_id, success=False,
+                elapsed=time.monotonic() - t0, error="CSV が見つかりません",
+            )
         raw_stem = base
     else:
         target = _find_csv_by_date(source_folder, today_str, job.report_id)
         if target is None:
             logger.warning("今日の CSV が %s に見つかりません (No: %s)。スキップ。", source_folder, job.no)
-            return False
+            return CollectResult(
+                seq=seq, report_id=report_id, success=False,
+                elapsed=time.monotonic() - t0, error="CSV が見つかりません",
+            )
         raw_stem = _extract_raw_stem(target.stem, job.report_id, today_str)
 
     dest_name = f"{build_output_stem(job.report_id, raw_stem)}{target.suffix}"
@@ -155,11 +183,41 @@ def _collect_one_job(
 
     try:
         shutil.copy2(target, destination)
-        logger.info("成功: From~ %s", target)
-        return True
+        elapsed = time.monotonic() - t0
+        logger.info("[%d件目] 収集完了: From %s", seq, target)
+        return CollectResult(
+            seq=seq, report_id=report_id, success=True,
+            elapsed=elapsed, source_path=target,
+        )
     except OSError as e:
+        elapsed = time.monotonic() - t0
         logger.error("コピー失敗 %s → %s: %s", target, destination, e)
-        return False
+        return CollectResult(
+            seq=seq, report_id=report_id, success=False,
+            elapsed=elapsed, error=f"コピー失敗: {e}",
+        )
+
+
+def log_summary(results: list[CollectResult]) -> None:
+    """実行結果のサマリーをログ出力する。"""
+    ok = sum(1 for r in results if r.success)
+    ng = sum(1 for r in results if not r.success)
+
+    logger.info("*" * 50)
+    logger.info("file_collect complete >>")
+    logger.info("成功 %d 件 / 失敗 %d 件 / 合計 %d 件", ok, ng, len(results))
+    logger.info("-" * 50)
+
+    for r in results:
+        status = "OK" if r.success else "NG"
+        source = f"From {r.source_path}" if r.source_path else "-"
+        err = f" ({r.error})" if r.error else ""
+        logger.info(
+            "  [%s] %d件目 %s  %.1fs  %s%s",
+            status, r.seq, r.report_id, r.elapsed, source, err,
+        )
+
+    logger.info("*" * 50)
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -209,28 +267,22 @@ def main(argv: list[str] | None = None) -> int:
     daily_output_folder.mkdir(parents=True, exist_ok=True)
 
     # --- collect ---
-    ok_count = 0
-    failed_ids: list[str] = []
+    results: list[CollectResult] = []
+    seq = 0
 
     for job in jobs:
         if job.report_id not in success_ids:
             continue
-        if _collect_one_job(job, today_str, daily_output_folder):
-            ok_count += 1
-        else:
-            failed_ids.append(job.report_id or job.no)
+        seq += 1
+        results.append(
+            _collect_one_job(job, today_str, daily_output_folder, seq=seq),
+        )
 
     # --- summary ---
-    logger.info("*" * 50)
-    logger.info("file_collect complete >>")
-    logger.info("成功 %d 件 / 失敗 %d 件 / 合計 %d 件", ok_count, len(failed_ids), ok_count + len(failed_ids))
-    if failed_ids:
-        logger.info("-" * 50)
-        for fid in failed_ids:
-            logger.info("  %s", fid)
-    logger.info("*" * 50)
+    log_summary(results)
 
-    return 1 if failed_ids else 0
+    failed = sum(1 for r in results if not r.success)
+    return 1 if failed else 0
 
 
 if __name__ == "__main__":

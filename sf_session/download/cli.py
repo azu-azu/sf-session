@@ -230,6 +230,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="出力先フォルダを Explorer/Finder で開く",
     )
     parser.add_argument(
+        "--mkdir",
+        action="store_true",
+        help="移動先フォルダが存在しない場合、親があれば最終フォルダを自動作成",
+    )
+    parser.add_argument(
         "--dry-run",
         action="store_true",
         help="実行せずジョブ一覧を表示",
@@ -304,7 +309,7 @@ def _execute(
 
     try:
         if args.direct_deliver:
-            errors = probe_destinations(active_jobs)
+            errors = probe_destinations(active_jobs, mkdir=args.mkdir)
             if errors:
                 for msg in errors:
                     logger.error("移動先フォルダに問題があります: %s", msg)

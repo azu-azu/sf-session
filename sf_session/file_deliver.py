@@ -17,6 +17,7 @@ import argparse
 import logging
 import shutil
 import sys
+import time
 from dataclasses import dataclass, replace as _dc_replace
 from pathlib import Path
 
@@ -34,8 +35,8 @@ class DistributeResult:
 
     seq: int
     report_id: str
-    source_name: str
     success: bool
+    elapsed: float = 0.0
     dest_path: Path | None = None
     error: str = ""
 
@@ -81,33 +82,35 @@ def distribute_files(
         count += 1
         dest = build_destination(job, file)
         dest_dir = dest.parent
+        t0 = time.monotonic()
 
         if not dest_dir.is_dir():
             results.append(DistributeResult(
                 seq=count,
                 report_id=job.report_id or "",
-                source_name=file.name,
                 success=False,
+                elapsed=time.monotonic() - t0,
                 error=f"振り分け先フォルダが存在しません: {dest_dir}",
             ))
             continue
-
         try:
             shutil.copy2(str(file), str(dest))
-            logger.info("[%d件目] %s  %s → %s", count, job.report_id, file.name, dest)
+            elapsed = time.monotonic() - t0
+            logger.info("[%d件目] 移動完了: %s", count, dest)
             results.append(DistributeResult(
                 seq=count,
                 report_id=job.report_id or "",
-                source_name=file.name,
                 success=True,
+                elapsed=elapsed,
                 dest_path=dest,
             ))
         except OSError as e:
+            elapsed = time.monotonic() - t0
             results.append(DistributeResult(
                 seq=count,
                 report_id=job.report_id or "",
-                source_name=file.name,
                 success=False,
+                elapsed=elapsed,
                 error=f"コピー失敗: {e}",
             ))
 
@@ -129,8 +132,8 @@ def log_summary(results: list[DistributeResult]) -> None:
         dest = r.dest_path or "-"
         err = f" ({r.error})" if r.error else ""
         logger.info(
-            "  [%s] %d件目 %s  %s → %s%s",
-            status, r.seq, r.report_id, r.source_name, dest, err,
+            "  [%s] %d件目 %s  %.1fs  %s%s",
+            status, r.seq, r.report_id, r.elapsed, dest, err,
         )
 
     logger.info("*" * 50)
@@ -162,6 +165,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         action="store_true",
         default=False,
         help="ids.txt から report ID を読み取り、intersection でフィルタ",
+    )
+    parser.add_argument(
+        "--mkdir",
+        action="store_true",
+        help="移動先フォルダが存在しない場合、親があれば最終フォルダを自動作成",
     )
     parser.add_argument(
         "--dry-run",
@@ -210,7 +218,7 @@ def main(argv: list[str] | None = None) -> int:
             logger.info("  %-50s → %s", file.name, dest)
         return 0
 
-    errors = probe_destinations(active_jobs)
+    errors = probe_destinations(active_jobs, mkdir=args.mkdir)
     if errors:
         for msg in errors:
             logger.error("振り分け先フォルダに問題があります: %s", msg)

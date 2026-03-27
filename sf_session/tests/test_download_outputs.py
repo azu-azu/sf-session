@@ -197,6 +197,31 @@ class TestProbeOutputDir:
             probe_output_dir(target)
 
 
+class TestProbeOutputDirMkdir:
+    def test_mkdir_creates_last_folder(self, tmp_path):
+        target = tmp_path / "new_folder"
+        assert not target.exists()
+        probe_output_dir(target, mkdir=True)
+        assert target.is_dir()
+
+    def test_mkdir_parent_missing_raises(self, tmp_path):
+        target = tmp_path / "missing_parent" / "child"
+        with pytest.raises(FileNotFoundError, match="出力先ディレクトリが存在しません"):
+            probe_output_dir(target, mkdir=True)
+
+    def test_mkdir_false_does_not_create(self, tmp_path):
+        target = tmp_path / "new_folder"
+        with pytest.raises(FileNotFoundError):
+            probe_output_dir(target, mkdir=False)
+        assert not target.exists()
+
+    def test_mkdir_path_is_file_raises(self, tmp_path):
+        target = tmp_path / "not_a_dir"
+        target.write_text("I am a file")
+        with pytest.raises(FileNotFoundError, match="ファイルとして存在します"):
+            probe_output_dir(target, mkdir=True)
+
+
 class TestProbeDestinations:
     def test_all_accessible(self, tmp_path):
         d1 = tmp_path / "dest1"
@@ -240,6 +265,20 @@ class TestProbeDestinations:
         ]
         errors = probe_destinations(jobs)
         assert len(errors) == 2
+
+    def test_mkdir_creates_missing_folders(self, tmp_path):
+        d1 = tmp_path / "new_dest"
+        jobs = [make_job(report_id="A", src_folder_name=str(d1))]
+        errors = probe_destinations(jobs, mkdir=True)
+        assert errors == []
+        assert d1.is_dir()
+
+    def test_mkdir_parent_missing_still_errors(self, tmp_path):
+        d1 = tmp_path / "no_parent" / "child"
+        jobs = [make_job(report_id="A", src_folder_name=str(d1))]
+        errors = probe_destinations(jobs, mkdir=True)
+        assert len(errors) == 1
+        assert "存在しません" in errors[0]
 
 
 class TestPrepareWorkDir:

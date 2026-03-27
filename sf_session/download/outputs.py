@@ -92,14 +92,24 @@ def write_success_ids(results: list[ExportResult], *, result_dir: Path) -> Path 
 # ── output dir probe / open ──────────────────────────────
 
 
-def probe_output_dir(path: Path) -> None:
+def probe_output_dir(path: Path, *, mkdir: bool = False) -> None:
     """output dir が物理的にアクセス可能か probe する。
 
     touch + unlink で書き込み可能性をチェック。
     ネットワークドライブが切れている等の場合に早期失敗させる。
+
+    mkdir=True の場合、親ディレクトリが存在すれば最終フォルダだけ自動作成する。
     """
     if not path.is_dir():
-        raise FileNotFoundError(f"出力先ディレクトリが存在しません: {path}")
+        if mkdir and path.parent.is_dir():
+            if path.exists():
+                raise FileNotFoundError(
+                    f"出力先パスがファイルとして存在します: {path}"
+                )
+            path.mkdir()
+            logger.info("出力先ディレクトリを作成しました: %s", path)
+        else:
+            raise FileNotFoundError(f"出力先ディレクトリが存在しません: {path}")
 
     probe_file = path / ".sf_session_probe"
     try:
@@ -109,10 +119,11 @@ def probe_output_dir(path: Path) -> None:
         raise OSError(f"出力先ディレクトリに書き込めません: {path} ({e})") from e
 
 
-def probe_destinations(jobs: list[JobEntry]) -> list[str]:
+def probe_destinations(jobs: list[JobEntry], *, mkdir: bool = False) -> list[str]:
     """job 定義の全移動先フォルダを probe し、エラーメッセージのリストを返す。
 
     空リストなら全フォルダ OK。
+    mkdir=True なら親が存在する場合に最終フォルダを自動作成する。
     """
     seen: set[str] = set()
     errors: list[str] = []
@@ -122,7 +133,7 @@ def probe_destinations(jobs: list[JobEntry]) -> list[str]:
             continue
         seen.add(folder)
         try:
-            probe_output_dir(Path(folder))
+            probe_output_dir(Path(folder), mkdir=mkdir)
         except (FileNotFoundError, OSError) as e:
             errors.append(str(e))
     return errors
