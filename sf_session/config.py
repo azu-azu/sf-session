@@ -1,7 +1,6 @@
 """sf-session 共通パス定数・ユーティリティ。"""
 from __future__ import annotations
 
-import json
 import os
 from dataclasses import dataclass
 from pathlib import Path
@@ -30,11 +29,16 @@ CHROME_USER_DATA_DIR = os.environ.get("CHROME_USER_DATA_DIR", r"C:\ChromeProfile
 SF_BASE_URL = os.environ["SF_BASE_URL"]
 SF_HOME_URL = f"{SF_BASE_URL}/home/home.jsp"
 
+# Macro root
+_MACRO_ROOT: Path | None = (
+    Path(os.environ["MACRO_ROOT"]) if "MACRO_ROOT" in os.environ else None
+)
+
 
 # ── PipelineConfig ────────────────────────────────────
 @dataclass(frozen=True)
 class PipelineConfig:
-    """pipeline ごとの設定。macro_dir のみ外部指定、他は convention ベースで derive。"""
+    """pipeline ごとの設定。macro_dir は MACRO_ROOT/name で derive、他は convention ベース。"""
 
     name: str
     macro_dir: Path
@@ -53,22 +57,19 @@ class PipelineConfig:
 
 
 def _load_pipelines() -> dict[str, PipelineConfig]:
-    """環境変数 PIPELINES (JSON) から pipeline 定義を読み込む。
+    """環境変数 PIPELINES (カンマ区切り) から pipeline 定義を読み込む。
 
-    Format: {"archive": "マクロ格納フォルダ", "daily": "日次マクロフォルダ"}
+    macro_dir は MACRO_ROOT / name で自動 derive する。
     """
     raw = os.environ.get("PIPELINES", "")
     if not raw:
         return {}
-    try:
-        mapping = json.loads(raw)
-    except json.JSONDecodeError as e:
-        raise ValueError(f"PIPELINES の JSON が不正です: {e}") from e
-    if not isinstance(mapping, dict):
-        raise ValueError("PIPELINES は JSON object で指定してください")
+    if _MACRO_ROOT is None:
+        raise ValueError("PIPELINES が設定されていますが MACRO_ROOT が未設定です")
+    names = [n.strip() for n in raw.split(",") if n.strip()]
     return {
-        name: PipelineConfig(name=name, macro_dir=Path(path))
-        for name, path in mapping.items()
+        name: PipelineConfig(name=name, macro_dir=_MACRO_ROOT / name)
+        for name in names
     }
 
 
