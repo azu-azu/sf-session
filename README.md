@@ -191,13 +191,16 @@ export 中にセッションが切れた場合は、タブを traverse してロ
 
 ```powershell
 # dry-run で振り分け先を確認
-★02_振り分け.bat --source-dir pipelines/archive/csv --dry-run
+★02_振り分け.bat --dry-run
 
-# 実行
-★02_振り分け.bat --source-dir pipelines/archive/csv
+# 実行 (source-dir 省略時は pipeline の csv/ を参照)
+★02_振り分け.bat
 
-# 日付サフィックス + ids.txt フィルタ
-★02_振り分け.bat --source-dir pipelines/archive/csv --date-suffix --ids-file
+# 別フォルダを指定する場合
+★02_振り分け.bat --source-dir /other/path
+
+# ids.txt でフィルタ
+★02_振り分け.bat --ids-file
 ```
 
 ## ids.txt — レポート ID フィルタ
