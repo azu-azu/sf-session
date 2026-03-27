@@ -76,11 +76,22 @@ def _update_env_pipelines(new_name: str) -> str:
     return updated
 
 
+_IDS_TXT_TEMPLATE = """\
+# 対象の report ID を1行1つ記入する（# 行はコメント）
+# 例:
+# 00O000000000001AAA
+# 00O000000000002AAA
+"""
+
+
 def _create_directories(name: str) -> Path:
     pipeline_dir = _PIPELINES_DIR / name
     pipeline_dir.mkdir(parents=True, exist_ok=True)
     for sub in _SUBDIRS:
         (pipeline_dir / sub).mkdir(exist_ok=True)
+    ids_txt = pipeline_dir / "ids_file" / "ids.txt"
+    if not ids_txt.exists():
+        ids_txt.write_text(_IDS_TXT_TEMPLATE, encoding="utf-8")
     return pipeline_dir
 
 
