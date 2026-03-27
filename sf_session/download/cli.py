@@ -20,7 +20,6 @@ from ..config import (
     CHROME_EXE_PATH,
     CHROME_USER_DATA_DIR,
     ARCHIVE_CSV_DIR,
-    DEPLOY_ROOT,
     PROJECT_ROOT,
     ARCHIVE_IDS_FILE,
     ARCHIVE_MACRO_DIR,
@@ -268,10 +267,10 @@ def _execute(
 
     try:
         if not args.direct_deliver:
-            if not DEPLOY_ROOT.is_dir():
-                logger.error("DEPLOY_ROOT が存在しません: %s", DEPLOY_ROOT)
+            if not PROJECT_ROOT.is_dir():
+                logger.error("PROJECT_ROOT が存在しません: %s", PROJECT_ROOT)
                 return 1
-            probe_output_dir(DEPLOY_ROOT)
+            probe_output_dir(PROJECT_ROOT)
 
         if args.direct_deliver:
             output_dir = None
@@ -284,7 +283,7 @@ def _execute(
         if args.open_download_dir:
             open_folder(download_dir)
         if args.open_output_dir:
-            open_folder(output_dir if output_dir else DEPLOY_ROOT)
+            open_folder(output_dir if output_dir else PROJECT_ROOT)
 
         if output_dir is not None:
             write_start_marker(output_dir, len(active_jobs))

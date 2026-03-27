@@ -11,8 +11,7 @@ load_dotenv()
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 # ── 共通 ──────────────────────────────────────────────
-DEPLOY_ROOT = Path(os.environ["DEPLOY_ROOT"])
-_PIPELINES_DIR = DEPLOY_ROOT / "pipelines"
+_PIPELINES_DIR = PROJECT_ROOT / "pipelines"
 
 _CSV_SUBDIR = "csv"
 _RESULT_SUBDIR = "result"
