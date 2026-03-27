@@ -149,6 +149,9 @@ def _stub_main_externals(monkeypatch, tmp_path, *, jobs=None):
     monkeypatch.setattr(
         "sf_session.download.cli.probe_output_dir", lambda *a: None,
     )
+    monkeypatch.setattr(
+        "sf_session.download.cli.probe_destinations", lambda *a: [],
+    )
 
     staging_dir = fake_pipeline.csv_dir  # pipelines_dir / "archive" / "csv"
     return staging_dir, download_dir

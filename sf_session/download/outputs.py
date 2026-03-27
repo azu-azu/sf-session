@@ -109,6 +109,25 @@ def probe_output_dir(path: Path) -> None:
         raise OSError(f"出力先ディレクトリに書き込めません: {path} ({e})") from e
 
 
+def probe_destinations(jobs: list[JobEntry]) -> list[str]:
+    """job 定義の全移動先フォルダを probe し、エラーメッセージのリストを返す。
+
+    空リストなら全フォルダ OK。
+    """
+    seen: set[str] = set()
+    errors: list[str] = []
+    for job in jobs:
+        folder = job.src_folder_name
+        if not folder or folder in seen:
+            continue
+        seen.add(folder)
+        try:
+            probe_output_dir(Path(folder))
+        except (FileNotFoundError, OSError) as e:
+            errors.append(str(e))
+    return errors
+
+
 def open_folder(path: Path) -> None:
     """フォルダを OS のファイルマネージャで開く。
 

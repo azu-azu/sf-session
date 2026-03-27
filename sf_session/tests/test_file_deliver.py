@@ -14,6 +14,7 @@ from sf_session.file_deliver import (
     build_job_lookup,
     distribute_files,
     log_summary,
+    main,
     match_file_to_job,
     parse_args,
 )
@@ -246,6 +247,25 @@ class TestLogSummary:
             log_summary(results)
         assert "成功 1 件" in caplog.text
         assert "失敗 1 件" in caplog.text
+
+
+class TestMainProbeFailure:
+    def test_returns_1_when_probe_fails(self, tmp_path, monkeypatch):
+        """移動先フォルダが存在しない場合、main() が 1 を返す。"""
+        source_dir = tmp_path / "source"
+        source_dir.mkdir()
+        (source_dir / "dummy.csv").write_text("data")
+
+        jobs = [make_job(
+            report_id="00O123",
+            src_folder_name=str(tmp_path / "nonexistent"),
+        )]
+
+        monkeypatch.setattr(
+            "sf_session.file_deliver.load_active_jobs", lambda *a, **kw: jobs,
+        )
+        rc = main(["archive", "--source-dir", str(source_dir)])
+        assert rc == 1
 
 
 class TestParseArgs:

@@ -46,13 +46,13 @@ API ではなく、ブラウザの export URL (`?export=1`) を使う VBA マク
 | `sf_session/keeper.py` | Chrome 起動 → 手動ログイン待機（SSO / MFA）→ 定期 reload でセッション維持 |
 | `sf_session/download/cli.py` | 営業日ガード + pre-flight login check 付きバッチ export orchestration |
 | `sf_session/download/runner.py` | レポート export 実行エンジン (export_one / export_batch) |
-| `sf_session/download/outputs.py` | ファイル移動先パス組み立て、summary ログ、work_dir swap、完了マーカー |
+| `sf_session/download/outputs.py` | ファイル移動先パス組み立て、summary ログ、work_dir swap、完了マーカー、移動先 probe |
 | `sf_session/download/single.py` | Chrome CLI 実行 + ダウンロード監視 |
 | `sf_session/session.py` | Chrome + Selenium session の prepare / close 共通層 (keeper / download 共用) |
 | `sf_session/business_day.py` | 営業日判定 (土日 + `jpholiday` 祝日) |
 | `sf_session/browser.py` | Chrome 起動・WebDriver 接続の共通モジュール |
 | `sf_session/login_helper.py` | ログイン/SSO ページ検出・手動ログイン待機・MFA 完了待ち |
-| `sf_session/file_deliver.py` | `reportID_*` ファイルをマクロ定義の移動先フォルダへコピー・リネーム + 完了マーカー出力 |
+| `sf_session/file_deliver.py` | `reportID_*` ファイルをマクロ定義の移動先フォルダへコピー・リネーム + 移動先 probe + 完了マーカー出力 |
 | `sf_session/file_collect.py` | 各フォルダから CSV を収集して `ARCHIVE_CSV_DIR` に集約 (file_deliver の逆) |
 | `sf_session/jis_to_utf8.py` | `ARCHIVE_CSV_DIR` 内の CSV を UTF-8 BOM に変換 → `*_utf/` |
 | `sf_session/macro_book_reader.py` | ジョブ定義 (`JobEntry`) の読み取り。xlsm から直接読み取り |
@@ -166,6 +166,8 @@ SSO 経由のログインに対応。ログインが必要な場合はユーザ�
 
 営業日（平日 + 祝日除外）のみ実行。`--force` で営業日チェックを bypass できる。
 起動時に pre-flight login check を行い、ログインが必要なら手動ログインを待機する。
+`--direct-deliver` 時は export 前に全移動先フォルダの到達性を probe し、
+1 つでもアクセス不可なら即座に abort する（network folder 切断時の数分ロスを防止）。
 export 中にセッションが切れた場合は、タブを traverse してログイン/SSO ページを検出し、
 手動ログイン待機 → 1 回だけリトライする（無限ループ防止）。
 
@@ -202,6 +204,9 @@ export 中にセッションが切れた場合は、タブを traverse してロ
 # ids.txt でフィルタ
 ★02_振り分け.bat --ids-file
 ```
+
+実行前に全振り分け先フォルダの到達性を probe し、1 つでもアクセス不可なら即座に abort する。
+`--dry-run` 時は probe をスキップする。
 
 ## ids.txt — レポート ID フィルタ
 

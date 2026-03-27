@@ -21,7 +21,7 @@ from dataclasses import dataclass, replace as _dc_replace
 from pathlib import Path
 
 from .config import PIPELINES, PROJECT_ROOT, VALID_PIPELINES
-from .download.outputs import build_destination
+from .download.outputs import build_destination, probe_destinations
 from .macro_book_reader import JobEntry, load_active_jobs
 from .utils import setup_logging, time_label, write_pipeline_status
 
@@ -208,6 +208,12 @@ def main(argv: list[str] | None = None) -> int:
             dest = build_destination(job, file)
             logger.info("  %-50s → %s", file.name, dest)
         return 0
+
+    errors = probe_destinations(active_jobs)
+    if errors:
+        for msg in errors:
+            logger.error("振り分け先フォルダに問題があります: %s", msg)
+        return 1
 
     logger.info("Source dir  : %s", source_dir)
 

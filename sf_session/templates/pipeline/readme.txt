@@ -4,11 +4,12 @@
 |---|------------------------|-----------------------------------------|
 | 1 | ★01_download.bat      | 全件 export (営業日のみ実行)              |
 | 2 | ★02_振り分け.bat       | Box フォルダへ振り分け                    |
-| 3 | 11_download_ids.bat    | ids.txt 指定 export                     |
-| 4 | 12_download_retry.bat  | 失敗分リトライ                           |
-| 5 | 20_jis_to_utf.bat      | UTF-8 BOM 変換                          |
-| 6 | 21_file_collect.bat    | CSV 収集                                |
-| 7 | 90_show_macrofile.bat  | ジョブ定義表示                           |
+| 3 | 03_download_direct.bat | direct-deliver (export + 直接振り分け)    |
+| 4 | 11_download_ids.bat    | ids.txt 指定 export                     |
+| 5 | 12_download_retry.bat  | 失敗分リトライ                           |
+| 6 | 20_jis_to_utf.bat      | UTF-8 BOM 変換                          |
+| 7 | 21_file_collect.bat    | CSV 収集                                |
+| 8 | 90_show_macrofile.bat  | ジョブ定義表示                           |
 
 ダブルクリックで実行。PowerShell に D&D すれば引数追加も可能。
 バッチファイルの名前は自由に変えても問題ない。

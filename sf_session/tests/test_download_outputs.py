@@ -12,6 +12,7 @@ import pytest
 from sf_session.download.outputs import (
     build_destination,
     log_summary,
+    probe_destinations,
     probe_output_dir,
     prepare_work_dir,
     swap_work_to_staging,
@@ -194,6 +195,51 @@ class TestProbeOutputDir:
         monkeypatch.setattr(Path, "touch", mock_touch)
         with pytest.raises(OSError, match="書き込めません"):
             probe_output_dir(target)
+
+
+class TestProbeDestinations:
+    def test_all_accessible(self, tmp_path):
+        d1 = tmp_path / "dest1"
+        d1.mkdir()
+        d2 = tmp_path / "dest2"
+        d2.mkdir()
+        jobs = [
+            make_job(report_id="A", src_folder_name=str(d1)),
+            make_job(report_id="B", src_folder_name=str(d2)),
+        ]
+        assert probe_destinations(jobs) == []
+
+    def test_nonexistent_folder(self, tmp_path):
+        jobs = [
+            make_job(report_id="A", src_folder_name=str(tmp_path / "missing")),
+        ]
+        errors = probe_destinations(jobs)
+        assert len(errors) == 1
+        assert "存在しません" in errors[0]
+
+    def test_empty_src_folder_name_skipped(self, tmp_path):
+        jobs = [make_job(report_id="A", src_folder_name="")]
+        assert probe_destinations(jobs) == []
+
+    def test_duplicate_folder_probed_once(self, tmp_path):
+        d = tmp_path / "dest"
+        d.mkdir()
+        jobs = [
+            make_job(report_id="A", src_folder_name=str(d)),
+            make_job(report_id="B", src_folder_name=str(d)),
+        ]
+        with patch.object(Path, "is_dir", wraps=d.is_dir) as mock_is_dir:
+            probe_destinations(jobs)
+        # probe_output_dir calls is_dir once per unique folder
+        assert mock_is_dir.call_count == 1
+
+    def test_multiple_errors_collected(self, tmp_path):
+        jobs = [
+            make_job(report_id="A", src_folder_name=str(tmp_path / "m1")),
+            make_job(report_id="B", src_folder_name=str(tmp_path / "m2")),
+        ]
+        errors = probe_destinations(jobs)
+        assert len(errors) == 2
 
 
 class TestPrepareWorkDir:

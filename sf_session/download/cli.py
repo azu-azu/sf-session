@@ -45,6 +45,7 @@ from .outputs import (
     log_summary,
     open_folder,
     prepare_work_dir,
+    probe_destinations,
     probe_output_dir,
     swap_work_to_staging,
     write_marker,
@@ -301,7 +302,13 @@ def _execute(
     work_dir: Path | None = None
 
     try:
-        if not args.direct_deliver:
+        if args.direct_deliver:
+            errors = probe_destinations(active_jobs)
+            if errors:
+                for msg in errors:
+                    logger.error("移動先フォルダに問題があります: %s", msg)
+                return 1
+        else:
             if not PROJECT_ROOT.is_dir():
                 logger.error("PROJECT_ROOT が存在しません: %s", PROJECT_ROOT)
                 return 1

@@ -33,6 +33,7 @@ pause
 _BAT_DEFS = (
     ("★01_download.bat",      "sf_session.download",          ""),
     ("★02_振り分け.bat",       "sf_session.file_deliver",      ""),
+    ("03_download_direct.bat", "sf_session.download",          " --direct-deliver"),
     ("11_download_ids.bat",    "sf_session.download",          " --ids-file"),
     ("12_download_retry.bat",  "sf_session.download",          " --retry"),
     ("20_jis_to_utf.bat",      "sf_session.jis_to_utf8",       ""),
