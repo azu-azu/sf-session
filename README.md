@@ -53,10 +53,10 @@ API ではなく、ブラウザの export URL (`?export=1`) を使う VBA マク
 | `sf_session/browser.py` | Chrome 起動・WebDriver 接続の共通モジュール |
 | `sf_session/login_helper.py` | ログイン/SSO ページ検出・手動ログイン待機・MFA 完了待ち |
 | `sf_session/file_deliver.py` | `reportID_*` ファイルをマクロ定義の移動先フォルダへコピー・リネーム + 完了マーカー出力 |
-| `sf_session/file_collect.py` | 各フォルダから CSV を収集して `CSV_STAGING_DIR` に集約 (file_deliver の逆) |
-| `sf_session/jis_to_utf8.py` | `CSV_STAGING_DIR` 内の CSV を UTF-8 BOM に変換 → `*_utf/` |
+| `sf_session/file_collect.py` | 各フォルダから CSV を収集して `ARCHIVE_CSV_DIR` に集約 (file_deliver の逆) |
+| `sf_session/jis_to_utf8.py` | `ARCHIVE_CSV_DIR` 内の CSV を UTF-8 BOM に変換 → `*_utf/` |
 | `sf_session/macro_book_reader.py` | ジョブ定義 (`JobEntry`) の読み取り。xlsm から直接読み取り |
-| `sf_session/config.py` | 共通パス定数 + `read_ids_file()` + `create_sf_client()` |
+| `sf_session/config.py` | 共通パス定数 + `create_sf_client()` |
 | `sf_session/clean.py` | `__pycache__` / `.pyc` / `.log` 等のクリーンアップ |
 | `sf_session/report_filter/` | レポートのメタデータ抽出 (API 経由、データ本体は取らない) |
 
@@ -203,7 +203,7 @@ export 中にセッションが切れた場合は、タブを traverse してロ
 
 `--ids-file` フラグを付けると、`ids.txt` に書かれた report ID だけを処理対象にする。
 
-- **置き場所**: `レポートID/ids.txt`
+- **置き場所**: `outputs/archive/id_filter/ids.txt`
 - **フォーマット**: 1 行 1 report ID（UTF-8）
 - `#` で始まる行はコメント扱いでスキップ
 - 空行もスキップ
@@ -218,7 +218,7 @@ export 中にセッションが切れた場合は、タブを traverse してロ
 
 ## ジョブ定義
 
-`マクロ格納フォルダ/` に配置した `.xlsm` の `SalseForce` シートから直接読み取る。
+`ARCHIVE_MACRO_DIR` (env var) に配置した `.xlsm` の `SalseForce` シートから直接読み取る。
 
 | 列 | 内容 |
 |---|---|
@@ -239,7 +239,8 @@ API 経由でレポートのメタデータ（名前・列数・列名）を取�
 py -m sf_session.report_filter
 ```
 
-- 前提: `.env` に SF 認証情報、`レポートID/ids.txt` に対象 ID を記載
+- 前提: `.env` に SF 認証情報
+- 対象: マクロ定義 (`.xlsm`) の全レポート ID を自動取得
 - 出力: `outputs/archive/result/probe_result_{ts}.xlsx`（probe_result シート + columns シート）
 
 ## テスト

@@ -21,6 +21,7 @@ from ..config import (
     CHROME_USER_DATA_DIR,
     ARCHIVE_CSV_DIR,
     OUTPUT_STAGING_ROOT,
+    OUTPUTS_DIR,
     ARCHIVE_IDS_FILE,
     ARCHIVE_MACRO_DIR,
     SF_HOME_URL,
@@ -28,7 +29,7 @@ from ..config import (
 from ..browser import REMOTE_DEBUGGING_PORT
 from ..business_day import should_run_download
 from ..macro_book_reader import JobEntry, load_active_jobs
-from ..utils import setup_logging
+from ..utils import setup_logging, time_label, write_pipeline_status
 from .single import (
     build_export_url,
     ensure_exists,
@@ -317,6 +318,11 @@ def _execute(
 
         if work_dir is not None:
             swap_work_to_staging(work_dir, ARCHIVE_CSV_DIR, ok)
+
+        write_pipeline_status(
+            OUTPUTS_DIR, "archive", "dl",
+            f"{time_label()}_成功{ok}件_失敗{ng}件",
+        )
 
         return 1 if ok < len(results) else 0
     except KeyboardInterrupt:

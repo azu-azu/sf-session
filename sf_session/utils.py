@@ -7,6 +7,8 @@ import re
 from datetime import datetime
 from pathlib import Path
 
+logger = logging.getLogger(__name__)
+
 _RE_TRAILING_DATE = re.compile(r"_(\d{8})$")
 
 
@@ -61,6 +63,20 @@ def strip_trailing_date(name: str, *, strict: bool = True) -> str:
     if dt.year != datetime.now().year:
         return name
     return name[: m.start()]
+
+
+def write_pipeline_status(
+    outputs_dir: Path, pipeline: str, phase: str, label: str,
+) -> Path:
+    """outputs/ 直下に pipeline status marker を書く。同 pipeline+phase の旧ファイルは削除。"""
+    outputs_dir.mkdir(parents=True, exist_ok=True)
+    prefix = f"{pipeline}_{phase}_"
+    for old in outputs_dir.glob(f"{prefix}*.txt"):
+        old.unlink()
+    marker = outputs_dir / f"{prefix}{label}.txt"
+    marker.touch()
+    logger.info("pipeline status: %s", marker.name)
+    return marker
 
 
 def read_ids_file(path: Path) -> set[str]:

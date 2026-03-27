@@ -22,9 +22,9 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
-from .config import ARCHIVE_CSV_DIR, ARCHIVE_IDS_FILE, ARCHIVE_MACRO_DIR
+from .config import ARCHIVE_CSV_DIR, ARCHIVE_IDS_FILE, ARCHIVE_MACRO_DIR, OUTPUTS_DIR
 from .macro_book_reader import JobEntry, load_active_jobs
-from .utils import setup_logging, time_label
+from .utils import setup_logging, time_label, write_pipeline_status
 
 logger = logging.getLogger(__name__)
 
@@ -249,6 +249,11 @@ def main(argv: list[str] | None = None) -> int:
     marker = source_dir / f"★{time_label()}_振り分け完了.txt"
     marker.touch()
     logger.info("完了マーカー: %s", marker.name)
+
+    write_pipeline_status(
+        OUTPUTS_DIR, "archive", "dv",
+        f"{time_label()}_振り分け完了",
+    )
 
     failed = sum(1 for r in results if not r.success)
     return 1 if failed else 0
