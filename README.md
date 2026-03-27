@@ -42,6 +42,7 @@ API ではなく、ブラウザの export URL (`?export=1`) を使う VBA マク
 
 | スクリプト | 役割 |
 |---|---|
+| `01_stay_awake.bat` | Windows スリープ防止（`--minutes` で時間指定、0 で無制限） |
 | `98_setup_初回または設定更新の場合のみ実行する.bat` | venv 作成 + pip upgrade + 依存パッケージ install（初回のみ実行） |
 | `sf_session/keeper.py` | Chrome 起動 → 手動ログイン待機（SSO / MFA）→ 定期 reload でセッション維持 |
 | `sf_session/download/cli.py` | 営業日ガード + pre-flight login check 付きバッチ export orchestration |
@@ -49,7 +50,8 @@ API ではなく、ブラウザの export URL (`?export=1`) を使う VBA マク
 | `sf_session/download/outputs.py` | ファイル移動先パス組み立て、summary ログ、work_dir swap、完了マーカー、移動先 probe |
 | `sf_session/download/single.py` | Chrome CLI 実行 + ダウンロード監視 |
 | `sf_session/session.py` | Chrome + Selenium session の prepare / close 共通層 (keeper / download 共用) |
-| `sf_session/business_day.py` | 営業日判定 (土日 + `jpholiday` 祝日) |
+| `sf_session/business_day.py` | 営業日判定 (土日 + `jpholiday` 祝日 + `extra_holidays.csv`) |
+| `sf_session/stay_awake.py` | Windows スリープ防止 (`SetThreadExecutionState` API) |
 | `sf_session/browser.py` | Chrome 起動・WebDriver 接続の共通モジュール |
 | `sf_session/login_helper.py` | ログイン/SSO ページ検出・手動ログイン待機・MFA 完了待ち |
 | `sf_session/file_deliver.py` | `reportID_*` ファイルをマクロ定義の移動先フォルダへコピー・リネーム + 移動先 probe + 完了マーカー出力 |
@@ -164,7 +166,7 @@ SSO 経由のログインに対応。ログインが必要な場合はユーザ�
 ★01_download.bat --date-suffix
 ```
 
-営業日（平日 + 祝日除外）のみ実行。`--force` で営業日チェックを bypass できる。
+営業日（平日 + 祝日 + `extra_holidays.csv` 除外）のみ実行。`--force` で営業日チェックを bypass できる。
 起動時に pre-flight login check を行い、ログインが必要なら手動ログインを待機する。
 `--direct-deliver` 時は export 前に全移動先フォルダの到達性を probe し、
 1 つでもアクセス不可なら即座に abort する（network folder 切断時の数分ロスを防止）。
@@ -207,6 +209,22 @@ export 中にセッションが切れた場合は、タブを traverse してロ
 
 実行前に全振り分け先フォルダの到達性を probe し、1 つでもアクセス不可なら即座に abort する。
 `--dry-run` 時は probe をスキップする。
+
+## extra_holidays.csv — 追加休業日
+
+`pipelines/extra_holidays.csv` に日付を書くと、営業日チェックで非営業日として扱う。
+年末年始や会社独自の休業日など、祝日以外の非稼働日を追加する用途。
+
+- **置き場所**: `pipelines/extra_holidays.csv`
+- **フォーマット**: 1 行 1 日付 (`YYYY-MM-DD`)
+- 空行・parse できない行はスキップ（warning ログ出力）
+- ファイルが存在しなければ無視（既存動作に影響なし）
+
+```text
+2026-12-31
+2027-01-02
+2027-01-03
+```
 
 ## ids.txt — レポート ID フィルタ
 

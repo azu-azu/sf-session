@@ -3,9 +3,10 @@
 | # | ファイル                                          | 機能                                              |
 |---|--------------------------------------------------|---------------------------------------------------|
 | 1 | ■00_keep_session.bat                             | セッション維持 (Chrome 起動 + ログイン + 定期 reload) |
-| 2 | 97_clean_cache.bat                               | キャッシュファイルのクリーンアップ                     |
-| 3 | 98_setup_初回または設定更新の場合のみ実行する.bat    | 初回セットアップ (venv + 依存 install)               |
-| 4 | 99_new_pipeline.bat                              | 新規 pipeline 作成                                 |
+| 2 | 01_stay_awake.bat                                | Windows スリープ防止 (--minutes で時間指定、0 で無制限) |
+| 3 | 97_clean_cache.bat                               | キャッシュファイルのクリーンアップ                     |
+| 4 | 98_setup_初回または設定更新の場合のみ実行する.bat      | 初回セットアップ (venv + 依存 install)               |
+| 5 | 99_new_pipeline.bat                              | 新規 pipeline 作成                                 |
 
 各 pipeline の bat については pipelines/<name>/readme.txt を参照。
 
@@ -19,102 +20,26 @@
 
 ---
 
-==============================
- 新規 pipeline の追加手順
-==============================
+## 新規 pipeline の追加手順
 
 pipeline = 「ダウンロード → 振り分け → 変換」をまとめた単位。
-部署やチームごとに pipeline を分けて運用する。
 
+1. 99_new_pipeline.bat をダブルクリックし、pipeline 名を入力
+2. MACRO_ROOT_PATH/<name>/ に マクロファイル（xlsmファイル） を配置
+3. 動作確認:
+   - pipelines\<name>\90_show_macrofile.bat   … ジョブ定義の確認
 
-----------------------------------------------------------------------
- Step 1: 99_new_pipeline.bat をダブルクリック
-----------------------------------------------------------------------
+---
 
-  pipeline名を入力してください: monthly
+## 追加休業日 (extra_holidays.csv)
 
-  ※ 名前は英数字・ハイフン・アンダースコアのみ（日本語・スペース不可）
-  ※ 事前に 98_setup〜.bat を実行済みであること
+pipelines/extra_holidays.csv に YYYY-MM-DD を1行ずつ書くと、営業日チェックで休業日扱いになる。
+ファイルが無ければ無視される（既存動作に影響なし）。
 
-  → 以下が自動で作られる:
-
-    pipelines/monthly/
-      ├── ★01_download.bat    … 全件 export
-      ├── ★02_振り分け.bat     … Box フォルダへ振り分け
-      ├── 11〜90_*.bat        … その他のバッチ
-      ├── readme.txt          … bat の使い方ガイド
-      ├── result/
-      └── ids_file/
-
-    OUTPUT_ROOT_PATH/monthly/csv/            … csv 出力先
-    MACRO_ROOT_PATH/monthly/             … マクロファイル格納先
-
-    .env の PIPELINES に "monthly" が追記される
-
-
-----------------------------------------------------------------------
- Step 2: マクロファイル（.xlsm）を配置する
-----------------------------------------------------------------------
-
-  自動作成された MACRO_ROOT_PATH/monthly/ に xlsm を格納する。
-  既存 pipeline の xlsm をコピーして編集するのが早い。
-
-  xlsm の SalseForce シート（101 行目〜）にレポート定義を記入:
-
-    AA列 … No
-    AB列 … export URL（末尾の report ID を抽出）
-    AC列 … リネーム後ファイル名（空なら元名維持）
-    AD列 … 移動先フォルダパス
-    AE列 … エンコーディング（空なら Shift_JIS）
-    AG列 … skip フラグ（値があればスキップ）
-
-
-----------------------------------------------------------------------
- Step 3: 動作確認
-----------------------------------------------------------------------
-
-  1) ジョブ定義が正しく読めるか確認:
-
-     pipelines\monthly\90_show_macrofile.bat
-
-  2) dry-run で export 対象を確認（実行はしない）:
-
-     pipelines\monthly\★01_download.bat --dry-run
-
-
-----------------------------------------------------------------------
- Step 4（任意）: ids.txt で対象を絞る
-----------------------------------------------------------------------
-
-  全件ではなく特定レポートだけ処理したい場合:
-
-  pipelines/monthly/ids_file/ids.txt を作成し、
-  1行1つ report ID を書く（# で始まる行はコメント）
-
-    # 対象レポート
-    00O000000000001AAA
-    00O000000000002AAA
-
-
-----------------------------------------------------------------------
- 実行例
-----------------------------------------------------------------------
-
-  > 99_new_pipeline.bat
-
-  pipeline名を入力してください: monthly
-
-  ✓ .env の PIPELINES を更新しました: archive, monthly
-  ✓ pipelines/monthly/ を作成しました
-    - result/
-    - ids_file/
-  ✓ bat ファイルを配置しました (7 files)
-  ✓ readme.txt を配置しました
-  ✓ Z:\Users\you\macros\monthly を作成しました
-  ⚠ マクロファイル (.xlsm) を Z:\Users\you\macros\monthly に格納してください
-  ✓ Z:\Users\you\outputs\monthly\csv を作成しました
-
-  セットアップ完了！
+  例:
+    2026-12-31
+    2027-01-02
+    2027-01-03
 
 ---
 
