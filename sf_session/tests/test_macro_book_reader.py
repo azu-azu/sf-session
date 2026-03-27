@@ -41,8 +41,8 @@ class TestIdsFileEmpty:
 
     def test_ids_file_empty_returns_empty(self, tmp_path, monkeypatch, caplog):
         """ids.txt がコメントのみ → 空リスト + warning ログ。"""
-        # _PIPELINES_DIR を tmp_path に向ける → pipeline.ids_file が tmp_path 配下になる
-        monkeypatch.setattr("sf_session.config._PIPELINES_DIR", tmp_path)
+        # PIPELINES_DIR を tmp_path に向ける → pipeline.ids_file が tmp_path 配下になる
+        monkeypatch.setattr("sf_session.config.PIPELINES_DIR", tmp_path)
 
         pipeline = PipelineConfig(name="test", macro_dir=tmp_path)
         # pipeline.ids_file = tmp_path / "test" / "ids_file" / "ids.txt"

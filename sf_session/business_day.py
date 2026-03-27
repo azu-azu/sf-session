@@ -12,11 +12,11 @@ from pathlib import Path
 
 import jpholiday
 
-from sf_session.config import _PIPELINES_DIR
+from sf_session.config import PIPELINES_DIR
 
 logger = logging.getLogger(__name__)
 
-EXTRA_HOLIDAYS_PATH = _PIPELINES_DIR / "extra_holidays.csv"
+EXTRA_HOLIDAYS_PATH = PIPELINES_DIR / "extra_holidays.csv"
 
 
 def load_extra_holidays(path: Path = EXTRA_HOLIDAYS_PATH) -> set[date]:

@@ -105,9 +105,9 @@ def _stub_main_externals(monkeypatch, tmp_path, *, jobs=None):
     Returns (staging_dir, download_dir) の tuple。
     staging_dir = pipeline.csv_dir = OUTPUT_ROOT / "archive" / "csv"
     """
-    # _PIPELINES_DIR を tmp_path 配下に向ける → result_dir, ids_file が追従
+    # PIPELINES_DIR を tmp_path 配下に向ける → result_dir, ids_file が追従
     pipelines_dir = tmp_path / "pipelines"
-    monkeypatch.setattr("sf_session.config._PIPELINES_DIR", pipelines_dir)
+    monkeypatch.setattr("sf_session.config.PIPELINES_DIR", pipelines_dir)
     # OUTPUT_ROOT を tmp_path / "outputs" に向ける → csv_dir / status marker が追従
     monkeypatch.setattr("sf_session.config.OUTPUT_ROOT", tmp_path / "outputs")
     monkeypatch.setattr("sf_session.download.cli.OUTPUT_ROOT", tmp_path / "outputs")

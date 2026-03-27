@@ -12,7 +12,7 @@ load_dotenv()
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 # ── 共通 ──────────────────────────────────────────────
-_PIPELINES_DIR = PROJECT_ROOT / "pipelines"
+PIPELINES_DIR = PROJECT_ROOT / "pipelines"
 
 _CSV_SUBDIR = "csv"
 _RESULT_SUBDIR = "result"
@@ -52,15 +52,15 @@ class PipelineConfig:
     def csv_dir(self) -> Path:
         if OUTPUT_ROOT is not None:
             return OUTPUT_ROOT / self.name / _CSV_SUBDIR
-        return _PIPELINES_DIR / self.name / _CSV_SUBDIR
+        return PIPELINES_DIR / self.name / _CSV_SUBDIR
 
     @property
     def result_dir(self) -> Path:
-        return _PIPELINES_DIR / self.name / _RESULT_SUBDIR
+        return PIPELINES_DIR / self.name / _RESULT_SUBDIR
 
     @property
     def ids_file(self) -> Path:
-        return _PIPELINES_DIR / self.name / _IDS_FILE_SUBDIR / "ids.txt"
+        return PIPELINES_DIR / self.name / _IDS_FILE_SUBDIR / "ids.txt"
 
 
 def _load_pipelines() -> dict[str, PipelineConfig]:
