@@ -103,11 +103,14 @@ def _stub_main_externals(monkeypatch, tmp_path, *, jobs=None):
     """main() を軽量に実行するための monkeypatch 群。
 
     Returns (staging_dir, download_dir) の tuple。
-    staging_dir = pipeline.csv_dir = _PIPELINES_DIR / "archive" / "csv"
+    staging_dir = pipeline.csv_dir = OUTPUT_ROOT / "archive" / "csv"
     """
-    # _PIPELINES_DIR を tmp_path 配下に向ける → PipelineConfig の derived paths が追従
+    # _PIPELINES_DIR を tmp_path 配下に向ける → result_dir, ids_file が追従
     pipelines_dir = tmp_path / "pipelines"
     monkeypatch.setattr("sf_session.config._PIPELINES_DIR", pipelines_dir)
+    # OUTPUT_ROOT を tmp_path / "outputs" に向ける → csv_dir / status marker が追従
+    monkeypatch.setattr("sf_session.config.OUTPUT_ROOT", tmp_path / "outputs")
+    monkeypatch.setattr("sf_session.download.cli.OUTPUT_ROOT", tmp_path / "outputs")
 
     download_dir = tmp_path / "downloads"
     download_dir.mkdir()
@@ -153,7 +156,7 @@ def _stub_main_externals(monkeypatch, tmp_path, *, jobs=None):
         "sf_session.download.cli.probe_destinations", lambda *a: [],
     )
 
-    staging_dir = fake_pipeline.csv_dir  # pipelines_dir / "archive" / "csv"
+    staging_dir = fake_pipeline.csv_dir  # OUTPUT_ROOT / "archive" / "csv"
     return staging_dir, download_dir
 
 

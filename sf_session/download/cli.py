@@ -21,9 +21,9 @@ from ..config import (
     CHROME_EXE_PATH,
     CHROME_USER_DATA_DIR,
     PIPELINES,
-    PROJECT_ROOT,
     SF_HOME_URL,
     VALID_PIPELINES,
+    OUTPUT_ROOT,
 )
 from ..browser import REMOTE_DEBUGGING_PORT
 from ..business_day import should_run_download
@@ -278,7 +278,7 @@ def _finalize(
     phase = "direct" if args.direct_deliver else "dl"
     other = "dl" if phase == "direct" else "direct"
     write_pipeline_status(
-        PROJECT_ROOT, args.pipeline, phase,
+        OUTPUT_ROOT.parent, args.pipeline, phase,
         f"{time_label()}_成功{ok}件_失敗{ng}件",
         clear_phases=[other, "dv"],
     )
@@ -298,6 +298,7 @@ def _execute(
     result_dir: Path,
 ) -> int:
     """Chrome 起動 → export → finalize。"""
+    assert OUTPUT_ROOT is not None  # validated by _load_pipelines
     driver = session.driver if session else None
     work_dir: Path | None = None
 
@@ -309,10 +310,11 @@ def _execute(
                     logger.error("移動先フォルダに問題があります: %s", msg)
                 return 1
         else:
-            if not PROJECT_ROOT.is_dir():
-                logger.error("PROJECT_ROOT が存在しません: %s", PROJECT_ROOT)
+            if not OUTPUT_ROOT.parent.is_dir():
+                logger.error("OUTPUT_ROOT の親ディレクトリが存在しません: %s", OUTPUT_ROOT.parent)
                 return 1
-            probe_output_dir(PROJECT_ROOT)
+            probe_output_dir(OUTPUT_ROOT.parent)
+            OUTPUT_ROOT.mkdir(exist_ok=True)
 
         if args.direct_deliver:
             output_dir = None
@@ -325,7 +327,7 @@ def _execute(
         if args.open_download_dir:
             open_folder(download_dir)
         if args.open_output_dir:
-            open_folder(output_dir if output_dir else PROJECT_ROOT)
+            open_folder(output_dir if output_dir else OUTPUT_ROOT.parent)
 
         if output_dir is not None:
             write_start_marker(output_dir, len(active_jobs))

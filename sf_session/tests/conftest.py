@@ -6,6 +6,7 @@ import os
 _TEST_DEFAULTS = {
     "SF_BASE_URL": "https://test.salesforce.com",
     "MACRO_ROOT_PATH": ".",
+    "OUTPUT_ROOT_PATH": ".",
     "PIPELINES": "archive",
 }
 

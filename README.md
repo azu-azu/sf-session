@@ -148,7 +148,7 @@ SSO 経由のログインに対応。ログインが必要な場合はユーザ�
 # dry-run でジョブ一覧を確認
 ★01_download.bat --dry-run
 
-# 実行 (pipelines/archive/csv/ に全ファイル集約)
+# 実行 (OUTPUT_ROOT_PATH/archive/csv/ に全ファイル集約)
 ★01_download.bat
 
 # per-job 振り分け先フォルダへ直接コピー
@@ -178,7 +178,7 @@ export 中にセッションが切れた場合は、タブを traverse してロ
 --my-chrome         OS デフォルト Chrome を使用（login check skip、手動ログイン前提）
 --no-login-check    pre-flight login check を skip
 --port              リモートデバッグポート (default: 9222)
---direct-deliver    各ジョブの src_folder_name へ直接振り分け (default: pipelines/archive/csv/ に集約)
+--direct-deliver    各ジョブの src_folder_name へ直接振り分け (default: OUTPUT_ROOT_PATH/archive/csv/ に集約)
 --ids-file          ids.txt の report ID との intersection でフィルタ
 --retry             前回の success_ids を読み、失敗分だけ再実行
 --date-suffix       ファイル名に _YYYYMMDD を付与
@@ -272,4 +272,5 @@ py -m pytest -v
 ```
 
 対話形式で pipeline 名を入力すると、ディレクトリ・bat・readme・.env を一括生成する。
+csv 出力先は `OUTPUT_ROOT_PATH/<pipeline>/csv/` に作成される（`.env` で設定）。
 詳細は `new_pipeline.txt` を参照。

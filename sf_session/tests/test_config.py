@@ -18,7 +18,7 @@ def test_project_root_is_sf_session():
 def test_archive_pipeline_exists():
     archive = PIPELINES["archive"]
     assert archive.macro_dir == Path(".") / "archive"
-    assert archive.csv_dir == PROJECT_ROOT / "pipelines" / "archive" / "csv"
+    assert archive.csv_dir == Path(".") / "archive" / "csv"
     assert archive.ids_file == PROJECT_ROOT / "pipelines" / "archive" / "ids_file" / "ids.txt"
 
 

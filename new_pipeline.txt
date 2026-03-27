@@ -22,11 +22,11 @@ pipeline = 「ダウンロード → 振り分け → 変換」をまとめた�
       ├── ★02_振り分け.bat     … Box フォルダへ振り分け
       ├── 11〜90_*.bat        … その他のバッチ
       ├── readme.txt          … bat の使い方ガイド
-      ├── csv/                … export 出力先
       ├── result/
       └── ids_file/
 
-    MACRO_ROOT_PATH/monthly/   … マクロファイル格納先
+    OUTPUT_ROOT_PATH/monthly/csv/            … csv 出力先
+    MACRO_ROOT_PATH/monthly/             … マクロファイル格納先
 
     .env の PIPELINES に "monthly" が追記される
 
@@ -85,12 +85,12 @@ pipeline = 「ダウンロード → 振り分け → 変換」をまとめた�
 
   ✓ .env の PIPELINES を更新しました: archive, monthly
   ✓ pipelines/monthly/ を作成しました
-    - csv/
     - result/
     - ids_file/
   ✓ bat ファイルを配置しました (7 files)
   ✓ readme.txt を配置しました
   ✓ Z:\Users\you\macros\monthly を作成しました
   ⚠ マクロファイル (.xlsm) を Z:\Users\you\macros\monthly に格納してください
+  ✓ Z:\Users\you\outputs\monthly\csv を作成しました
 
   セットアップ完了！

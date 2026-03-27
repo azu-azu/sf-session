@@ -34,6 +34,11 @@ _MACRO_ROOT_PATH: Path | None = (
     Path(os.environ["MACRO_ROOT_PATH"]) if "MACRO_ROOT_PATH" in os.environ else None
 )
 
+# Output root (csv 出力先の root)
+OUTPUT_ROOT: Path | None = (
+    Path(os.environ["OUTPUT_ROOT_PATH"]) if "OUTPUT_ROOT_PATH" in os.environ else None
+)
+
 
 # ── PipelineConfig ────────────────────────────────────
 @dataclass(frozen=True)
@@ -45,6 +50,8 @@ class PipelineConfig:
 
     @property
     def csv_dir(self) -> Path:
+        if OUTPUT_ROOT is not None:
+            return OUTPUT_ROOT / self.name / _CSV_SUBDIR
         return _PIPELINES_DIR / self.name / _CSV_SUBDIR
 
     @property
@@ -66,6 +73,8 @@ def _load_pipelines() -> dict[str, PipelineConfig]:
         return {}
     if _MACRO_ROOT_PATH is None:
         raise ValueError("PIPELINES が設定されていますが MACRO_ROOT_PATH が未設定です")
+    if OUTPUT_ROOT is None:
+        raise ValueError("PIPELINES が設定されていますが OUTPUT_ROOT_PATH が未設定です")
     names = [n.strip() for n in raw.split(",") if n.strip()]
     return {
         name: PipelineConfig(name=name, macro_dir=_MACRO_ROOT_PATH / name)

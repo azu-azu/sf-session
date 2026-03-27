@@ -20,7 +20,7 @@ import sys
 from dataclasses import dataclass, replace as _dc_replace
 from pathlib import Path
 
-from .config import PIPELINES, PROJECT_ROOT, VALID_PIPELINES
+from .config import PIPELINES, VALID_PIPELINES, OUTPUT_ROOT
 from .download.outputs import build_destination, probe_destinations
 from .macro_book_reader import JobEntry, load_active_jobs
 from .utils import setup_logging, time_label, write_pipeline_status
@@ -175,6 +175,7 @@ def main(argv: list[str] | None = None) -> int:
     setup_logging()
 
     args = parse_args(argv)
+    assert OUTPUT_ROOT is not None  # validated by _load_pipelines
     pipeline = PIPELINES[args.pipeline]
 
     source_dir = (args.source_dir or pipeline.csv_dir).expanduser().resolve()
@@ -227,7 +228,7 @@ def main(argv: list[str] | None = None) -> int:
     logger.info("完了マーカー: %s", marker.name)
 
     write_pipeline_status(
-        PROJECT_ROOT, args.pipeline, "dv",
+        OUTPUT_ROOT.parent, args.pipeline, "dv",
         f"{time_label()}_振り分け完了",
     )
 

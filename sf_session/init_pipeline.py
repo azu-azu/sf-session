@@ -14,7 +14,7 @@ _PROJECT_ROOT = _PACKAGE_DIR.parent
 _ENV_PATH = _PROJECT_ROOT / ".env"
 _PIPELINES_DIR = _PROJECT_ROOT / "pipelines"
 _TEMPLATES_DIR = _PACKAGE_DIR / "templates" / "pipeline"
-_SUBDIRS = ("csv", "result", "ids_file")
+_SUBDIRS = ("result", "ids_file")
 
 _BAT_TEMPLATE = """\
 @echo off
@@ -93,6 +93,14 @@ def _generate_bat_files(name: str, pipeline_dir: Path) -> int:
     return len(_BAT_DEFS)
 
 
+def _get_output_root() -> Path:
+    """OUTPUT_ROOT_PATH を .env から取得する。"""
+    raw = _read_env_value("OUTPUT_ROOT_PATH")
+    if not raw:
+        raise RuntimeError("OUTPUT_ROOT_PATH not found in .env")
+    return Path(raw)
+
+
 def _ensure_macro_dir(name: str) -> tuple[Path, bool]:
     macro_root_raw = _read_env_value("MACRO_ROOT_PATH")
     if not macro_root_raw:
@@ -101,6 +109,13 @@ def _ensure_macro_dir(name: str) -> tuple[Path, bool]:
     created = not macro_dir.exists()
     macro_dir.mkdir(parents=True, exist_ok=True)
     return macro_dir, created
+
+
+def _ensure_output_dir(name: str, output_root: Path) -> tuple[Path, bool]:
+    csv_dir = output_root / name / "csv"
+    created = not csv_dir.exists()
+    csv_dir.mkdir(parents=True, exist_ok=True)
+    return csv_dir, created
 
 
 # ── main ─────────────────────────────────────────────────────────────
@@ -143,7 +158,7 @@ def main() -> None:
         )
         print("✓ readme.txt を配置しました")
 
-    # 5. macro directory
+    # 5. macro directory (MACRO_ROOT_PATH)
     try:
         macro_dir, created = _ensure_macro_dir(name)
         if created:
@@ -153,6 +168,17 @@ def main() -> None:
             print(f"✓ {macro_dir} は既に存在します")
     except RuntimeError as e:
         print(f"⚠ MACRO_ROOT_PATH の処理をスキップしました: {e}")
+
+    # 6. output directory (OUTPUT_ROOT_PATH)
+    try:
+        output_root = _get_output_root()
+        csv_dir, csv_created = _ensure_output_dir(name, output_root)
+        if csv_created:
+            print(f"✓ {csv_dir} を作成しました")
+        else:
+            print(f"✓ {csv_dir} は既に存在します")
+    except RuntimeError as e:
+        print(f"⚠ OUTPUT_ROOT_PATH の処理をスキップしました: {e}")
 
     print("\nセットアップ完了！")
 
