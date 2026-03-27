@@ -52,16 +52,20 @@ class TestMatchFileToJob:
 
 
 class TestBuildDestination:
-    def test_no_filename_keeps_full_stem(self, tmp_path):
-        job = make_job(src_folder_name=str(tmp_path))
+    def test_no_filename(self, tmp_path):
+        job = make_job(report_id="00O123", src_folder_name=str(tmp_path))
         source = tmp_path / "00O123_report.csv"
         source.touch()
 
-        result = build_destination(job, source, date_suffix=False)
-        assert result == tmp_path / "00O123_report.csv"
+        with patch("sf_session.utils.datetime") as mock_dt:
+            mock_dt.now.return_value.strftime.return_value = "20260327"
+            result = build_destination(job, source)
+
+        assert result == tmp_path / "00O123_20260327_00O123_report.csv"
 
     def test_with_new_filename(self, tmp_path):
         job = make_job(
+            report_id="00O123",
             src_folder_name=str(tmp_path),
             has_filename=True,
             new_filename="daily_export",
@@ -69,37 +73,15 @@ class TestBuildDestination:
         source = tmp_path / "00O123_original.csv"
         source.touch()
 
-        result = build_destination(job, source, date_suffix=False)
-        assert result == tmp_path / "daily_export.csv"
+        with patch("sf_session.utils.datetime") as mock_dt:
+            mock_dt.now.return_value.strftime.return_value = "20260327"
+            result = build_destination(job, source)
 
-    def test_with_date_suffix_no_filename(self, tmp_path):
-        job = make_job(src_folder_name=str(tmp_path))
-        source = tmp_path / "00O123_report.csv"
-        source.touch()
-
-        with patch("sf_session.file_deliver.datetime") as mock_dt:
-            mock_dt.now.return_value.strftime.return_value = "20260319"
-            result = build_destination(job, source, date_suffix=True)
-
-        assert result == tmp_path / "00O123_report_20260319.csv"
-
-    def test_with_new_filename_and_date_suffix(self, tmp_path):
-        job = make_job(
-            src_folder_name=str(tmp_path),
-            has_filename=True,
-            new_filename="daily",
-        )
-        source = tmp_path / "00O123_original.xlsx"
-        source.touch()
-
-        with patch("sf_session.file_deliver.datetime") as mock_dt:
-            mock_dt.now.return_value.strftime.return_value = "20260319"
-            result = build_destination(job, source, date_suffix=True)
-
-        assert result == tmp_path / "daily_20260319.xlsx"
+        assert result == tmp_path / "00O123_20260327_daily_export.csv"
 
     def test_preserves_extension(self, tmp_path):
         job = make_job(
+            report_id="00O123",
             src_folder_name=str(tmp_path),
             has_filename=True,
             new_filename="output",
@@ -107,8 +89,20 @@ class TestBuildDestination:
         source = tmp_path / "00O123_data.xls"
         source.touch()
 
-        result = build_destination(job, source, date_suffix=False)
-        assert result == tmp_path / "output.xls"
+        with patch("sf_session.utils.datetime") as mock_dt:
+            mock_dt.now.return_value.strftime.return_value = "20260327"
+            result = build_destination(job, source)
+
+        assert result == tmp_path / "00O123_20260327_output.xls"
+
+    def test_no_report_id(self, tmp_path):
+        """report_id が空なら prefix なし。"""
+        job = make_job(report_id="", src_folder_name=str(tmp_path))
+        source = tmp_path / "some_report.csv"
+        source.touch()
+
+        result = build_destination(job, source)
+        assert result == tmp_path / "some_report.csv"
 
 
 class TestDistributeFiles:
@@ -122,12 +116,16 @@ class TestDistributeFiles:
         f.write_text("data")
 
         jobs = [make_job(report_id="00O123", src_folder_name=str(dest_dir))]
-        results = distribute_files(src_dir, jobs)
+
+        with patch("sf_session.utils.datetime") as mock_dt:
+            mock_dt.now.return_value.strftime.return_value = "20260327"
+            results = distribute_files(src_dir, jobs)
 
         assert len(results) == 1
         assert results[0].success
-        assert results[0].dest_path == dest_dir / "00O123_report.csv"
-        assert (dest_dir / "00O123_report.csv").exists()
+        expected = dest_dir / "00O123_20260327_00O123_report.csv"
+        assert results[0].dest_path == expected
+        assert expected.exists()
         assert f.exists()  # コピーなので元ファイルは残る
 
     def test_renames_file(self, tmp_path):
@@ -145,12 +143,16 @@ class TestDistributeFiles:
             has_filename=True,
             new_filename="renamed",
         )]
-        results = distribute_files(src_dir, jobs)
+
+        with patch("sf_session.utils.datetime") as mock_dt:
+            mock_dt.now.return_value.strftime.return_value = "20260327"
+            results = distribute_files(src_dir, jobs)
 
         assert len(results) == 1
         assert results[0].success
-        assert results[0].dest_path == dest_dir / "renamed.csv"
-        assert (dest_dir / "renamed.csv").exists()
+        expected = dest_dir / "00O123_20260327_renamed.csv"
+        assert results[0].dest_path == expected
+        assert expected.exists()
 
     def test_dest_dir_missing(self, tmp_path):
         src_dir = tmp_path / "source"
@@ -196,12 +198,15 @@ class TestDistributeFiles:
             make_job(no="1", report_id="00OAAA", src_folder_name=str(dest1)),
             make_job(no="2", report_id="00OBBB", src_folder_name=str(dest2)),
         ]
-        results = distribute_files(src_dir, jobs)
+
+        with patch("sf_session.utils.datetime") as mock_dt:
+            mock_dt.now.return_value.strftime.return_value = "20260327"
+            results = distribute_files(src_dir, jobs)
 
         assert len(results) == 2
         assert all(r.success for r in results)
-        assert (dest1 / "00OAAA_report_a.csv").exists()
-        assert (dest2 / "00OBBB_report_b.csv").exists()
+        assert (dest1 / "00OAAA_20260327_00OAAA_report_a.csv").exists()
+        assert (dest2 / "00OBBB_20260327_00OBBB_report_b.csv").exists()
 
     def test_directories_ignored(self, tmp_path):
         src_dir = tmp_path / "source"
@@ -243,32 +248,18 @@ class TestLogSummary:
 
 
 class TestParseArgs:
-    def test_source_dir_required(self):
-        import pytest
-
-        with pytest.raises(SystemExit):
-            parse_args([])
-
-    def test_source_dir(self):
-        args = parse_args(["--source-dir", "/tmp/src"])
-        assert args.source_dir == Path("/tmp/src")
-
     def test_defaults(self):
-        args = parse_args(["--source-dir", "/tmp/src"])
-        assert not args.date_suffix
+        args = parse_args([])
         assert not args.dry_run
         assert not args.ids_file
         assert args.macro_dir == ARCHIVE_MACRO_DIR
 
     def test_all_flags(self):
         args = parse_args([
-            "--source-dir", "/tmp/src",
-            "--date-suffix",
             "--ids-file",
             "--dry-run",
             "--macro-dir", "/tmp/macro",
         ])
-        assert args.date_suffix
         assert args.ids_file
         assert args.dry_run
         assert args.macro_dir == Path("/tmp/macro")

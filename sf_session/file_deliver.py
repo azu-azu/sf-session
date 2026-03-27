@@ -7,7 +7,6 @@
 Usage:
     python sf-session/file_deliver.py
     python sf-session/file_deliver.py --dry-run
-    python sf-session/file_deliver.py --date-suffix
     python sf-session/file_deliver.py --ids-file
     python sf-session/file_deliver.py --source-dir /other/path
 """
@@ -19,12 +18,11 @@ import logging
 import shutil
 import sys
 from dataclasses import dataclass
-from datetime import datetime
 from pathlib import Path
 
-from .config import ARCHIVE_CSV_DIR, ARCHIVE_IDS_FILE, ARCHIVE_MACRO_DIR, OUTPUTS_DIR
+from .config import ARCHIVE_CSV_DIR, ARCHIVE_IDS_FILE, ARCHIVE_MACRO_DIR, PROJECT_ROOT
 from .macro_book_reader import JobEntry, load_active_jobs
-from .utils import setup_logging, time_label, write_pipeline_status
+from .utils import build_output_stem, setup_logging, time_label, write_pipeline_status
 
 logger = logging.getLogger(__name__)
 
@@ -64,26 +62,16 @@ def match_file_to_job(
 def build_destination(
     job: JobEntry,
     source: Path,
-    *,
-    date_suffix: bool,
 ) -> Path:
     """振り分け先パスを組み立てる。
 
-    リネーム指定 (has_filename) があれば new_filename を使い、
-    なければファイル名はそのまま維持する。
-    日付 suffix はリネーム指定時は常に付与、それ以外は date_suffix で制御。
+    ファイル名は {report_id}_{YYYYMMDD}_{stem}{ext} 形式。
+    リネーム指定 (has_filename) があれば stem = new_filename、なければ元ファイル名。
     """
     dest_dir = Path(job.src_folder_name)
     ext = source.suffix
-
-    if job.has_filename:
-        stem = job.new_filename
-    else:
-        stem = source.stem
-
-    if job.has_filename or date_suffix:
-        today = datetime.now().strftime("%Y%m%d")
-        stem = f"{stem}_{today}"
+    raw_stem = job.new_filename if job.has_filename else source.stem
+    stem = build_output_stem(job.report_id, raw_stem)
 
     return dest_dir / f"{stem}{ext}"
 
@@ -91,8 +79,6 @@ def build_destination(
 def distribute_files(
     source_dir: Path,
     jobs: list[JobEntry],
-    *,
-    date_suffix: bool = False,
 ) -> list[DistributeResult]:
     """source_dir 内のファイルを jobs に基づいて振り分ける。"""
     lookup = build_job_lookup(jobs)
@@ -109,7 +95,7 @@ def distribute_files(
             continue
 
         count += 1
-        dest = build_destination(job, file, date_suffix=date_suffix)
+        dest = build_destination(job, file)
         dest_dir = dest.parent
 
         if not dest_dir.is_dir():
@@ -183,11 +169,6 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help=f"マクロ格納フォルダ path (default: {ARCHIVE_MACRO_DIR})",
     )
     parser.add_argument(
-        "--date-suffix",
-        action="store_true",
-        help="ファイル名に _YYYYMMDD を付与",
-    )
-    parser.add_argument(
         "--ids-file",
         action="store_true",
         default=False,
@@ -233,15 +214,13 @@ def main(argv: list[str] | None = None) -> int:
             if job is None:
                 logger.info("  %-50s → (マッチなし)", file.name)
                 continue
-            dest = build_destination(job, file, date_suffix=args.date_suffix)
+            dest = build_destination(job, file)
             logger.info("  %-50s → %s", file.name, dest)
         return 0
 
     logger.info("Source dir  : %s", source_dir)
 
-    results = distribute_files(
-        source_dir, active_jobs, date_suffix=args.date_suffix,
-    )
+    results = distribute_files(source_dir, active_jobs)
 
     log_summary(results)
 
@@ -251,7 +230,7 @@ def main(argv: list[str] | None = None) -> int:
     logger.info("完了マーカー: %s", marker.name)
 
     write_pipeline_status(
-        OUTPUTS_DIR, "archive", "dv",
+        PROJECT_ROOT, "archive", "dv",
         f"{time_label()}_振り分け完了",
     )
 

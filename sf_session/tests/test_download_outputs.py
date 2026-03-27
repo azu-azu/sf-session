@@ -24,16 +24,20 @@ from sf_session.tests.helpers import make_job
 
 
 class TestBuildDestination:
-    def test_no_filename_no_suffix(self, tmp_path):
-        job = make_job(src_folder_name=str(tmp_path))
+    def test_no_filename(self, tmp_path):
+        job = make_job(report_id="00O123", src_folder_name=str(tmp_path))
         downloaded = tmp_path / "report.csv"
         downloaded.touch()
 
-        result = build_destination(job, downloaded, date_suffix=False)
-        assert result == tmp_path / "report.csv"
+        with patch("sf_session.utils.datetime") as mock_dt:
+            mock_dt.now.return_value.strftime.return_value = "20260327"
+            result = build_destination(job, downloaded)
+
+        assert result == tmp_path / "00O123_20260327_report.csv"
 
     def test_with_filename(self, tmp_path):
         job = make_job(
+            report_id="00O123",
             src_folder_name=str(tmp_path),
             has_filename=True,
             new_filename="myreport",
@@ -41,37 +45,15 @@ class TestBuildDestination:
         downloaded = tmp_path / "original.csv"
         downloaded.touch()
 
-        result = build_destination(job, downloaded, date_suffix=False)
-        assert result == tmp_path / "myreport.csv"
+        with patch("sf_session.utils.datetime") as mock_dt:
+            mock_dt.now.return_value.strftime.return_value = "20260327"
+            result = build_destination(job, downloaded)
 
-    def test_with_date_suffix(self, tmp_path):
-        job = make_job(src_folder_name=str(tmp_path))
-        downloaded = tmp_path / "report.csv"
-        downloaded.touch()
-
-        with patch("sf_session.download.outputs.datetime") as mock_dt:
-            mock_dt.now.return_value.strftime.return_value = "20260317"
-            result = build_destination(job, downloaded, date_suffix=True)
-
-        assert result == tmp_path / "report_20260317.csv"
-
-    def test_with_filename_and_date_suffix(self, tmp_path):
-        job = make_job(
-            src_folder_name=str(tmp_path),
-            has_filename=True,
-            new_filename="daily",
-        )
-        downloaded = tmp_path / "original.xlsx"
-        downloaded.touch()
-
-        with patch("sf_session.download.outputs.datetime") as mock_dt:
-            mock_dt.now.return_value.strftime.return_value = "20260317"
-            result = build_destination(job, downloaded, date_suffix=True)
-
-        assert result == tmp_path / "daily_20260317.xlsx"
+        assert result == tmp_path / "00O123_20260327_myreport.csv"
 
     def test_preserves_download_extension(self, tmp_path):
         job = make_job(
+            report_id="00O123",
             src_folder_name=str(tmp_path),
             has_filename=True,
             new_filename="output",
@@ -79,20 +61,24 @@ class TestBuildDestination:
         downloaded = tmp_path / "data.xls"
         downloaded.touch()
 
-        result = build_destination(job, downloaded, date_suffix=False)
-        assert result == tmp_path / "output.xls"
+        with patch("sf_session.utils.datetime") as mock_dt:
+            mock_dt.now.return_value.strftime.return_value = "20260327"
+            result = build_destination(job, downloaded)
 
-    def test_output_dir_prefixes_report_id(self, tmp_path):
+        assert result == tmp_path / "00O123_20260327_output.xls"
+
+    def test_output_dir(self, tmp_path):
         out_dir = tmp_path / "outputs_csv"
         out_dir.mkdir()
         job = make_job(report_id="00O999")
         downloaded = tmp_path / "report.csv"
         downloaded.touch()
 
-        result = build_destination(
-            job, downloaded, date_suffix=False, output_dir=out_dir,
-        )
-        assert result == out_dir / "00O999_report.csv"
+        with patch("sf_session.utils.datetime") as mock_dt:
+            mock_dt.now.return_value.strftime.return_value = "20260327"
+            result = build_destination(job, downloaded, output_dir=out_dir)
+
+        assert result == out_dir / "00O999_20260327_report.csv"
 
     def test_output_dir_with_new_filename(self, tmp_path):
         out_dir = tmp_path / "outputs_csv"
@@ -105,25 +91,20 @@ class TestBuildDestination:
         downloaded = tmp_path / "original.csv"
         downloaded.touch()
 
-        result = build_destination(
-            job, downloaded, date_suffix=False, output_dir=out_dir,
-        )
-        assert result == out_dir / "00O999_daily.csv"
+        with patch("sf_session.utils.datetime") as mock_dt:
+            mock_dt.now.return_value.strftime.return_value = "20260327"
+            result = build_destination(job, downloaded, output_dir=out_dir)
 
-    def test_output_dir_with_date_suffix(self, tmp_path):
-        out_dir = tmp_path / "outputs_csv"
-        out_dir.mkdir()
-        job = make_job(report_id="00O999")
+        assert result == out_dir / "00O999_20260327_daily.csv"
+
+    def test_no_report_id(self, tmp_path):
+        """report_id が空なら prefix なし。"""
+        job = make_job(report_id="", src_folder_name=str(tmp_path))
         downloaded = tmp_path / "report.csv"
         downloaded.touch()
 
-        with patch("sf_session.download.outputs.datetime") as mock_dt:
-            mock_dt.now.return_value.strftime.return_value = "20260318"
-            result = build_destination(
-                job, downloaded, date_suffix=True, output_dir=out_dir,
-            )
-
-        assert result == out_dir / "00O999_report_20260318.csv"
+        result = build_destination(job, downloaded)
+        assert result == tmp_path / "report.csv"
 
 
 class TestLogSummary:

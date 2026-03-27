@@ -21,7 +21,7 @@ from ..config import (
     CHROME_USER_DATA_DIR,
     ARCHIVE_CSV_DIR,
     OUTPUT_STAGING_ROOT,
-    OUTPUTS_DIR,
+    PROJECT_ROOT,
     ARCHIVE_IDS_FILE,
     ARCHIVE_MACRO_DIR,
     SF_HOME_URL,
@@ -95,7 +95,6 @@ def _log_run_config(
         logger.info("Profile     : %s", args.profile_directory)
     logger.info("Port        : %d", args.port)
     logger.info("Timeout     : %ds", args.timeout)
-    logger.info("date-suffix : %s", args.date_suffix)
     if output_dir:
         logger.info("Output dir  : %s", output_dir)
     else:
@@ -115,7 +114,6 @@ def _print_dry_run(args: argparse.Namespace, jobs) -> None:
         if not args.direct_deliver:
             dest = build_destination(
                 j, dummy_dl,
-                date_suffix=args.date_suffix,
                 output_dir=ARCHIVE_CSV_DIR,
             )
         else:
@@ -170,11 +168,6 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         type=float,
         default=DEFAULT_POLL,
         help=f"Poll interval 秒 (default: {DEFAULT_POLL})",
-    )
-    parser.add_argument(
-        "--date-suffix",
-        action="store_true",
-        help="ファイル名に _YYYYMMDD を付与 (VBA CheckBox1 相当)",
     )
     parser.add_argument(
         "--interval",
@@ -303,7 +296,6 @@ def _execute(
             timeout=args.timeout,
             poll=args.poll,
             interval=args.interval,
-            date_suffix=args.date_suffix,
             output_dir=output_dir,
             user_data_dir=user_data_dir,
             profile_directory=args.profile_directory,
@@ -319,9 +311,12 @@ def _execute(
         if work_dir is not None:
             swap_work_to_staging(work_dir, ARCHIVE_CSV_DIR, ok)
 
+        phase = "direct" if args.direct_deliver else "dl"
+        other = "dl" if phase == "direct" else "direct"
         write_pipeline_status(
-            OUTPUTS_DIR, "archive", "dl",
+            PROJECT_ROOT, "archive", phase,
             f"{time_label()}_成功{ok}件_失敗{ng}件",
+            clear_phases=[other, "dv"],
         )
 
         return 1 if ok < len(results) else 0

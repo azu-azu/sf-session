@@ -196,7 +196,6 @@ def export_batch(
     timeout: int = DEFAULT_TIMEOUT,
     poll: float = DEFAULT_POLL,
     interval: float = DEFAULT_INTERVAL,
-    date_suffix: bool = False,
     output_dir: Path | None = None,
     user_data_dir: Path | None = None,
     profile_directory: str | None = None,
@@ -222,7 +221,6 @@ def export_batch(
         # 移動先を組み立て
         dest = build_destination(
             job, result.dest_path,
-            date_suffix=date_suffix,
             output_dir=output_dir,
         )
         dest_dir = dest.parent

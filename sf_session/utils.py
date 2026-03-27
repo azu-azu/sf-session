@@ -32,7 +32,7 @@ def find_latest_success_ids(results_dir: Path) -> Path | None:
 def time_label() -> str:
     """マーカーファイル用の日時ラベルを返す。"""
     now = datetime.now()
-    return f"{now.month}月{now.day}日{now.hour}時{now.minute}分"
+    return f"{now.month}月{now.day}日{now.hour:02d}時{now.minute:02d}分"
 
 
 def format_duration(seconds: float | None) -> str:
@@ -66,17 +66,34 @@ def strip_trailing_date(name: str, *, strict: bool = True) -> str:
 
 
 def write_pipeline_status(
-    outputs_dir: Path, pipeline: str, phase: str, label: str,
+    outputs_dir: Path,
+    pipeline: str,
+    phase: str,
+    label: str,
+    *,
+    clear_phases: list[str] | None = None,
 ) -> Path:
-    """outputs/ 直下に pipeline status marker を書く。同 pipeline+phase の旧ファイルは削除。"""
+    """pipeline status marker を書く。同 pipeline+phase の旧ファイルは削除。
+
+    clear_phases が指定されていれば、それらの phase のマーカーも削除する。
+    """
     outputs_dir.mkdir(parents=True, exist_ok=True)
-    prefix = f"{pipeline}_{phase}_"
-    for old in outputs_dir.glob(f"{prefix}*.txt"):
-        old.unlink()
-    marker = outputs_dir / f"{prefix}{label}.txt"
+    phases_to_clear = [phase] + (clear_phases or [])
+    for p in phases_to_clear:
+        for old in outputs_dir.glob(f"★{pipeline}_{p}_*.txt"):
+            old.unlink()
+    marker = outputs_dir / f"★{pipeline}_{phase}_{label}.txt"
     marker.touch()
     logger.info("pipeline status: %s", marker.name)
     return marker
+
+
+def build_output_stem(report_id: str | None, stem: str) -> str:
+    """出力ファイル名の stem を組み立てる。{report_id}_{YYYYMMDD}_{stem} 形式。"""
+    today = datetime.now().strftime("%Y%m%d")
+    if report_id:
+        return f"{report_id}_{today}_{stem}"
+    return stem
 
 
 def read_ids_file(path: Path) -> set[str]:

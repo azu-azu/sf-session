@@ -30,6 +30,7 @@ outputs/
 
 # Local only
 README.txt
+★*.txt
 
 # Temp
 tmp.md

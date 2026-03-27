@@ -168,6 +168,8 @@ class TestExportBatch:
 
     def test_move_to_dest_dir(self, tmp_path, monkeypatch):
         """成功時にファイルが dest_dir に移動される。"""
+        from unittest.mock import patch
+
         dest_dir = tmp_path / "output"
         dest_dir.mkdir()
 
@@ -175,7 +177,7 @@ class TestExportBatch:
         downloaded.parent.mkdir()
         downloaded.write_text("data")
 
-        job = make_job(no="1", src_folder_name=str(dest_dir))
+        job = make_job(no="1", report_id="00O123", src_folder_name=str(dest_dir))
 
         monkeypatch.setattr(
             "sf_session.download.runner.snapshot_files", lambda *a, **kw: {}
@@ -188,16 +190,21 @@ class TestExportBatch:
             lambda *a, **kw: downloaded,
         )
 
-        results = export_batch(
-            Path("/dummy/chrome"), [job], tmp_path / "dl", interval=0
-        )
+        with patch("sf_session.utils.datetime") as mock_dt:
+            mock_dt.now.return_value.strftime.return_value = "20260327"
+            results = export_batch(
+                Path("/dummy/chrome"), [job], tmp_path / "dl", interval=0
+            )
         assert len(results) == 1
         assert results[0].success
-        assert results[0].dest_path == dest_dir / "report.csv"
-        assert (dest_dir / "report.csv").exists()
+        expected = dest_dir / "00O123_20260327_report.csv"
+        assert results[0].dest_path == expected
+        assert expected.exists()
 
     def test_output_dir_moves_files(self, tmp_path, monkeypatch):
-        """output_dir 指定時、output_dir に report_id prefix で移動。"""
+        """output_dir 指定時、output_dir に移動。"""
+        from unittest.mock import patch
+
         out_dir = tmp_path / "outputs_csv"
         out_dir.mkdir()
 
@@ -218,14 +225,17 @@ class TestExportBatch:
             lambda *a, **kw: downloaded,
         )
 
-        results = export_batch(
-            Path("/dummy/chrome"), [job], tmp_path / "dl",
-            interval=0, output_dir=out_dir,
-        )
+        with patch("sf_session.utils.datetime") as mock_dt:
+            mock_dt.now.return_value.strftime.return_value = "20260327"
+            results = export_batch(
+                Path("/dummy/chrome"), [job], tmp_path / "dl",
+                interval=0, output_dir=out_dir,
+            )
         assert len(results) == 1
         assert results[0].success
-        assert results[0].dest_path == out_dir / "00O999_report.csv"
-        assert (out_dir / "00O999_report.csv").exists()
+        expected = out_dir / "00O999_20260327_report.csv"
+        assert results[0].dest_path == expected
+        assert expected.exists()
 
     def test_dest_dir_missing_stays_in_downloads(self, tmp_path, monkeypatch):
         """移動先フォルダが存在しない場合、Downloads に残る。"""

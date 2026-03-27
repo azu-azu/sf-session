@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 
 from ..config import ARCHIVE_RESULT_DIR
 from ..macro_book_reader import JobEntry
-from ..utils import time_label
+from ..utils import build_output_stem, time_label
 
 logger = logging.getLogger(__name__)
 
@@ -32,25 +32,19 @@ def build_destination(
     job: JobEntry,
     downloaded: Path,
     *,
-    date_suffix: bool,
     output_dir: Path | None = None,
 ) -> Path:
     """ダウンロードファイルの移動先パスを組み立てる。
 
+    ファイル名は {report_id}_{YYYYMMDD}_{stem}{ext} 形式。
+    rename 指定 (has_filename) があれば stem = new_filename、なければ元ファイル名。
     output_dir が指定されていれば全ファイルをそこに出力し、
-    ファイル名の先頭に report_id を付与する。
-    未指定なら従来通り job.src_folder_name を使う。
+    未指定なら job.src_folder_name を使う。
     """
     dest_dir = output_dir if output_dir else Path(job.src_folder_name)
     ext = downloaded.suffix
-    stem = job.new_filename if job.has_filename else downloaded.stem
-
-    if output_dir and job.report_id:
-        stem = f"{job.report_id}_{stem}"
-
-    if date_suffix:
-        today = datetime.now().strftime("%Y%m%d")
-        stem = f"{stem}_{today}"
+    raw_stem = job.new_filename if job.has_filename else downloaded.stem
+    stem = build_output_stem(job.report_id, raw_stem)
 
     return dest_dir / f"{stem}{ext}"
 

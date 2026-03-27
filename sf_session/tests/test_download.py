@@ -36,7 +36,6 @@ class TestParseArgs:
         assert args.timeout == DEFAULT_TIMEOUT
         assert args.poll == DEFAULT_POLL
         assert args.interval == DEFAULT_INTERVAL
-        assert not args.date_suffix
         assert not args.dry_run
         assert not args.direct_deliver
         assert not args.my_chrome
@@ -55,7 +54,6 @@ class TestParseArgs:
             "--download-dir", "/tmp/dl",
             "--timeout", "30",
             "--poll", "0.5",
-            "--date-suffix",
             "--interval", "5.0",
             "--direct-deliver",
             "--ids-file",
@@ -72,7 +70,6 @@ class TestParseArgs:
         assert args.download_dir == "/tmp/dl"
         assert args.timeout == 30
         assert args.poll == 0.5
-        assert args.date_suffix
         assert args.interval == 5.0
         assert args.direct_deliver
         assert args.ids_file
