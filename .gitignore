@@ -31,6 +31,7 @@ pipelines/archive/*/
 # Local only
 *.txt
 !README.txt
+!new_pipeline.txt
 !pipelines/archive/readme.txt
 
 # Temp
