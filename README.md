@@ -182,8 +182,8 @@ export 中にセッションが切れた場合は、タブを traverse してロ
 --date-suffix       ファイル名に _YYYYMMDD を付与
 --interval          レポート間 wait 秒 (default: 2.0)
 --timeout           per-report タイムアウト秒 (default: 600)
---open-download-dir Download フォルダを Explorer/Finder で開く
---open-output-dir   出力先フォルダを Explorer/Finder で開く
+--open-download-dir Download フォルダを Explorer で開く
+--open-output-dir   出力先フォルダを Explorer で開く
 --dry-run           実行せずジョブ一覧を表示
 ```
 
@@ -246,8 +246,8 @@ py -m sf_session.report_filter
 
 ## テスト
 
-```bash
-python -m pytest -v
+```powershell
+py -m pytest -v
 ```
 
 ## クリーンアップ
@@ -268,4 +268,5 @@ python -m pytest -v
 1. `.env` の `PIPELINES` に追加
 2. `pipelines/<name>/` + サブディレクトリ (`csv/`, `result/`, `ids_file/`)
 3. `pipelines/archive/` の bat ファイルをコピー（pipeline 名を置換）
-4. `MACRO_ROOT_PATH/<name>/` ディレクトリを作成
+4. `readme.txt` をコピー
+5. `MACRO_ROOT_PATH/<name>/` ディレクトリを作成

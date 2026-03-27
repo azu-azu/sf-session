@@ -30,6 +30,8 @@ pipelines/archive/*/
 
 # Local only
 *.txt
+!README.txt
+!pipelines/archive/readme.txt
 
 # Temp
 tmp.md

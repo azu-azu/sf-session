@@ -111,7 +111,15 @@ def main() -> None:
     count = _copy_bat_files(name, pipeline_dir)
     print(f"✓ bat ファイルを配置しました ({count} files)")
 
-    # 4. macro directory
+    # 4. copy readme.txt
+    readme_src = _PIPELINES_DIR / _TEMPLATE_PIPELINE / "readme.txt"
+    if readme_src.exists():
+        (pipeline_dir / "readme.txt").write_text(
+            readme_src.read_text(encoding="utf-8"), encoding="utf-8"
+        )
+        print("✓ readme.txt を配置しました")
+
+    # 5. macro directory
     try:
         macro_dir, created = _ensure_macro_dir(name)
         if created:
