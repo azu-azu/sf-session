@@ -9,11 +9,36 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-_PROJECT_ROOT = Path(__file__).resolve().parent.parent
+_PACKAGE_DIR = Path(__file__).resolve().parent
+_PROJECT_ROOT = _PACKAGE_DIR.parent
 _ENV_PATH = _PROJECT_ROOT / ".env"
 _PIPELINES_DIR = _PROJECT_ROOT / "pipelines"
-_TEMPLATE_PIPELINE = "archive"
+_TEMPLATES_DIR = _PACKAGE_DIR / "templates" / "pipeline"
 _SUBDIRS = ("csv", "result", "ids_file")
+
+_BAT_TEMPLATE = """\
+@echo off
+cd /d "%~dp0..\\.."
+
+if not exist ".venv\\Scripts\\python.exe" (
+    echo [ERROR] Run setup.bat first.
+    pause
+    exit /b 1
+)
+
+.venv\\Scripts\\python.exe -m {module} {pipeline}{extra_args} %*
+pause
+"""
+
+_BAT_DEFS = (
+    ("★01_download.bat",      "sf_session.download",          ""),
+    ("★02_振り分け.bat",       "sf_session.file_deliver",      ""),
+    ("11_download_ids.bat",    "sf_session.download",          " --ids-file"),
+    ("12_download_retry.bat",  "sf_session.download",          " --retry"),
+    ("20_jis_to_utf.bat",      "sf_session.jis_to_utf8",       ""),
+    ("21_file_collect.bat",    "sf_session.file_collect",       ""),
+    ("90_show_macrofile.bat",  "sf_session.macro_book_reader",  ""),
+)
 
 
 # ── helpers ──────────────────────────────────────────────────────────
@@ -58,15 +83,13 @@ def _create_directories(name: str) -> Path:
     return pipeline_dir
 
 
-def _copy_bat_files(name: str, pipeline_dir: Path) -> int:
-    template_dir = _PIPELINES_DIR / _TEMPLATE_PIPELINE
-    count = 0
-    for src in sorted(template_dir.glob("*.bat")):
-        content = src.read_text(encoding="utf-8")
-        content = content.replace(f" {_TEMPLATE_PIPELINE}", f" {name}")
-        (pipeline_dir / src.name).write_text(content, encoding="utf-8")
-        count += 1
-    return count
+def _generate_bat_files(name: str, pipeline_dir: Path) -> int:
+    for filename, module, extra_args in _BAT_DEFS:
+        content = _BAT_TEMPLATE.format(
+            module=module, pipeline=name, extra_args=extra_args,
+        )
+        (pipeline_dir / filename).write_text(content, encoding="utf-8")
+    return len(_BAT_DEFS)
 
 
 def _ensure_macro_dir(name: str) -> tuple[Path, bool]:
@@ -107,12 +130,12 @@ def main() -> None:
     for sub in _SUBDIRS:
         print(f"  - {sub}/")
 
-    # 3. copy bat files
-    count = _copy_bat_files(name, pipeline_dir)
+    # 3. generate bat files
+    count = _generate_bat_files(name, pipeline_dir)
     print(f"✓ bat ファイルを配置しました ({count} files)")
 
     # 4. copy readme.txt
-    readme_src = _PIPELINES_DIR / _TEMPLATE_PIPELINE / "readme.txt"
+    readme_src = _TEMPLATES_DIR / "readme.txt"
     if readme_src.exists():
         (pipeline_dir / "readme.txt").write_text(
             readme_src.read_text(encoding="utf-8"), encoding="utf-8"
