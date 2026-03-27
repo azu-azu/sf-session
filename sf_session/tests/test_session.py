@@ -1,4 +1,4 @@
-"""sf_browser_session のテスト。"""
+"""session のテスト。"""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from sf_session.sf_browser_session import (
+from sf_session.session import (
     BrowserSession,
     close_browser_session,
     prepare_salesforce_session,
@@ -33,9 +33,9 @@ class TestBrowserSession:
 
 
 class TestPrepareSalesforceSession:
-    @patch("sf_session.sf_browser_session.ensure_logged_in")
-    @patch("sf_session.sf_browser_session.wait_page_load")
-    @patch("sf_session.sf_browser_session.try_connect_driver")
+    @patch("sf_session.session.ensure_logged_in")
+    @patch("sf_session.session.wait_page_load")
+    @patch("sf_session.session.try_connect_driver")
     def test_existing_connection(self, mock_try, mock_wait, mock_login):
         """既存 Chrome に接続成功するケース。"""
         mock_driver = MagicMock()
@@ -50,12 +50,12 @@ class TestPrepareSalesforceSession:
         mock_wait.assert_called_once_with(mock_driver)
         mock_login.assert_called_once_with(mock_driver)
 
-    @patch("sf_session.sf_browser_session.ensure_logged_in")
-    @patch("sf_session.sf_browser_session.wait_page_load")
-    @patch("sf_session.sf_browser_session.connect_driver")
-    @patch("sf_session.sf_browser_session.launch_chrome")
-    @patch("sf_session.sf_browser_session.try_connect_driver", return_value=None)
-    @patch("sf_session.sf_browser_session.time.sleep")
+    @patch("sf_session.session.ensure_logged_in")
+    @patch("sf_session.session.wait_page_load")
+    @patch("sf_session.session.connect_driver")
+    @patch("sf_session.session.launch_chrome")
+    @patch("sf_session.session.try_connect_driver", return_value=None)
+    @patch("sf_session.session.time.sleep")
     def test_launch_chrome(
         self, mock_sleep, mock_try, mock_launch, mock_connect,
         mock_wait, mock_login,
@@ -78,7 +78,7 @@ class TestPrepareSalesforceSession:
         mock_driver.get.assert_not_called()
         mock_wait.assert_called_once_with(mock_driver)
 
-    @patch("sf_session.sf_browser_session.try_connect_driver", return_value=None)
+    @patch("sf_session.session.try_connect_driver", return_value=None)
     def test_no_user_data_dir_raises(self, mock_try):
         """user_data_dir=None で既存接続も失敗すると RuntimeError。"""
         with pytest.raises(RuntimeError, match="user_data_dir 未指定"):
@@ -86,10 +86,10 @@ class TestPrepareSalesforceSession:
                 user_data_dir=None, try_existing=True,
             )
 
-    @patch("sf_session.sf_browser_session.connect_driver")
-    @patch("sf_session.sf_browser_session.launch_chrome")
-    @patch("sf_session.sf_browser_session.try_connect_driver", return_value=None)
-    @patch("sf_session.sf_browser_session.time.sleep")
+    @patch("sf_session.session.connect_driver")
+    @patch("sf_session.session.launch_chrome")
+    @patch("sf_session.session.try_connect_driver", return_value=None)
+    @patch("sf_session.session.time.sleep")
     def test_connect_failure_terminates_chrome(
         self, mock_sleep, mock_try, mock_launch, mock_connect,
     ):
@@ -108,11 +108,11 @@ class TestPrepareSalesforceSession:
         mock_proc.terminate.assert_called_once()
         mock_proc.wait.assert_called_once()
 
-    @patch("sf_session.sf_browser_session.ensure_logged_in")
-    @patch("sf_session.sf_browser_session.wait_page_load")
-    @patch("sf_session.sf_browser_session.connect_driver")
-    @patch("sf_session.sf_browser_session.launch_chrome")
-    @patch("sf_session.sf_browser_session.time.sleep")
+    @patch("sf_session.session.ensure_logged_in")
+    @patch("sf_session.session.wait_page_load")
+    @patch("sf_session.session.connect_driver")
+    @patch("sf_session.session.launch_chrome")
+    @patch("sf_session.session.time.sleep")
     def test_try_existing_false_skips_try_connect(
         self, mock_sleep, mock_launch, mock_connect,
         mock_wait, mock_login,
@@ -124,7 +124,7 @@ class TestPrepareSalesforceSession:
         mock_connect.return_value = mock_driver
 
         with patch(
-            "sf_session.sf_browser_session.try_connect_driver"
+            "sf_session.session.try_connect_driver"
         ) as mock_try:
             session = prepare_salesforce_session(
                 user_data_dir="/tmp/profile", try_existing=False,
@@ -133,12 +133,12 @@ class TestPrepareSalesforceSession:
 
         assert session.self_launched
 
-    @patch("sf_session.sf_browser_session.ensure_logged_in")
-    @patch("sf_session.sf_browser_session.wait_page_load")
-    @patch("sf_session.sf_browser_session.connect_driver")
-    @patch("sf_session.sf_browser_session.launch_chrome")
-    @patch("sf_session.sf_browser_session.try_connect_driver", return_value=None)
-    @patch("sf_session.sf_browser_session.time.sleep")
+    @patch("sf_session.session.ensure_logged_in")
+    @patch("sf_session.session.wait_page_load")
+    @patch("sf_session.session.connect_driver")
+    @patch("sf_session.session.launch_chrome")
+    @patch("sf_session.session.try_connect_driver", return_value=None)
+    @patch("sf_session.session.time.sleep")
     def test_login_failure_cleans_up_chrome(
         self, mock_sleep, mock_try, mock_launch, mock_connect,
         mock_wait, mock_login,
@@ -163,8 +163,8 @@ class TestPrepareSalesforceSession:
         mock_driver.quit.assert_called_once()
         mock_proc.terminate.assert_called_once()
 
-    @patch("sf_session.sf_browser_session.wait_page_load")
-    @patch("sf_session.sf_browser_session.try_connect_driver")
+    @patch("sf_session.session.wait_page_load")
+    @patch("sf_session.session.try_connect_driver")
     def test_login_failure_existing_chrome_quits_driver(
         self, mock_try, mock_wait,
     ):
@@ -174,7 +174,7 @@ class TestPrepareSalesforceSession:
         mock_driver = MagicMock()
         mock_try.return_value = mock_driver
         with patch(
-            "sf_session.sf_browser_session.ensure_logged_in",
+            "sf_session.session.ensure_logged_in",
             side_effect=LoginExhaustedError("expired"),
         ):
             with pytest.raises(LoginExhaustedError):

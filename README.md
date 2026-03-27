@@ -43,12 +43,12 @@ API ではなく、ブラウザの export URL (`?export=1`) を使う VBA マク
 | スクリプト | 役割 |
 |---|---|
 | `98_setup_初回または設定更新の場合のみ実行する.bat` | venv 作成 + pip upgrade + 依存パッケージ install（初回のみ実行） |
-| `sf_session/session_keeper.py` | Chrome 起動 → 手動ログイン待機（SSO / MFA）→ 定期 reload でセッション維持 |
+| `sf_session/keeper.py` | Chrome 起動 → 手動ログイン待機（SSO / MFA）→ 定期 reload でセッション維持 |
 | `sf_session/download/cli.py` | 営業日ガード + pre-flight login check 付きバッチ export orchestration |
 | `sf_session/download/runner.py` | レポート export 実行エンジン (export_one / export_batch) |
 | `sf_session/download/outputs.py` | ファイル移動先パス組み立て、summary ログ、work_dir swap、完了マーカー |
 | `sf_session/download/single.py` | Chrome CLI 実行 + ダウンロード監視 |
-| `sf_session/sf_browser_session.py` | Chrome + Selenium session の prepare / close 共通層 (session_keeper / download 共用) |
+| `sf_session/session.py` | Chrome + Selenium session の prepare / close 共通層 (keeper / download 共用) |
 | `sf_session/business_day.py` | 営業日判定 (土日 + `jpholiday` 祝日) |
 | `sf_session/browser.py` | Chrome 起動・WebDriver 接続の共通モジュール |
 | `sf_session/login_helper.py` | ログイン/SSO ページ検出・手動ログイン待機・MFA 完了待ち |
@@ -79,14 +79,14 @@ bat ファイルをダブルクリック、または PowerShell からオプシ�
 
 2 通りの使い方がある。
 
-**パターン A: session_keeper + download（推奨）**
+**パターン A: keeper + download（推奨）**
 
 ```
 ■00_keep_session.bat     ← Chrome 起動 + 手動ログイン待機 + セッション維持
 ★01_download.bat    ← ↑ の Chrome に接続して export
 ```
 
-session_keeper がセッションを維持するので、長時間の連続 export でも切れにくい。
+keeper がセッションを維持するので、長時間の連続 export でも切れにくい。
 
 **パターン B: download 単独**
 
@@ -94,7 +94,7 @@ session_keeper がセッションを維持するので、長時間の連続 expo
 ★01_download.bat    ← 自前で Chrome を起動 + 手動ログイン待機 + export
 ```
 
-session_keeper なしでも動く。download が専用プロファイルで Chrome を起動し、
+keeper なしでも動く。download が専用プロファイルで Chrome を起動し、
 ログインしてから export を開始する。export 完了後に Chrome は自動終了する。
 
 ### ログインの仕組み
@@ -263,10 +263,5 @@ py -m pytest -v
 99_new_pipeline.bat
 ```
 
-対話形式で pipeline 名を入力すると、以下を一括生成する:
-
-1. `.env` の `PIPELINES` に追加
-2. `pipelines/<name>/` + サブディレクトリ (`csv/`, `result/`, `ids_file/`)
-3. `pipelines/archive/` の bat ファイルをコピー（pipeline 名を置換）
-4. `readme.txt` をコピー
-5. `MACRO_ROOT_PATH/<name>/` ディレクトリを作成
+対話形式で pipeline 名を入力すると、ディレクトリ・bat・readme・.env を一括生成する。
+詳細は `new_pipeline.txt` を参照。

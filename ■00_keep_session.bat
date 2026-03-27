@@ -7,5 +7,5 @@ if not exist ".venv\Scripts\python.exe" (
     exit /b 1
 )
 
-.venv\Scripts\python.exe -m sf_session.session_keeper %*
+.venv\Scripts\python.exe -m sf_session.keeper %*
 pause

@@ -1,6 +1,6 @@
 """Salesforce browser session の prepare / close を一元管理する共通層。
 
-download.py と session_keeper.py の Chrome 起動 + Selenium 接続ロジックを
+keeper.py と download の Chrome 起動 + Selenium 接続ロジックを
 ここに集約し、重複を排除する。
 """
 

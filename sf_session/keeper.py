@@ -13,7 +13,7 @@ from selenium.common.exceptions import WebDriverException
 
 from .browser import REMOTE_DEBUGGING_PORT
 from .config import CHROME_EXE_PATH, CHROME_USER_DATA_DIR, SF_HOME_URL
-from .sf_browser_session import (
+from .session import (
     BrowserSession,
     close_browser_session,
     prepare_salesforce_session,

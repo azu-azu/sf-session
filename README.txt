@@ -37,7 +37,7 @@ py -m pip install -r sf_session\requirements.txt
 
 ```
 .\.venv\Scripts\Activate.ps1
-py -m sf_session.session_keeper
+py -m sf_session.keeper
 ```
 
 ※ログインしたら自動検知して keep-alive 開始。Ctrl+C で停止。
@@ -48,5 +48,5 @@ py -m sf_session.session_keeper
 py -m venv .venv
 .\.venv\Scripts\python.exe -m pip install --upgrade pip
 .\.venv\Scripts\python.exe -m pip install -r sf_session\requirements.txt
-.\.venv\Scripts\python.exe -m sf_session.session_keeper
+.\.venv\Scripts\python.exe -m sf_session.keeper
 ```

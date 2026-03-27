@@ -51,7 +51,7 @@ from .outputs import (
     write_start_marker,
     write_success_ids,
 )
-from ..sf_browser_session import (
+from ..session import (
     BrowserSession,
     close_browser_session,
     prepare_salesforce_session,
@@ -149,7 +149,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--my-chrome",
         action="store_true",
-        help="普段使いの Chrome で実行 (session_keeper の専用プロファイルではなく OS デフォルト)",
+        help="普段使いの Chrome で実行 (keeper の専用プロファイルではなく OS デフォルト)",
     )
     parser.add_argument(
         "--user-data-dir",

@@ -5,7 +5,7 @@
 `download_all.bat` をダブルクリックしてから Chrome が起動するまで約60秒かかる。
 `keep_session.bat` は即座に Chrome が起動する。
 
-session_keeper 経由ではなく download 単体で起動した場合に発生。
+keeper 経由ではなく download 単体で起動した場合に発生。
 既にログイン済み (cookie が残っている) の場合でも、ログイン画面すら表示されずにダウンロードが始まるまで60秒待たされる。
 
 ## 原因
@@ -38,16 +38,16 @@ launch_chrome()                  ← やっと Chrome 起動
 ```
 
 `try_connect_driver` は「既に起動中の Chrome があれば接続する」ためのもの。
-session_keeper が動いていれば port 9222 で Chrome が listen しているので即接続できる。
-しかし session_keeper なしの場合、port 9222 は閉じている。
+keeper が動いていれば port 9222 で Chrome が listen しているので即接続できる。
+しかし keeper なしの場合、port 9222 は閉じている。
 Selenium の `webdriver.Chrome()` は TCP 接続を試み、応答がないと OS レベルの TCP timeout (~60秒) まで待ってしまう。
 
-### session_keeper が速い理由
+### keeper が速い理由
 
-session_keeper は `try_existing=False` (default) で呼ぶため、`try_connect_driver` を完全に skip して即 `launch_chrome` に進む。
+keeper は `try_existing=False` (default) で呼ぶため、`try_connect_driver` を完全に skip して即 `launch_chrome` に進む。
 
 ```
-session_keeper: try_existing=False → skip try_connect → launch_chrome (即座)
+keeper: try_existing=False → skip try_connect → launch_chrome (即座)
 download:       try_existing=True  → try_connect → TCP timeout 60秒 → launch_chrome
 ```
 
@@ -81,7 +81,7 @@ def try_connect_driver(port=REMOTE_DEBUGGING_PORT):
 |---|---|---|
 | Chrome 未起動 | ~60秒 (TCP timeout) | ~1秒 (socket check) |
 | 普段使い Chrome のみ起動 (debug port なし) | ~60秒 (TCP timeout) | ~1秒 (socket check) |
-| session_keeper 起動中 (port 9222 open) | 即接続 | 即接続 (変化なし) |
+| keeper 起動中 (port 9222 open) | 即接続 | 即接続 (変化なし) |
 
 ## 同時に修正した関連問題: Ctrl+C のエラー
 
