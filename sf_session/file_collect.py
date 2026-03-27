@@ -206,16 +206,17 @@ def log_summary(results: list[CollectResult]) -> None:
     logger.info("*" * 50)
     logger.info("file_collect complete >>")
     logger.info("成功 %d 件 / 失敗 %d 件 / 合計 %d 件", ok, ng, len(results))
-    logger.info("-" * 50)
 
-    for r in results:
-        status = "OK" if r.success else "NG"
-        source = f"From {r.source_path}" if r.source_path else "-"
-        err = f" ({r.error})" if r.error else ""
-        logger.info(
-            "  [%s] %d件目 %s  %.1fs  %s%s",
-            status, r.seq, r.report_id, r.elapsed, source, err,
-        )
+    failures = [r for r in results if not r.success]
+    if failures:
+        logger.info("-" * 50)
+        for r in failures:
+            source = f"From {r.source_path}" if r.source_path else "-"
+            err = f" ({r.error})" if r.error else ""
+            logger.info(
+                "  [NG] %d件目 %s  %.1fs  %s%s",
+                r.seq, r.report_id, r.elapsed, source, err,
+            )
 
     logger.info("*" * 50)
 

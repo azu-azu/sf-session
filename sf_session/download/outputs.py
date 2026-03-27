@@ -59,16 +59,17 @@ def log_summary(results: list[ExportResult]) -> tuple[int, int]:
     logger.info("*" * 50)
     logger.info("download complete >>")
     logger.info("成功 %d 件 / 失敗 %d 件 / 合計 %d 件", ok, ng, len(results))
-    logger.info("-" * 50)
 
-    for r in results:
-        status = "OK" if r.success else "NG"
-        dest = r.dest_path or "-"
-        err = f" ({r.error})" if r.error else ""
-        logger.info(
-            "  [%s] %d件目 %s  %.1fs  %s%s",
-            status, r.seq, r.report_id, r.elapsed, dest, err,
-        )
+    failures = [r for r in results if not r.success]
+    if failures:
+        logger.info("-" * 50)
+        for r in failures:
+            dest = r.dest_path or "-"
+            err = f" ({r.error})" if r.error else ""
+            logger.info(
+                "  [NG] %d件目 %s  %.1fs  %s%s",
+                r.seq, r.report_id, r.elapsed, dest, err,
+            )
 
     logger.info("*" * 50)
 
@@ -173,7 +174,7 @@ def prepare_work_dir(staging_dir: Path) -> Path:
 
 def write_start_marker(output_dir: Path, total: int) -> Path:
     """開始マーカーファイルを作成して返す。"""
-    marker = output_dir / f"_{time_label()}_START_{total}件の予定.txt"
+    marker = output_dir / f"★{time_label()}_START_{total}件の予定.txt"
     marker.touch()
     logger.info("開始マーカー: %s", marker.name)
     return marker
@@ -181,7 +182,7 @@ def write_start_marker(output_dir: Path, total: int) -> Path:
 
 def write_marker(output_dir: Path, ok: int, ng: int) -> Path:
     """完了マーカーファイルを作成して返す。"""
-    marker = output_dir / f"_{time_label()}_成功{ok}件_失敗{ng}件.txt"
+    marker = output_dir / f"★{time_label()}_成功{ok}件_失敗{ng}件.txt"
     marker.touch()
     logger.info("完了マーカー: %s", marker.name)
     return marker

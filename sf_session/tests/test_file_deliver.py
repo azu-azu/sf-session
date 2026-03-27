@@ -231,7 +231,8 @@ class TestLogSummary:
         with caplog.at_level(logging.INFO):
             log_summary(results)
         assert "成功 1 件" in caplog.text
-        assert "1.5s" in caplog.text
+        assert "[NG]" not in caplog.text
+        assert "-" * 50 not in caplog.text
 
     def test_with_failures(self, caplog):
         results = [
@@ -248,6 +249,8 @@ class TestLogSummary:
             log_summary(results)
         assert "成功 1 件" in caplog.text
         assert "失敗 1 件" in caplog.text
+        assert "[NG] 2件目 00O2" in caplog.text
+        assert "00O1" not in caplog.text.split("[NG]")[0].split("成功")[1]
 
 
 class TestMainProbeFailure:

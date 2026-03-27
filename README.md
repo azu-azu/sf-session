@@ -60,6 +60,7 @@ API ではなく、ブラウザの export URL (`?export=1`) を使う VBA マク
 | `sf_session/macro_book_reader.py` | ジョブ定義 (`JobEntry`) の読み取り。xlsm から直接読み取り |
 | `sf_session/config.py` | 共通パス定数 + `create_sf_client()` |
 | `sf_session/clean.py` | `__pycache__` / `.pyc` / `.log` 等のクリーンアップ |
+| `sf_session/cleanup_csv.py` | テスト用 CSV の一括削除 (devtest 専用、safety guard 付き) |
 | `sf_session/init_pipeline.py` | 新規 pipeline の scaffolding（ディレクトリ・bat・.env を一括生成）。`--ensure` で .env 記載の missing pipeline を自動作成 |
 | `sf_session/report_filter/` | レポートのメタデータ抽出 (API 経由、データ本体は取らない) |
 
@@ -186,6 +187,7 @@ export 中にセッションが切れた場合は、タブを traverse してロ
 --date-suffix       ファイル名に _YYYYMMDD を付与
 --interval          レポート間 wait 秒 (default: 2.0)
 --timeout           per-report タイムアウト秒 (default: 600)
+--mkdir             移動先フォルダが存在しない場合、親があれば最終フォルダを自動作成
 --open-download-dir Download フォルダを Explorer で開く
 --open-output-dir   出力先フォルダを Explorer で開く
 --dry-run           実行せずジョブ一覧を表示
@@ -208,6 +210,7 @@ export 中にセッションが切れた場合は、タブを traverse してロ
 ```
 
 実行前に全振り分け先フォルダの到達性を probe し、1 つでもアクセス不可なら即座に abort する。
+`--mkdir` を付けると、親フォルダが存在する場合に最終フォルダを自動作成する。
 `--dry-run` 時は probe をスキップする。
 
 ## extra_holidays.csv — 追加休業日
@@ -270,6 +273,32 @@ py -m sf_session.report_filter
 - 対象: マクロ定義 (`.xlsm`) の全レポート ID を自動取得
 - 出力: `pipelines/archive/result/probe_result_{ts}.xlsx`（probe_result シート + columns シート）
 
+## マーカーファイル
+
+各ステップの実行状態を示す txt ファイルが自動生成される。
+
+| マーカー | 配置先 | 用途 |
+|---|---|---|
+| `★{time}_START_{N}件の予定.txt` | csv_dir (`OUTPUT_ROOT/{pipeline}/csv/`) | download 開始マーカー |
+| `★{time}_成功{N}件_失敗{N}件.txt` | csv_dir (`OUTPUT_ROOT/{pipeline}/csv/`) | download 完了マーカー |
+| `★{time}_振り分け完了.txt` | source_dir (= csv_dir) | file_deliver 完了マーカー |
+| `_{pipeline}_{phase}_{label}.txt` | `OUTPUT_ROOT.parent` | pipeline status マーカー |
+
+```
+OUTPUT_ROOT.parent/
+  _archive_dl_3月28日09時30分_成功2件_失敗0件.txt      ← download 通常モード
+  _archive_direct_3月28日09時30分_成功2件_失敗0件.txt  ← download --direct-deliver
+  _archive_dv_3月28日09時30分_振り分け完了.txt          ← file_deliver
+  OUTPUT_ROOT/
+    archive/
+      csv/
+        ★3月28日09時30分_START_2件の予定.txt
+        ★3月28日09時30分_成功2件_失敗0件.txt
+        ★3月28日09時30分_振り分け完了.txt
+        00O000001_20260328_report_001.csv
+        00O000002_20260328_report_002.csv
+```
+
 ## テスト
 
 ```powershell
@@ -282,6 +311,16 @@ py -m pytest -v
 97_clean_cache.bat              # __pycache__, .pyc, .log, .bak 等を削除
 97_clean_cache.bat --dry-run    # 削除せず対象だけ表示
 ```
+
+### テスト用 CSV の削除 (devtest 専用)
+
+```powershell
+00_cleanup_test_csv.bat             # csv_dir + direct-deliver 先の *.csv を一括削除
+00_cleanup_test_csv.bat --dry-run   # 削除せず対象だけ表示
+```
+
+devtest pipeline の csv_dir（`_prev_*` / `_work_*` 含む）と、マクロ定義の振り分け先フォルダから `*.csv` を削除する。
+本番 pipeline での誤実行を防ぐため、devtest 以外では safety guard で拒否される。
 
 ## 新規 pipeline の追加
 
