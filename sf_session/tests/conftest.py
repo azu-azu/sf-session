@@ -5,7 +5,7 @@ import os
 # .env がないテスト環境でも import が通るようにデフォルト値を設定する。
 _TEST_DEFAULTS = {
     "SF_BASE_URL": "https://test.salesforce.com",
-    "MACRO_ROOT": ".",
+    "MACRO_ROOT_PATH": ".",
     "PIPELINES": "archive",
 }
 

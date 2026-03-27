@@ -148,7 +148,7 @@ SSO 経由のログインに対応。ログインが必要な場合はユーザ�
 # dry-run でジョブ一覧を確認
 ★01_download.bat --dry-run
 
-# 実行 (outputs/archive/csv/ に全ファイル集約)
+# 実行 (pipelines/archive/csv/ に全ファイル集約)
 ★01_download.bat
 
 # per-job 振り分け先フォルダへ直接コピー
@@ -176,7 +176,7 @@ export 中にセッションが切れた場合は、タブを traverse してロ
 --my-chrome         OS デフォルト Chrome を使用（login check skip、手動ログイン前提）
 --no-login-check    pre-flight login check を skip
 --port              リモートデバッグポート (default: 9222)
---direct-deliver    各ジョブの src_folder_name へ直接振り分け (default: outputs/archive/csv/ に集約)
+--direct-deliver    各ジョブの src_folder_name へ直接振り分け (default: pipelines/archive/csv/ に集約)
 --ids-file          ids.txt の report ID との intersection でフィルタ
 --retry             前回の success_ids を読み、失敗分だけ再実行
 --date-suffix       ファイル名に _YYYYMMDD を付与
@@ -191,20 +191,20 @@ export 中にセッションが切れた場合は、タブを traverse してロ
 
 ```powershell
 # dry-run で振り分け先を確認
-★02_振り分け.bat --source-dir outputs/archive/csv --dry-run
+★02_振り分け.bat --source-dir pipelines/archive/csv --dry-run
 
 # 実行
-★02_振り分け.bat --source-dir outputs/archive/csv
+★02_振り分け.bat --source-dir pipelines/archive/csv
 
 # 日付サフィックス + ids.txt フィルタ
-★02_振り分け.bat --source-dir outputs/archive/csv --date-suffix --ids-file
+★02_振り分け.bat --source-dir pipelines/archive/csv --date-suffix --ids-file
 ```
 
 ## ids.txt — レポート ID フィルタ
 
 `--ids-file` フラグを付けると、`ids.txt` に書かれた report ID だけを処理対象にする。
 
-- **置き場所**: `outputs/archive/id_filter/ids.txt`
+- **置き場所**: `pipelines/archive/ids_file/ids.txt`
 - **フォーマット**: 1 行 1 report ID（UTF-8）
 - `#` で始まる行はコメント扱いでスキップ
 - 空行もスキップ
@@ -219,7 +219,7 @@ export 中にセッションが切れた場合は、タブを traverse してロ
 
 ## ジョブ定義
 
-`ARCHIVE_MACRO_DIR` (env var) に配置した `.xlsm` の `SalseForce` シートから直接読み取る。
+`MACRO_ROOT_PATH/<pipeline>/` に配置した `.xlsm` の `SalseForce` シートから直接読み取る。
 
 | 列 | 内容 |
 |---|---|
@@ -242,7 +242,7 @@ py -m sf_session.report_filter
 
 - 前提: `.env` に SF 認証情報
 - 対象: マクロ定義 (`.xlsm`) の全レポート ID を自動取得
-- 出力: `outputs/archive/result/probe_result_{ts}.xlsx`（probe_result シート + columns シート）
+- 出力: `pipelines/archive/result/probe_result_{ts}.xlsx`（probe_result シート + columns シート）
 
 ## テスト
 
@@ -266,6 +266,6 @@ python -m pytest -v
 対話形式で pipeline 名を入力すると、以下を一括生成する:
 
 1. `.env` の `PIPELINES` に追加
-2. `pipelines/<name>/` + サブディレクトリ (`csv/`, `result/`, `id_filter/`)
+2. `pipelines/<name>/` + サブディレクトリ (`csv/`, `result/`, `ids_file/`)
 3. `pipelines/archive/` の bat ファイルをコピー（pipeline 名を置換）
-4. `MACRO_ROOT/<name>/` ディレクトリを作成
+4. `MACRO_ROOT_PATH/<name>/` ディレクトリを作成

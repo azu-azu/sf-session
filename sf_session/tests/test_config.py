@@ -19,7 +19,7 @@ def test_archive_pipeline_exists():
     archive = PIPELINES["archive"]
     assert archive.macro_dir == Path(".") / "archive"
     assert archive.csv_dir == PROJECT_ROOT / "pipelines" / "archive" / "csv"
-    assert archive.ids_file == PROJECT_ROOT / "pipelines" / "archive" / "id_filter" / "ids.txt"
+    assert archive.ids_file == PROJECT_ROOT / "pipelines" / "archive" / "ids_file" / "ids.txt"
 
 
 def test_valid_pipelines():
@@ -39,4 +39,4 @@ def test_pipeline_config_derived_paths():
     assert "test" in str(cfg.csv_dir)
     assert cfg.result_dir.name == "result"
     assert cfg.ids_file.name == "ids.txt"
-    assert "id_filter" in str(cfg.ids_file)
+    assert "ids_file" in str(cfg.ids_file)

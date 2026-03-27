@@ -13,7 +13,7 @@ _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 _ENV_PATH = _PROJECT_ROOT / ".env"
 _PIPELINES_DIR = _PROJECT_ROOT / "pipelines"
 _TEMPLATE_PIPELINE = "archive"
-_SUBDIRS = ("csv", "result", "id_filter")
+_SUBDIRS = ("csv", "result", "ids_file")
 
 
 # ── helpers ──────────────────────────────────────────────────────────
@@ -70,9 +70,9 @@ def _copy_bat_files(name: str, pipeline_dir: Path) -> int:
 
 
 def _ensure_macro_dir(name: str) -> tuple[Path, bool]:
-    macro_root_raw = _read_env_value("MACRO_ROOT")
+    macro_root_raw = _read_env_value("MACRO_ROOT_PATH")
     if not macro_root_raw:
-        raise RuntimeError("MACRO_ROOT not found in .env")
+        raise RuntimeError("MACRO_ROOT_PATH not found in .env")
     macro_dir = Path(macro_root_raw) / name
     created = not macro_dir.exists()
     macro_dir.mkdir(parents=True, exist_ok=True)
@@ -120,7 +120,7 @@ def main() -> None:
         else:
             print(f"✓ {macro_dir} は既に存在します")
     except RuntimeError as e:
-        print(f"⚠ MACRO_ROOT の処理をスキップしました: {e}")
+        print(f"⚠ MACRO_ROOT_PATH の処理をスキップしました: {e}")
 
     print("\nセットアップ完了！")
 

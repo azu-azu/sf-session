@@ -16,7 +16,7 @@ _PIPELINES_DIR = PROJECT_ROOT / "pipelines"
 
 _CSV_SUBDIR = "csv"
 _RESULT_SUBDIR = "result"
-_ID_FILTER_SUBDIR = "id_filter"
+_IDS_FILE_SUBDIR = "ids_file"
 
 # Chrome
 CHROME_EXE_PATH = os.environ.get(
@@ -30,15 +30,15 @@ SF_BASE_URL = os.environ["SF_BASE_URL"]
 SF_HOME_URL = f"{SF_BASE_URL}/home/home.jsp"
 
 # Macro root
-_MACRO_ROOT: Path | None = (
-    Path(os.environ["MACRO_ROOT"]) if "MACRO_ROOT" in os.environ else None
+_MACRO_ROOT_PATH: Path | None = (
+    Path(os.environ["MACRO_ROOT_PATH"]) if "MACRO_ROOT_PATH" in os.environ else None
 )
 
 
 # ── PipelineConfig ────────────────────────────────────
 @dataclass(frozen=True)
 class PipelineConfig:
-    """pipeline ごとの設定。macro_dir は MACRO_ROOT/name で derive、他は convention ベース。"""
+    """pipeline ごとの設定。macro_dir は MACRO_ROOT_PATH/name で derive、他は convention ベース。"""
 
     name: str
     macro_dir: Path
@@ -53,22 +53,22 @@ class PipelineConfig:
 
     @property
     def ids_file(self) -> Path:
-        return _PIPELINES_DIR / self.name / _ID_FILTER_SUBDIR / "ids.txt"
+        return _PIPELINES_DIR / self.name / _IDS_FILE_SUBDIR / "ids.txt"
 
 
 def _load_pipelines() -> dict[str, PipelineConfig]:
     """環境変数 PIPELINES (カンマ区切り) から pipeline 定義を読み込む。
 
-    macro_dir は MACRO_ROOT / name で自動 derive する。
+    macro_dir は MACRO_ROOT_PATH / name で自動 derive する。
     """
     raw = os.environ.get("PIPELINES", "")
     if not raw:
         return {}
-    if _MACRO_ROOT is None:
-        raise ValueError("PIPELINES が設定されていますが MACRO_ROOT が未設定です")
+    if _MACRO_ROOT_PATH is None:
+        raise ValueError("PIPELINES が設定されていますが MACRO_ROOT_PATH が未設定です")
     names = [n.strip() for n in raw.split(",") if n.strip()]
     return {
-        name: PipelineConfig(name=name, macro_dir=_MACRO_ROOT / name)
+        name: PipelineConfig(name=name, macro_dir=_MACRO_ROOT_PATH / name)
         for name in names
     }
 

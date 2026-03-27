@@ -45,7 +45,7 @@ class TestIdsFileEmpty:
         monkeypatch.setattr("sf_session.config._PIPELINES_DIR", tmp_path)
 
         pipeline = PipelineConfig(name="test", macro_dir=tmp_path)
-        # pipeline.ids_file = tmp_path / "test" / "id_filter" / "ids.txt"
+        # pipeline.ids_file = tmp_path / "test" / "ids_file" / "ids.txt"
         ids_file = pipeline.ids_file
         ids_file.parent.mkdir(parents=True)
         ids_file.write_text("# コメントだけ\n# もう1行\n")
