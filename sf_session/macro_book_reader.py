@@ -1,11 +1,12 @@
 """マクロ格納フォルダの xlsm からジョブ定義を読み取る。
 
 Usage:
-    python -m sf_session.macro_book_reader
+    python -m sf_session.macro_book_reader archive
 """
 
 from __future__ import annotations
 
+import argparse
 import logging
 from dataclasses import dataclass
 from datetime import datetime
@@ -13,7 +14,7 @@ from pathlib import Path
 
 from openpyxl import load_workbook
 
-from .config import ARCHIVE_IDS_FILE, ARCHIVE_MACRO_DIR, ARCHIVE_RESULT_DIR
+from .config import ARCHIVE_IDS_FILE, ARCHIVE_MACRO_DIR, ARCHIVE_RESULT_DIR, VALID_PIPELINES
 from .utils import find_latest_success_ids, read_ids_file, strip_trailing_date
 
 logger = logging.getLogger(__name__)
@@ -199,10 +200,24 @@ def _log_jobs(entries: list[JobEntry]) -> None:
     logger.info("\n%s", "\n".join(lines))
 
 
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="マクロ格納フォルダの xlsm からジョブ定義を読み取る",
+    )
+    parser.add_argument(
+        "pipeline",
+        choices=VALID_PIPELINES,
+        help="実行対象の pipeline 名",
+    )
+    return parser.parse_args(argv)
+
+
 if __name__ == "__main__":
     from .utils import setup_logging
 
     setup_logging()
+    parse_args()
+
     xlsm_path = _find_xlsm(ARCHIVE_MACRO_DIR)
     if xlsm_path is None:
         logger.error("'%s/' に .xlsm がありません。", ARCHIVE_MACRO_DIR.name)

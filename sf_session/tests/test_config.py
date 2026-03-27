@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from sf_session.config import ARCHIVE_CSV_DIR, ARCHIVE_IDS_FILE, ARCHIVE_MACRO_DIR, PROJECT_ROOT
+from sf_session.config import ARCHIVE_CSV_DIR, ARCHIVE_IDS_FILE, ARCHIVE_MACRO_DIR, PROJECT_ROOT, VALID_PIPELINES
 
 
 def test_project_root_is_sf_session():
@@ -21,3 +21,8 @@ def test_archive_csv_dir():
 
 def test_archive_ids_file():
     assert ARCHIVE_IDS_FILE == PROJECT_ROOT / "pipelines" / "archive" / "id_filter" / "ids.txt"
+
+
+def test_valid_pipelines():
+    assert isinstance(VALID_PIPELINES, tuple)
+    assert "archive" in VALID_PIPELINES

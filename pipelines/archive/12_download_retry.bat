@@ -1,5 +1,5 @@
 @echo off
-cd /d "%~dp0"
+cd /d "%~dp0..\.."
 
 if not exist ".venv\Scripts\python.exe" (
     echo [ERROR] Run setup.bat first.
@@ -7,5 +7,5 @@ if not exist ".venv\Scripts\python.exe" (
     exit /b 1
 )
 
-.venv\Scripts\python.exe -m sf_session.download --retry %*
+.venv\Scripts\python.exe -m sf_session.download archive --retry %*
 pause

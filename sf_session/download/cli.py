@@ -4,9 +4,9 @@
 Downloads フォルダを監視して新規ファイルを移動先にリネーム・コピーする。
 
 Usage:
-    python -m sf_session.download --dry-run
-    python -m sf_session.download --ids-file
-    python -m sf_session.download --retry
+    python -m sf_session.download archive --dry-run
+    python -m sf_session.download archive --ids-file
+    python -m sf_session.download archive --retry
 """
 
 from __future__ import annotations
@@ -24,6 +24,7 @@ from ..config import (
     ARCHIVE_IDS_FILE,
     ARCHIVE_MACRO_DIR,
     SF_HOME_URL,
+    VALID_PIPELINES,
 )
 from ..browser import REMOTE_DEBUGGING_PORT
 from ..business_day import should_run_download
@@ -130,6 +131,11 @@ def _print_dry_run(args: argparse.Namespace, jobs) -> None:
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="VBA procSalseForce 相当 — バッチ export スクリプト",
+    )
+    parser.add_argument(
+        "pipeline",
+        choices=VALID_PIPELINES,
+        help="実行対象の pipeline 名",
     )
     parser.add_argument(
         "--chrome-path",
@@ -313,7 +319,7 @@ def _execute(
         phase = "direct" if args.direct_deliver else "dl"
         other = "dl" if phase == "direct" else "direct"
         write_pipeline_status(
-            PROJECT_ROOT, "archive", phase,
+            PROJECT_ROOT, args.pipeline, phase,
             f"{time_label()}_成功{ok}件_失敗{ng}件",
             clear_phases=[other, "dv"],
         )

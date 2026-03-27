@@ -6,6 +6,8 @@ import argparse
 import logging
 from unittest.mock import MagicMock
 
+import pytest
+
 from sf_session.config import CHROME_EXE_PATH, CHROME_USER_DATA_DIR
 from sf_session.download import (
     main,
@@ -24,15 +26,16 @@ from sf_session.tests.helpers import make_job
 
 class TestParseArgs:
     def test_override_chrome_path(self):
-        args = parse_args(["--chrome-path", "/usr/bin/chrome"])
+        args = parse_args(["archive", "--chrome-path", "/usr/bin/chrome"])
         assert args.chrome_path == "/usr/bin/chrome"
 
     def test_default_chrome_path(self):
-        args = parse_args([])
+        args = parse_args(["archive"])
         assert args.chrome_path == CHROME_EXE_PATH
 
     def test_defaults(self):
-        args = parse_args([])
+        args = parse_args(["archive"])
+        assert args.pipeline == "archive"
         assert args.timeout == DEFAULT_TIMEOUT
         assert args.poll == DEFAULT_POLL
         assert args.interval == DEFAULT_INTERVAL
@@ -50,6 +53,7 @@ class TestParseArgs:
 
     def test_all_flags(self):
         args = parse_args([
+            "archive",
             "--chrome-path", "chrome",
             "--download-dir", "/tmp/dl",
             "--timeout", "30",
@@ -82,6 +86,14 @@ class TestParseArgs:
         assert args.force
         assert args.open_download_dir
         assert args.open_output_dir
+
+    def test_missing_pipeline_exits(self):
+        with pytest.raises(SystemExit):
+            parse_args([])
+
+    def test_unknown_pipeline_exits(self):
+        with pytest.raises(SystemExit):
+            parse_args(["unknown"])
 
 
 # ── helper: main() の外部依存を全て stub する fixture ──────────
@@ -142,7 +154,7 @@ class TestWorkDirSwap:
         """正常終了時、work_dir が ARCHIVE_CSV_DIR に rename される。"""
         staging_dir, _ = _stub_main_externals(monkeypatch, tmp_path)
 
-        rc = main(["--no-login-check", "--force"])
+        rc = main(["archive", "--no-login-check", "--force"])
 
         assert rc == 0
         assert staging_dir.is_dir()
@@ -158,7 +170,7 @@ class TestWorkDirSwap:
         prev_file = staging_dir / "old_report.csv"
         prev_file.write_text("old data")
 
-        rc = main(["--no-login-check", "--force"])
+        rc = main(["archive", "--no-login-check", "--force"])
 
         assert rc == 0
         prevs = list(tmp_path.glob(f"{staging_dir.name}_prev_*"))
@@ -180,7 +192,7 @@ class TestWorkDirSwap:
         staging_dir.mkdir(parents=True)
         (staging_dir / "old_report.csv").write_text("old")
 
-        rc = main(["--no-login-check", "--force"])
+        rc = main(["archive", "--no-login-check", "--force"])
 
         assert rc == 0
         prevs = list(tmp_path.glob(f"{staging_dir.name}_prev_*"))
@@ -204,7 +216,7 @@ class TestWorkDirSwap:
         )
 
         try:
-            main(["--no-login-check", "--force"])
+            main(["archive", "--no-login-check", "--force"])
         except RuntimeError:
             pass
 
@@ -217,7 +229,7 @@ class TestWorkDirSwap:
         """--direct-deliver 時は work_dir / swap を使わない。"""
         staging_dir, _ = _stub_main_externals(monkeypatch, tmp_path)
 
-        rc = main(["--no-login-check", "--direct-deliver", "--force"])
+        rc = main(["archive", "--no-login-check", "--direct-deliver", "--force"])
 
         assert rc == 0
         # staging_dir も work_dir も作成されない
@@ -237,7 +249,7 @@ class TestWorkDirSwap:
             lambda *a, **kw: (_ for _ in ()).throw(TimeoutError("timeout")),
         )
 
-        rc = main(["--no-login-check", "--force"])
+        rc = main(["archive", "--no-login-check", "--force"])
 
         assert rc == 1
         # current は前回分がそのまま
@@ -249,7 +261,7 @@ class TestWorkDirSwap:
         """完了マーカーは work_dir に書かれてから swap で ARCHIVE_CSV_DIR に入る。"""
         staging_dir, _ = _stub_main_externals(monkeypatch, tmp_path)
 
-        rc = main(["--no-login-check", "--force"])
+        rc = main(["archive", "--no-login-check", "--force"])
 
         assert rc == 0
         markers = [f for f in staging_dir.iterdir() if "成功" in f.name]
@@ -267,7 +279,7 @@ class TestBusinessDayGuard:
             lambda *a: (False, "weekend"),
         )
 
-        rc = main(["--no-login-check"])
+        rc = main(["archive", "--no-login-check"])
 
         assert rc == 0
         # export 実行されず staging_dir は作られない
@@ -281,7 +293,7 @@ class TestBusinessDayGuard:
             lambda *a: (False, "weekend"),
         )
 
-        rc = main(["--no-login-check", "--force"])
+        rc = main(["archive", "--no-login-check", "--force"])
 
         assert rc == 0
         assert staging_dir.is_dir()
@@ -299,7 +311,7 @@ class TestPreflightFailFast:
         )
 
         # --no-login-check なし → pre-flight 実行 → 失敗 → return 1
-        rc = main(["--force"])
+        rc = main(["archive", "--force"])
 
         assert rc == 1
         # export は実行されてない（work_dir に何も入ってない or swap されてない）
@@ -308,7 +320,7 @@ class TestPreflightFailFast:
         """--no-login-check なら pre-flight を skip して export は実行される。"""
         staging_dir, _ = _stub_main_externals(monkeypatch, tmp_path)
 
-        rc = main(["--no-login-check", "--force"])
+        rc = main(["archive", "--no-login-check", "--force"])
 
         assert rc == 0
         assert staging_dir.is_dir()
@@ -329,7 +341,7 @@ class TestEmptyJobs:
             ),
         )
 
-        rc = main(["--no-login-check", "--force", "--ids-file"])
+        rc = main(["archive", "--no-login-check", "--force", "--ids-file"])
 
         assert rc == 0
         # staging_dir は作られない (export skip)
@@ -343,7 +355,7 @@ class TestDryRun:
     def test_dry_run_shows_report_info(self, tmp_path, monkeypatch, caplog):
         _stub_main_externals(monkeypatch, tmp_path)
         with caplog.at_level(logging.INFO):
-            rc = main(["--dry-run", "--force"])
+            rc = main(["archive", "--dry-run", "--force"])
         assert rc == 0
         assert "00O001" in caplog.text
         assert "UTF-8" in caplog.text
@@ -353,7 +365,7 @@ class TestDryRun:
     def test_dry_run_direct_deliver(self, tmp_path, monkeypatch, caplog):
         _stub_main_externals(monkeypatch, tmp_path)
         with caplog.at_level(logging.INFO):
-            rc = main(["--dry-run", "--force", "--direct-deliver"])
+            rc = main(["archive", "--dry-run", "--force", "--direct-deliver"])
         assert rc == 0
         # direct-deliver 時は src_folder_name が表示される
         assert "/tmp/dest" in caplog.text
@@ -364,7 +376,7 @@ class TestDryRun:
             jobs=[make_job(no="1", report_id=None)],
         )
         with caplog.at_level(logging.INFO):
-            rc = main(["--dry-run", "--force"])
+            rc = main(["archive", "--dry-run", "--force"])
         assert rc == 0
         assert "URL 構築不可" in caplog.text
 
@@ -430,7 +442,7 @@ class TestSessionCleanup:
         _stub_main_externals(monkeypatch, tmp_path)
         mock_session, closed = self._stub_session(monkeypatch)
 
-        rc = main(["--force"])
+        rc = main(["archive", "--force"])
         assert rc == 0
         assert closed == [mock_session]
 
@@ -443,7 +455,7 @@ class TestSessionCleanup:
         )
 
         try:
-            main(["--force"])
+            main(["archive", "--force"])
         except RuntimeError:
             pass
 

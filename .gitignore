@@ -24,13 +24,12 @@ Thumbs.db
 .env
 
 # Data (ローカル固有)
-pipelines/
-マクロ格納フォルダ/
-レポートID/
+pipelines/*
+!pipelines/archive/
+pipelines/archive/*/
 
 # Local only
-README.txt
-★*.txt
+*.txt
 
 # Temp
 tmp.md

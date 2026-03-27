@@ -6,6 +6,8 @@ import logging
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
+
 from sf_session.config import ARCHIVE_MACRO_DIR
 from sf_session.file_deliver import (
     DistributeResult,
@@ -249,13 +251,15 @@ class TestLogSummary:
 
 class TestParseArgs:
     def test_defaults(self):
-        args = parse_args([])
+        args = parse_args(["archive"])
+        assert args.pipeline == "archive"
         assert not args.dry_run
         assert not args.ids_file
         assert args.macro_dir == ARCHIVE_MACRO_DIR
 
     def test_all_flags(self):
         args = parse_args([
+            "archive",
             "--ids-file",
             "--dry-run",
             "--macro-dir", "/tmp/macro",
@@ -263,3 +267,11 @@ class TestParseArgs:
         assert args.ids_file
         assert args.dry_run
         assert args.macro_dir == Path("/tmp/macro")
+
+    def test_missing_pipeline_exits(self):
+        with pytest.raises(SystemExit):
+            parse_args([])
+
+    def test_unknown_pipeline_exits(self):
+        with pytest.raises(SystemExit):
+            parse_args(["unknown"])

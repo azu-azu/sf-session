@@ -5,10 +5,10 @@
 リネーム指定がある場合はリネームも行う。
 
 Usage:
-    python sf-session/file_deliver.py
-    python sf-session/file_deliver.py --dry-run
-    python sf-session/file_deliver.py --ids-file
-    python sf-session/file_deliver.py --source-dir /other/path
+    python -m sf_session.file_deliver archive
+    python -m sf_session.file_deliver archive --dry-run
+    python -m sf_session.file_deliver archive --ids-file
+    python -m sf_session.file_deliver archive --source-dir /other/path
 """
 
 from __future__ import annotations
@@ -20,7 +20,7 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-from .config import ARCHIVE_CSV_DIR, ARCHIVE_IDS_FILE, ARCHIVE_MACRO_DIR, PROJECT_ROOT
+from .config import ARCHIVE_CSV_DIR, ARCHIVE_IDS_FILE, ARCHIVE_MACRO_DIR, PROJECT_ROOT, VALID_PIPELINES
 from .macro_book_reader import JobEntry, load_active_jobs
 from .utils import build_output_stem, setup_logging, time_label, write_pipeline_status
 
@@ -157,6 +157,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         description="reportID_* ファイルをマクロ定義に基づき振り分け先フォルダへコピーする",
     )
     parser.add_argument(
+        "pipeline",
+        choices=VALID_PIPELINES,
+        help="実行対象の pipeline 名",
+    )
+    parser.add_argument(
         "--source-dir",
         type=Path,
         default=ARCHIVE_CSV_DIR,
@@ -230,7 +235,7 @@ def main(argv: list[str] | None = None) -> int:
     logger.info("完了マーカー: %s", marker.name)
 
     write_pipeline_status(
-        PROJECT_ROOT, "archive", "dv",
+        PROJECT_ROOT, args.pipeline, "dv",
         f"{time_label()}_振り分け完了",
     )
 
