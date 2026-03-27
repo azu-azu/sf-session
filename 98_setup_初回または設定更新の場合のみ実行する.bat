@@ -38,5 +38,11 @@ if errorlevel 1 (
     exit /b 1
 )
 
+echo Checking pipelines...
+.venv\Scripts\python.exe -m sf_session.init_pipeline --ensure
+if errorlevel 1 (
+    echo [WARN] pipeline check failed, continuing setup...
+)
+
 echo Setup complete.
 pause

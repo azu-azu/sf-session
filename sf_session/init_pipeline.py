@@ -1,13 +1,18 @@
 """New pipeline scaffolding tool.
 
 Usage:
-    python -m sf_session.init_pipeline
+    python -m sf_session.init_pipeline            # interactive: create a new pipeline
+    python -m sf_session.init_pipeline --ensure    # auto-create missing pipelines from .env
 """
 
 from __future__ import annotations
 
+import logging
 import re
+import sys
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 _PACKAGE_DIR = Path(__file__).resolve().parent
 _PROJECT_ROOT = _PACKAGE_DIR.parent
@@ -129,6 +134,21 @@ def _ensure_output_dir(name: str, output_root: Path) -> tuple[Path, bool]:
     return csv_dir, created
 
 
+# ── scaffold ─────────────────────────────────────────────────────────
+
+
+def _scaffold_pipeline(name: str) -> Path:
+    """Create directories, bat files, and readme for a single pipeline."""
+    pipeline_dir = _create_directories(name)
+    _generate_bat_files(name, pipeline_dir)
+    readme_src = _TEMPLATES_DIR / "readme.txt"
+    if readme_src.exists():
+        (pipeline_dir / "readme.txt").write_text(
+            readme_src.read_text(encoding="utf-8"), encoding="utf-8",
+        )
+    return pipeline_dir
+
+
 # ── main ─────────────────────────────────────────────────────────────
 
 
@@ -151,25 +171,16 @@ def main() -> None:
     updated = _update_env_pipelines(name)
     print(f"\n✓ .env の PIPELINES を更新しました: {updated}")
 
-    # 2. create directories
-    pipeline_dir = _create_directories(name)
+    # 2. scaffold (directories + bat files + readme)
+    _scaffold_pipeline(name)
     print(f"✓ pipelines/{name}/ を作成しました")
     for sub in _SUBDIRS:
         print(f"  - {sub}/")
-
-    # 3. generate bat files
-    count = _generate_bat_files(name, pipeline_dir)
-    print(f"✓ bat ファイルを配置しました ({count} files)")
-
-    # 4. copy readme.txt
-    readme_src = _TEMPLATES_DIR / "readme.txt"
-    if readme_src.exists():
-        (pipeline_dir / "readme.txt").write_text(
-            readme_src.read_text(encoding="utf-8"), encoding="utf-8"
-        )
+    print(f"✓ bat ファイルを配置しました ({len(_BAT_DEFS)} files)")
+    if (_TEMPLATES_DIR / "readme.txt").exists():
         print("✓ readme.txt を配置しました")
 
-    # 5. macro directory (MACRO_ROOT_PATH)
+    # 3. macro directory (MACRO_ROOT_PATH)
     try:
         macro_dir, created = _ensure_macro_dir(name)
         if created:
@@ -180,7 +191,7 @@ def main() -> None:
     except RuntimeError as e:
         print(f"⚠ MACRO_ROOT_PATH の処理をスキップしました: {e}")
 
-    # 6. output directory (OUTPUT_ROOT_PATH)
+    # 4. output directory (OUTPUT_ROOT_PATH)
     try:
         output_root = _get_output_root()
         csv_dir, csv_created = _ensure_output_dir(name, output_root)
@@ -194,5 +205,40 @@ def main() -> None:
     print("\nセットアップ完了！")
 
 
+# ── ensure (batch mode) ──────────────────────────────────────────────
+
+
+def ensure_pipelines() -> None:
+    """PIPELINES に列挙された pipeline で、pipelines/ に存在しないものを自動作成する。"""
+    names = _existing_pipelines()
+    if not names:
+        return
+
+    for name in names:
+        if (_PIPELINES_DIR / name).exists():
+            continue
+
+        logger.info("Creating missing pipeline: %s", name)
+        _scaffold_pipeline(name)
+
+        # macro directory (failure is non-fatal)
+        try:
+            _ensure_macro_dir(name)
+        except RuntimeError as e:
+            logger.warning("MACRO_ROOT_PATH skipped for %s: %s", name, e)
+
+        # output directory (failure is non-fatal)
+        try:
+            output_root = _get_output_root()
+            _ensure_output_dir(name, output_root)
+        except RuntimeError as e:
+            logger.warning("OUTPUT_ROOT_PATH skipped for %s: %s", name, e)
+
+        print(f"Created pipeline: {name}")
+
+
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) > 1 and sys.argv[1] == "--ensure":
+        ensure_pipelines()
+    else:
+        main()
