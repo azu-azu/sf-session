@@ -24,7 +24,7 @@ from pathlib import Path
 from .config import PIPELINES, VALID_PIPELINES, OUTPUT_ROOT
 from .download.outputs import build_destination, probe_destinations
 from .macro_book_reader import JobEntry, load_active_jobs
-from .utils import setup_logging, time_label, write_pipeline_status
+from .utils import log_result_summary, setup_logging, time_label, write_pipeline_status
 
 logger = logging.getLogger(__name__)
 
@@ -119,25 +119,7 @@ def distribute_files(
 
 def log_summary(results: list[DistributeResult]) -> None:
     """実行結果のサマリーをログ出力する。"""
-    ok = sum(1 for r in results if r.success)
-    ng = sum(1 for r in results if not r.success)
-
-    logger.info("*" * 50)
-    logger.info("file_deliver complete >>")
-    logger.info("成功 %d 件 / 失敗 %d 件 / 合計 %d 件", ok, ng, len(results))
-
-    failures = [r for r in results if not r.success]
-    if failures:
-        logger.info("-" * 50)
-        for r in failures:
-            dest = r.dest_path or "-"
-            err = f" ({r.error})" if r.error else ""
-            logger.info(
-                "  [NG] %d件目 %s  %.1fs  %s%s",
-                r.seq, r.report_id, r.elapsed, dest, err,
-            )
-
-    logger.info("*" * 50)
+    log_result_summary(results, "file_deliver")
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:

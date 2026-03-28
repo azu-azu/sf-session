@@ -83,6 +83,8 @@ def run_report_probe_job(
     sf: Salesforce,
     report_ids: list[str],
     output_path: Path | None = None,
+    *,
+    result_dir: Path | None = None,
 ) -> Path:
     """全 report_ids を probe して Excel に書き出す。
 
@@ -101,7 +103,7 @@ def run_report_probe_job(
         )
         results.append(result)
 
-    excel_path = write_result_excel(results, output_path=output_path, run_ts=run_ts)
+    excel_path = write_result_excel(results, output_path=output_path, run_ts=run_ts, result_dir=result_dir)
 
     success = sum(1 for r in results if r.status != "failed")
     failed = sum(1 for r in results if r.status == "failed")

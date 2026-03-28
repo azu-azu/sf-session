@@ -104,8 +104,7 @@ def wait_until_logged_in(
             time.sleep(poll)
             elapsed += poll
 
-            # 1回だけ取得して全判定に使い回す (Selenium RPC 削減)
-            url = driver.current_url.lower()
+            url = driver.current_url.lower()  # SSO 判定用
             on_login = is_login_page(driver)
             on_mfa = is_mfa_page(driver)
 

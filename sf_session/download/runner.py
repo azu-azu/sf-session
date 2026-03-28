@@ -76,7 +76,7 @@ def _run_export(
     login recovery は呼び出し元 export_one() が担当する。
     """
     report_id = job.report_id or ""
-    t0 = time.time()
+    t0 = time.monotonic()
 
     enc = job.encode if job.encode else "Shift_JIS"
     export_url = build_export_url(report_id, enc=enc)
@@ -99,7 +99,7 @@ def _run_export(
             seq=seq,
             report_id=report_id,
             success=False,
-            elapsed=time.time() - t0,
+            elapsed=time.monotonic() - t0,
             error=f"Chrome 起動失敗: {e}",
         )
 
@@ -116,11 +116,11 @@ def _run_export(
             seq=seq,
             report_id=report_id,
             success=False,
-            elapsed=time.time() - t0,
+            elapsed=time.monotonic() - t0,
             error=str(e),
         )
 
-    elapsed = time.time() - t0
+    elapsed = time.monotonic() - t0
     logger.info("[%d件目] ダウンロード検知: %s (%.1fs)", seq, downloaded.name, elapsed)
 
     return ExportResult(

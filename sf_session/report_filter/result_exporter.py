@@ -14,7 +14,6 @@ from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill
 from openpyxl.utils import get_column_letter
 
-from ..config import PIPELINES
 from ..utils import format_duration
 from .job_result import JobResult
 
@@ -102,7 +101,7 @@ def write_result_excel(
     """
     if output_path is None:
         if result_dir is None:
-            result_dir = PIPELINES["archive"].result_dir
+            raise ValueError("result_dir is required when output_path is not specified")
         ts = run_ts or datetime.now().strftime("%Y%m%d_%H%M%S")
         output_path = result_dir / f"probe_result_{ts}.xlsx"
 

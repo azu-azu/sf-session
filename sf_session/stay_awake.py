@@ -18,6 +18,8 @@ ES_CONTINUOUS = 0x80000000
 ES_SYSTEM_REQUIRED = 0x00000001
 ES_DISPLAY_REQUIRED = 0x00000002
 
+_KEEPALIVE_INTERVAL = 30  # seconds: SetThreadExecutionState refresh 間隔
+
 
 def _set_execution_state(flags: int) -> None:
     """SetThreadExecutionState を呼ぶ."""
@@ -30,28 +32,25 @@ def stay_awake(minutes: int = 0, keep_display_on: bool = True) -> None:
     if keep_display_on:
         flags |= ES_DISPLAY_REQUIRED
 
-    now_fmt = lambda: datetime.now().strftime("%H:%M:%S")  # noqa: E731
+    def now_fmt() -> str:
+        return datetime.now().strftime("%H:%M:%S")
 
-    if minutes > 0:
-        end_time = datetime.now() + timedelta(minutes=minutes)
+    end_time = (datetime.now() + timedelta(minutes=minutes)) if minutes > 0 else None
+
+    if end_time is not None:
         logger.info(
             "StayAwake START (%d min) %s -> %s",
             minutes, now_fmt(), end_time.strftime("%H:%M:%S"),
         )
-        try:
-            while datetime.now() < end_time:
-                _set_execution_state(flags)
-                time.sleep(30)
-        except KeyboardInterrupt:
-            pass
     else:
         logger.info("StayAwake START (infinite) %s", now_fmt())
-        try:
-            while True:
-                _set_execution_state(flags)
-                time.sleep(30)
-        except KeyboardInterrupt:
-            pass
+
+    try:
+        while end_time is None or datetime.now() < end_time:
+            _set_execution_state(flags)
+            time.sleep(_KEEPALIVE_INTERVAL)
+    except KeyboardInterrupt:
+        pass
 
     _set_execution_state(ES_CONTINUOUS)
     logger.info("StayAwake STOP %s", now_fmt())

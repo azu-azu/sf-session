@@ -1,5 +1,6 @@
 jpholiday
 openpyxl
 python-dotenv
+requests
 selenium
 simple-salesforce

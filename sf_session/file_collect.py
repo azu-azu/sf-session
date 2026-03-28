@@ -22,6 +22,7 @@ from .macro_book_reader import JobEntry, read_jobs
 from .utils import (
     build_output_stem,
     find_latest_success_ids,
+    log_result_summary,
     read_ids_file,
     setup_logging,
     strip_trailing_date,
@@ -200,25 +201,10 @@ def _collect_one_job(
 
 def log_summary(results: list[CollectResult]) -> None:
     """実行結果のサマリーをログ出力する。"""
-    ok = sum(1 for r in results if r.success)
-    ng = sum(1 for r in results if not r.success)
-
-    logger.info("*" * 50)
-    logger.info("file_collect complete >>")
-    logger.info("成功 %d 件 / 失敗 %d 件 / 合計 %d 件", ok, ng, len(results))
-
-    failures = [r for r in results if not r.success]
-    if failures:
-        logger.info("-" * 50)
-        for r in failures:
-            source = f"From {r.source_path}" if r.source_path else "-"
-            err = f" ({r.error})" if r.error else ""
-            logger.info(
-                "  [NG] %d件目 %s  %.1fs  %s%s",
-                r.seq, r.report_id, r.elapsed, source, err,
-            )
-
-    logger.info("*" * 50)
+    log_result_summary(
+        results, "file_collect",
+        path_fn=lambda r: f"From {r.source_path}" if r.source_path else "-",
+    )
 
 
 def _dry_run_preview(

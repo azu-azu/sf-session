@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     from .runner import ExportResult
 
 from ..macro_book_reader import JobEntry
-from ..utils import build_output_stem, time_label
+from ..utils import build_output_stem, log_result_summary, time_label
 
 logger = logging.getLogger(__name__)
 
@@ -53,27 +53,7 @@ def build_destination(
 
 def log_summary(results: list[ExportResult]) -> tuple[int, int]:
     """実行結果のサマリーをログ出力し、(ok, ng) を返す。"""
-    ok = sum(1 for r in results if r.success)
-    ng = sum(1 for r in results if not r.success)
-
-    logger.info("*" * 50)
-    logger.info("download complete >>")
-    logger.info("成功 %d 件 / 失敗 %d 件 / 合計 %d 件", ok, ng, len(results))
-
-    failures = [r for r in results if not r.success]
-    if failures:
-        logger.info("-" * 50)
-        for r in failures:
-            dest = r.dest_path or "-"
-            err = f" ({r.error})" if r.error else ""
-            logger.info(
-                "  [NG] %d件目 %s  %.1fs  %s%s",
-                r.seq, r.report_id, r.elapsed, dest, err,
-            )
-
-    logger.info("*" * 50)
-
-    return ok, ng
+    return log_result_summary(results, "download")
 
 
 def write_success_ids(results: list[ExportResult], *, result_dir: Path) -> Path | None:
