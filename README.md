@@ -72,7 +72,7 @@ API ではなく、ブラウザの export URL (`?export=1`) を使う VBA マク
 98_setup_初回または設定更新の場合のみ実行する.bat
 ```
 
-依存: `selenium`, `openpyxl`, `simple-salesforce`, `python-dotenv`, `jpholiday`
+依存: `selenium`, `openpyxl`, `simple-salesforce`, `python-dotenv`, `jpholiday`, `requests`
 
 ## 使い方
 
@@ -164,8 +164,6 @@ SSO 経由のログインに対応。ログインが必要な場合はユーザ�
 # 失敗分リトライ
 12_download_retry.bat
 
-# 日付サフィックス付与
-★01_download.bat --date-suffix
 ```
 
 営業日（平日 + 祝日 + `extra_holidays.csv` 除外）のみ実行。`--force` で営業日チェックを bypass できる。
@@ -197,7 +195,6 @@ export 中にセッションが切れた場合は、タブを traverse してロ
 --direct-deliver    各ジョブの src_folder_name へ直接振り分け (default: OUTPUT_ROOT_PATH/<pipeline>/csv/ に集約)
 --ids-file          ids.txt の report ID との intersection でフィルタ
 --retry             前回の success_ids を読み、失敗分だけ再実行
---date-suffix       ファイル名に _YYYYMMDD を付与
 --interval          レポート間 wait 秒 (default: 2.0)
 --timeout           per-report タイムアウト秒 (default: 600)
 --mkdir             移動先フォルダが存在しない場合、親があれば最終フォルダを自動作成
@@ -279,12 +276,12 @@ export 中にセッションが切れた場合は、タブを traverse してロ
 API 経由でレポートのメタデータ（名前・列数・列名）を取得する。データ本体はダウンロードしない。
 
 ```powershell
-py -m sf_session.report_filter
+py -m sf_session.report_filter archive
 ```
 
 - 前提: `.env` に SF 認証情報
 - 対象: マクロ定義 (`.xlsm`) の全レポート ID を自動取得
-- 出力: `pipelines/archive/result/probe_result_{ts}.xlsx`（probe_result シート + columns シート）
+- 出力: `pipelines/<pipeline>/result/probe_result_{ts}.xlsx`（probe_result シート + columns シート）
 
 ## マーカーファイル
 
