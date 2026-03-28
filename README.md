@@ -55,9 +55,10 @@ API ではなく、ブラウザの export URL (`?export=1`) を使う VBA マク
 | `sf_session/browser.py` | Chrome 起動・WebDriver 接続の共通モジュール |
 | `sf_session/login_helper.py` | ログイン/SSO ページ検出・手動ログイン待機・MFA 完了待ち |
 | `sf_session/file_deliver.py` | `reportID_*` ファイルをマクロ定義の移動先フォルダへコピー・リネーム + 移動先 probe + 完了マーカー出力 |
-| `sf_session/file_collect.py` | 各フォルダから CSV を収集して `ARCHIVE_CSV_DIR` に集約 (file_deliver の逆) |
-| `sf_session/jis_to_utf8.py` | `ARCHIVE_CSV_DIR` 内の CSV を UTF-8 BOM に変換 → `*_utf/` |
+| `sf_session/file_collect.py` | 各フォルダから CSV を収集して pipeline の `csv_dir` に集約 (file_deliver の逆) |
+| `sf_session/jis_to_utf8.py` | pipeline の `csv_dir` 直下の CSV を UTF-8 BOM に変換 → `csv_dir/utf/` |
 | `sf_session/macro_book_reader.py` | ジョブ定義 (`JobEntry`) の読み取り。xlsm から直接読み取り |
+| `sf_session/utils.py` | 共通ユーティリティ (logging setup, time_label, strip_trailing_date, ids-file 読み取り 等) |
 | `sf_session/config.py` | 共通パス定数 + `create_sf_client()` |
 | `sf_session/clean.py` | `__pycache__` / `.pyc` / `.log` 等のクリーンアップ |
 | `sf_session/cleanup_test_csv.py` | テスト用 CSV の一括削除 (devtest 専用、safety guard 付き) |
@@ -151,7 +152,7 @@ SSO 経由のログインに対応。ログインが必要な場合はユーザ�
 # dry-run でジョブ一覧を確認
 ★01_download.bat --dry-run
 
-# 実行 (OUTPUT_ROOT_PATH/archive/csv/ に全ファイル集約)
+# 実行 (OUTPUT_ROOT_PATH/<pipeline>/csv/ に全ファイル集約)
 ★01_download.bat
 
 # per-job 振り分け先フォルダへ直接コピー
@@ -193,7 +194,7 @@ export 中にセッションが切れた場合は、タブを traverse してロ
 --my-chrome         OS デフォルト Chrome を使用（login check skip、手動ログイン前提）
 --no-login-check    pre-flight login check を skip
 --port              リモートデバッグポート (default: 9222)
---direct-deliver    各ジョブの src_folder_name へ直接振り分け (default: OUTPUT_ROOT_PATH/archive/csv/ に集約)
+--direct-deliver    各ジョブの src_folder_name へ直接振り分け (default: OUTPUT_ROOT_PATH/<pipeline>/csv/ に集約)
 --ids-file          ids.txt の report ID との intersection でフィルタ
 --retry             前回の success_ids を読み、失敗分だけ再実行
 --date-suffix       ファイル名に _YYYYMMDD を付与
