@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "sf-session"
 version = "0.1.0"
 description = "Salesforce session management and report automation tools"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 dependencies = [
     "jpholiday",
     "openpyxl",
