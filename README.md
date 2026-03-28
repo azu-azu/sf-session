@@ -67,7 +67,7 @@ API ではなく、ブラウザの export URL (`?export=1`) を使う VBA マク
 ## セットアップ
 
 ```powershell
-# 初回のみ実行（venv 作成 + 依存 install）
+# 初回のみ実行（venv 作成 + 依存 install + missing pipeline 自動作成）
 98_setup_初回または設定更新の場合のみ実行する.bat
 ```
 
@@ -245,7 +245,7 @@ export 中にセッションが切れた場合は、タブを traverse してロ
 
 `--ids-file` フラグを付けると、`ids.txt` に書かれた report ID だけを処理対象にする。
 
-- **置き場所**: `pipelines/archive/ids_file/ids.txt`
+- **置き場所**: `pipelines/<pipeline>/ids_file/ids.txt`
 - **フォーマット**: 1 行 1 report ID（UTF-8）
 - `#` で始まる行はコメント扱いでスキップ
 - 空行もスキップ
@@ -260,7 +260,7 @@ export 中にセッションが切れた場合は、タブを traverse してロ
 
 ## ジョブ定義
 
-`MACRO_ROOT_PATH/<pipeline>/` に配置した `.xlsm` の `SalseForce` シートから直接読み取る。
+`MACRO_ROOT_PATH/<pipeline>/` に配置した `.xlsm` の `Salesforce` シートから直接読み取る。
 
 | 列 | 内容 |
 |---|---|
@@ -342,4 +342,3 @@ devtest pipeline の csv_dir（`_prev_*` / `_work_*` 含む）と、マクロ定
 
 対話形式で pipeline 名を入力すると、ディレクトリ・bat・readme・.env を一括生成する。
 csv 出力先は `OUTPUT_ROOT_PATH/<pipeline>/csv/` に作成される（`.env` で設定）。
-詳細は `new_pipeline.txt` を参照。

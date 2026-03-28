@@ -9,9 +9,11 @@ from __future__ import annotations
 import argparse
 import logging
 from dataclasses import dataclass
+from difflib import get_close_matches
 from pathlib import Path
 
 from openpyxl import load_workbook
+from openpyxl.worksheet.worksheet import Worksheet
 
 from .config import PIPELINES, PipelineConfig, VALID_PIPELINES
 from .utils import find_latest_success_ids, read_ids_file, strip_trailing_date
@@ -26,10 +28,37 @@ _COL_SRC_FOLDER_NAME = "AD"
 _COL_ENCODE = "AE"
 _COL_SKIP = "AG"
 
-_SHEET_NAME = "SalseForce"  # Excel シート名と一致（原文の typo）
+_SHEET_NAME = "Salesforce"
 
 # データ開始行（100 = ヘッダ、101〜 = データ）
 _DATA_START_ROW = 101
+
+
+class SheetNotFoundError(Exception):
+    """xlsm に期待するシートが存在しない場合のエラー。"""
+
+
+def _resolve_sheet(wb, expected: str) -> Worksheet:
+    """expected 名のシートを返す。見つからなければ typo 候補を提示して error。"""
+    if expected in wb.sheetnames:
+        return wb[expected]
+
+    candidates = get_close_matches(expected, wb.sheetnames, n=3, cutoff=0.5)
+    sheets_list = ", ".join(wb.sheetnames)
+
+    if candidates:
+        suggestion = ", ".join(candidates)
+        raise SheetNotFoundError(
+            f"シート '{expected}' が見つかりません。"
+            f"\n  typo の可能性: {suggestion}"
+            f"\n  → Excel でシート名を '{expected}' に修正してください。"
+            f"\n  (全シート: {sheets_list})"
+        )
+    raise SheetNotFoundError(
+        f"シート '{expected}' が見つかりません。"
+        f"\n  全シート: {sheets_list}"
+        f"\n  → Excel に '{expected}' シートを作成してください。"
+    )
 
 
 @dataclass
@@ -90,32 +119,34 @@ def _find_xlsm(directory: Path) -> Path | None:
 def read_jobs_from_xlsm(xlsm_path: Path) -> list[JobEntry]:
     """指定した xlsm パスからジョブ定義を読み取る。"""
     wb = load_workbook(xlsm_path, read_only=True, data_only=True)
-    ws = wb[_SHEET_NAME]
+    try:
+        ws = _resolve_sheet(wb, _SHEET_NAME)
 
-    entries: list[JobEntry] = []
-    for row in range(_DATA_START_ROW, ws.max_row + 1):
-        no = _cell(ws, row, _COL_NO)
-        url = _cell(ws, row, _COL_URL)
+        entries: list[JobEntry] = []
+        for row in range(_DATA_START_ROW, ws.max_row + 1):
+            no = _cell(ws, row, _COL_NO)
+            url = _cell(ws, row, _COL_URL)
 
-        # No も URL も空なら終端
-        if no is None and url is None:
-            break
+            # No も URL も空なら終端
+            if no is None and url is None:
+                break
 
-        raw_filename = _cell(ws, row, _COL_NEW_FILENAME)
-        has_fn = _has_filename(raw_filename)
+            raw_filename = _cell(ws, row, _COL_NEW_FILENAME)
+            has_fn = _has_filename(raw_filename)
 
-        entries.append(JobEntry(
-            no=str(no) if no is not None else "",
-            report_id=_extract_id(url),
-            has_filename=has_fn,
-            new_filename=strip_trailing_date(str(raw_filename).strip()) if has_fn else "",
-            src_folder_name=str(_cell(ws, row, _COL_SRC_FOLDER_NAME) or ""),
-            encode=str(_cell(ws, row, _COL_ENCODE) or ""),
-            skip=str(_cell(ws, row, _COL_SKIP) or ""),
-        ))
+            entries.append(JobEntry(
+                no=str(no) if no is not None else "",
+                report_id=_extract_id(url),
+                has_filename=has_fn,
+                new_filename=strip_trailing_date(str(raw_filename).strip()) if has_fn else "",
+                src_folder_name=str(_cell(ws, row, _COL_SRC_FOLDER_NAME) or ""),
+                encode=str(_cell(ws, row, _COL_ENCODE) or ""),
+                skip=str(_cell(ws, row, _COL_SKIP) or ""),
+            ))
 
-    wb.close()
-    return entries
+        return entries
+    finally:
+        wb.close()
 
 
 def read_jobs(macro_dir: Path) -> list[JobEntry]:
