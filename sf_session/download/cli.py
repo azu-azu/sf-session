@@ -48,7 +48,7 @@ from .outputs import (
     probe_destinations,
     probe_output_dir,
     swap_work_to_staging,
-    write_marker,
+    write_completion_marker,
     write_start_marker,
     write_success_ids,
 )
@@ -276,7 +276,7 @@ def _finalize(
     write_success_ids(results, result_dir=result_dir)
 
     if work_dir is not None:
-        write_marker(work_dir, ok, ng)
+        write_completion_marker(work_dir, ok, ng)
         swap_work_to_staging(work_dir, csv_dir, ok)
 
     phase = "direct" if args.direct_deliver else "dl"

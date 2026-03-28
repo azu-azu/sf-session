@@ -160,7 +160,7 @@ def write_start_marker(output_dir: Path, total: int) -> Path:
     return marker
 
 
-def write_marker(output_dir: Path, ok: int, ng: int) -> Path:
+def write_completion_marker(output_dir: Path, ok: int, ng: int) -> Path:
     """完了マーカーファイルを作成して返す。"""
     marker = output_dir / f"★{time_label()}_成功{ok}件_失敗{ng}件.txt"
     marker.touch()

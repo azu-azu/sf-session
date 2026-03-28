@@ -16,7 +16,7 @@ from sf_session.download.outputs import (
     probe_output_dir,
     prepare_work_dir,
     swap_work_to_staging,
-    write_marker,
+    write_completion_marker,
     write_start_marker,
     write_success_ids,
 )
@@ -299,7 +299,7 @@ class TestWriteStartMarker:
 
 class TestWriteMarker:
     def test_creates_marker(self, tmp_path):
-        marker = write_marker(tmp_path, 3, 1)
+        marker = write_completion_marker(tmp_path, 3, 1)
         assert marker.exists()
         assert "成功3件" in marker.name
         assert "失敗1件" in marker.name
