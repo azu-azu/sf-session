@@ -31,7 +31,7 @@ if errorlevel 1 (
 )
 
 echo Installing packages...
-.venv\Scripts\python.exe -m pip install -r sf_session\requirements.txt
+.venv\Scripts\python.exe -m pip install -e .
 if errorlevel 1 (
     echo [ERROR] failed to install packages
     pause

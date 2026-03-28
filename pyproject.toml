@@ -1,2 +1,23 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sf-session"
+version = "0.1.0"
+description = "Salesforce session management and report automation tools"
+requires-python = ">=3.9"
+dependencies = [
+    "jpholiday",
+    "openpyxl",
+    "python-dotenv",
+    "requests",
+    "selenium",
+    "simple-salesforce",
+]
+
+[tool.setuptools.packages.find]
+include = ["sf_session*"]
+
 [tool.pytest.ini_options]
 cache_dir = "sf_session/.pytest_cache"

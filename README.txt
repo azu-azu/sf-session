@@ -54,7 +54,7 @@ py -m venv .venv
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 .\.venv\Scripts\Activate.ps1
 py -m pip install --upgrade pip
-py -m pip install -r sf_session\requirements.txt
+py -m pip install -e .
 ```
 
 ### 2回目以降
@@ -71,6 +71,6 @@ py -m sf_session.keeper
 ```
 py -m venv .venv
 .\.venv\Scripts\python.exe -m pip install --upgrade pip
-.\.venv\Scripts\python.exe -m pip install -r sf_session\requirements.txt
+.\.venv\Scripts\python.exe -m pip install -e .
 .\.venv\Scripts\python.exe -m sf_session.keeper
 ```
