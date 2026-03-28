@@ -208,15 +208,17 @@ def main(argv: list[str] | None = None) -> int:
     if args.dry_run:
         logger.info("Source dir  : %s", source_dir)
         logger.info("--- dry-run mode ---")
+        seq = 0
         for file in sorted(source_dir.iterdir()):
             if not file.is_file():
                 continue
             job = match_file_to_job(file.name, lookup)
             if job is None:
-                logger.info("  %-50s → (マッチなし)", file.name)
+                logger.info("  %s → (マッチなし)", file.name)
                 continue
+            seq += 1
             dest = build_destination(job, file)
-            logger.info("  %-50s → %s", file.name, dest)
+            logger.info("  [%d件目] %s → %s", seq, file.name, dest)
         return 0
 
     errors = probe_destinations(active_jobs, mkdir=args.mkdir)

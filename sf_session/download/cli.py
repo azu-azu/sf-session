@@ -119,10 +119,9 @@ def _print_dry_run(args: argparse.Namespace, jobs, *, csv_dir: Path) -> None:
         else:
             dest = j.src_folder_name
         logger.info(
-            "  %d件目  %s  enc=%s  → %s",
-            i, rid, enc, dest,
+            "  [%d件目] %s  enc=%s  → %s  %s",
+            i, rid, enc, dest, url,
         )
-        logger.info("           %s", url)
 
 
 # ── CLI ──────────────────────────────────────────────────

@@ -66,7 +66,7 @@ def _dump_csv_list(csvs: list[Path]) -> None:
     ]
     if len(csvs) > 10:
         lines.append(f"  ... 他 {len(csvs) - 10} 件")
-    logger.warning("フォルダ内の CSV:\n%s", "\n".join(lines))
+    logger.debug("フォルダ内の CSV:\n%s", "\n".join(lines))
 
 
 def _find_csv_by_name(
@@ -221,6 +221,37 @@ def log_summary(results: list[CollectResult]) -> None:
     logger.info("*" * 50)
 
 
+def _dry_run_preview(
+    jobs: list[JobEntry],
+    success_ids: set[str],
+    today_str: str,
+) -> None:
+    """dry-run: 各 job の収集元 CSV をプレビュー表示する。"""
+    logger.info("--- dry-run mode ---")
+    seq = 0
+    for job in jobs:
+        if job.report_id not in success_ids:
+            continue
+        seq += 1
+        report_id = job.report_id or job.no
+        source_folder = Path(job.src_folder_name)
+
+        if not source_folder.is_dir():
+            logger.info("  [%d件目] %s → (フォルダなし: %s)", seq, report_id, source_folder)
+            continue
+
+        if job.has_filename:
+            base = strip_trailing_date(job.new_filename, strict=False)
+            target = _find_csv_by_name(source_folder, base, today_str, job.report_id)
+        else:
+            target = _find_csv_by_date(source_folder, today_str, job.report_id)
+
+        if target is None:
+            logger.info("  [%d件目] %s → (CSV なし: %s)", seq, report_id, source_folder)
+        else:
+            logger.info("  [%d件目] %s → From %s", seq, report_id, target)
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="ジョブ定義と success ID で対象 CSV を収集する",
@@ -229,6 +260,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "pipeline",
         choices=VALID_PIPELINES,
         help="実行対象の pipeline 名",
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="実行せず収集対象のプレビューを表示",
     )
     return parser.parse_args(argv)
 
@@ -255,6 +291,11 @@ def main(argv: list[str] | None = None) -> int:
     logger.info("success IDs: %s (%d 件)", ids_path.name, len(success_ids))
 
     today_str = datetime.now().strftime("%Y%m%d")
+
+    if args.dry_run:
+        _dry_run_preview(jobs, success_ids, today_str)
+        return 0
+
     new_folder_name = _COLLECT_FOLDER_TEMPLATE.replace("#", today_str)
     daily_output_folder = pipeline.csv_dir / new_folder_name
 
