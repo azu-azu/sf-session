@@ -50,6 +50,8 @@ def test_ensure_creates_missing_pipeline(workspace: Path):
         assert (pipeline_dir / "readme.txt").exists()
         # bat files
         assert (pipeline_dir / "★01_download.bat").exists()
+        # devtest-only bat should NOT exist for normal pipelines
+        assert not (pipeline_dir / "■00_cleanup_test_csv.bat").exists()
 
 
 def test_ensure_skips_existing_pipeline(workspace: Path):
@@ -75,3 +77,16 @@ def test_ensure_no_pipelines(workspace: Path):
 
     # pipelines/ should be empty
     assert list((workspace / "pipelines").iterdir()) == []
+
+
+def test_ensure_creates_devtest_with_extra_bat(workspace: Path):
+    _write_env(workspace, "devtest")
+
+    init_pipeline.ensure_pipelines()
+
+    pipeline_dir = workspace / "pipelines" / "devtest"
+    assert pipeline_dir.is_dir()
+    # common bat files should exist
+    assert (pipeline_dir / "★01_download.bat").exists()
+    # devtest-only bat should exist
+    assert (pipeline_dir / "■00_cleanup_test_csv.bat").exists()

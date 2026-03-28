@@ -46,6 +46,10 @@ _BAT_DEFS = (
     ("90_show_macrofile.bat",  "sf_session.macro_book_reader",  ""),
 )
 
+_DEVTEST_BAT_DEFS = (
+    ("■00_cleanup_test_csv.bat", "sf_session.cleanup_test_csv", ""),
+)
+
 
 # ── helpers ──────────────────────────────────────────────────────────
 
@@ -101,12 +105,15 @@ def _create_directories(name: str) -> Path:
 
 
 def _generate_bat_files(name: str, pipeline_dir: Path) -> int:
-    for filename, module, extra_args in _BAT_DEFS:
+    defs = _BAT_DEFS
+    if name == "devtest":
+        defs = _BAT_DEFS + _DEVTEST_BAT_DEFS
+    for filename, module, extra_args in defs:
         content = _BAT_TEMPLATE.format(
             module=module, pipeline=name, extra_args=extra_args,
         )
         (pipeline_dir / filename).write_text(content, encoding="utf-8")
-    return len(_BAT_DEFS)
+    return len(defs)
 
 
 def _get_output_root() -> Path:
@@ -137,16 +144,16 @@ def _ensure_output_dir(name: str, output_root: Path) -> tuple[Path, bool]:
 # ── scaffold ─────────────────────────────────────────────────────────
 
 
-def _scaffold_pipeline(name: str) -> Path:
+def _scaffold_pipeline(name: str) -> tuple[Path, int]:
     """Create directories, bat files, and readme for a single pipeline."""
     pipeline_dir = _create_directories(name)
-    _generate_bat_files(name, pipeline_dir)
+    bat_count = _generate_bat_files(name, pipeline_dir)
     readme_src = _TEMPLATES_DIR / "readme.txt"
     if readme_src.exists():
         (pipeline_dir / "readme.txt").write_text(
             readme_src.read_text(encoding="utf-8"), encoding="utf-8",
         )
-    return pipeline_dir
+    return pipeline_dir, bat_count
 
 
 # ── main ─────────────────────────────────────────────────────────────
@@ -172,11 +179,11 @@ def main() -> None:
     print(f"\n✓ .env の PIPELINES を更新しました: {updated}")
 
     # 2. scaffold (directories + bat files + readme)
-    _scaffold_pipeline(name)
+    _, bat_count = _scaffold_pipeline(name)
     print(f"✓ pipelines/{name}/ を作成しました")
     for sub in _SUBDIRS:
         print(f"  - {sub}/")
-    print(f"✓ bat ファイルを配置しました ({len(_BAT_DEFS)} files)")
+    print(f"✓ bat ファイルを配置しました ({bat_count} files)")
     if (_TEMPLATES_DIR / "readme.txt").exists():
         print("✓ readme.txt を配置しました")
 
