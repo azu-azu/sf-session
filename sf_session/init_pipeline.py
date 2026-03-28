@@ -12,6 +12,8 @@ import re
 import sys
 from pathlib import Path
 
+from .utils import setup_logging
+
 logger = logging.getLogger(__name__)
 
 _PACKAGE_DIR = Path(__file__).resolve().parent
@@ -160,18 +162,19 @@ def _scaffold_pipeline(name: str) -> tuple[Path, int]:
 
 
 def main() -> None:
+    setup_logging()
     name = input("pipeline名を入力してください: ").strip()
 
     # validation
     if not name:
-        print("[ERROR] pipeline名が空です")
+        logger.error("pipeline名が空です")
         return
     if not re.fullmatch(r"[a-zA-Z0-9_-]+", name):
-        print("[ERROR] pipeline名は英数字・ハイフン・アンダースコアのみ使用できます")
+        logger.error("pipeline名は英数字・ハイフン・アンダースコアのみ使用できます")
         return
     existing = _existing_pipelines()
     if name in existing:
-        print(f"[ERROR] pipeline '{name}' は既に存在します: {', '.join(existing)}")
+        logger.error("pipeline '%s' は既に存在します: %s", name, ", ".join(existing))
         return
 
     # 1. update .env
@@ -241,11 +244,12 @@ def ensure_pipelines() -> None:
         except RuntimeError as e:
             logger.warning("OUTPUT_ROOT_PATH skipped for %s: %s", name, e)
 
-        print(f"Created pipeline: {name}")
+        logger.info("Created pipeline: %s", name)
 
 
 if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] == "--ensure":
+        setup_logging()
         ensure_pipelines()
     else:
         main()
