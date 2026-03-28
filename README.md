@@ -60,7 +60,7 @@ API ではなく、ブラウザの export URL (`?export=1`) を使う VBA マク
 | `sf_session/macro_book_reader.py` | ジョブ定義 (`JobEntry`) の読み取り。xlsm から直接読み取り |
 | `sf_session/config.py` | 共通パス定数 + `create_sf_client()` |
 | `sf_session/clean.py` | `__pycache__` / `.pyc` / `.log` 等のクリーンアップ |
-| `sf_session/cleanup_csv.py` | テスト用 CSV の一括削除 (devtest 専用、safety guard 付き) |
+| `sf_session/cleanup_test_csv.py` | テスト用 CSV の一括削除 (devtest 専用、safety guard 付き) |
 | `sf_session/init_pipeline.py` | 新規 pipeline の scaffolding（ディレクトリ・bat・.env を一括生成）。`--ensure` で .env 記載の missing pipeline を自動作成 |
 | `sf_session/report_filter/` | レポートのメタデータ抽出 (API 経由、データ本体は取らない) |
 
@@ -315,8 +315,8 @@ py -m pytest -v
 ### テスト用 CSV の削除 (devtest 専用)
 
 ```powershell
-00_cleanup_test_csv.bat             # csv_dir + direct-deliver 先の *.csv を一括削除
-00_cleanup_test_csv.bat --dry-run   # 削除せず対象だけ表示
+■00_cleanup_test_csv.bat             # csv_dir + direct-deliver 先の *.csv を一括削除
+■00_cleanup_test_csv.bat --dry-run   # 削除せず対象だけ表示
 ```
 
 devtest pipeline の csv_dir（`_prev_*` / `_work_*` 含む）と、マクロ定義の振り分け先フォルダから `*.csv` を削除する。
