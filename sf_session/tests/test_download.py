@@ -399,25 +399,15 @@ class TestDryRun:
 
 
 class TestResolveUserDataDir:
-    def _make_ns(self, **overrides):
-        defaults = dict(
-            my_chrome=False,
-            user_data_dir=CHROME_USER_DATA_DIR,
-        )
-        defaults.update(overrides)
-        return argparse.Namespace(**defaults)
-
     def test_my_chrome_returns_none(self):
-        ns = self._make_ns(my_chrome=True)
-        assert _resolve_user_data_dir(ns) is None
+        assert _resolve_user_data_dir(True, CHROME_USER_DATA_DIR) is None
 
     def test_my_chrome_warns_on_custom_user_data_dir(self, caplog, monkeypatch):
         monkeypatch.setattr(
             "sf_session.download.cli.ensure_exists", lambda *a: None,
         )
-        ns = self._make_ns(my_chrome=True, user_data_dir="/other")
         with caplog.at_level(logging.WARNING):
-            result = _resolve_user_data_dir(ns)
+            result = _resolve_user_data_dir(True, "/other")
         assert result is None
         assert "無視" in caplog.text
 
@@ -425,13 +415,11 @@ class TestResolveUserDataDir:
         monkeypatch.setattr(
             "sf_session.download.cli.ensure_exists", lambda *a: None,
         )
-        ns = self._make_ns(user_data_dir=str(tmp_path))
-        result = _resolve_user_data_dir(ns)
+        result = _resolve_user_data_dir(False, str(tmp_path))
         assert result == tmp_path.resolve()
 
     def test_empty_user_data_dir(self):
-        ns = self._make_ns(user_data_dir="")
-        assert _resolve_user_data_dir(ns) is None
+        assert _resolve_user_data_dir(False, "") is None
 
 
 # ── Gap 5: close_browser_session finally block ───────────

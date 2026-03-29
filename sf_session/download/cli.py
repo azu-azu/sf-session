@@ -61,49 +61,65 @@ from ..session import (
 logger = logging.getLogger(__name__)
 
 
+# ── config ──────────────────────────────────────────────
+
+
+@dataclasses.dataclass(frozen=True)
+class RunConfig:
+    """parse 後に resolve 済みの実行設定。"""
+
+    chrome_path: Path
+    download_dir: Path
+    user_data_dir: Path | None
+    profile_directory: str | None
+    port: int
+    pipeline: str
+    timeout: int
+    poll: float
+    interval: float
+    direct_deliver: bool
+    mkdir: bool
+    open_download_dir: bool
+    open_output_dir: bool
+
+
 # ── internal helpers ─────────────────────────────────────
 
 
-def _resolve_user_data_dir(args: argparse.Namespace) -> Path | None:
+def _resolve_user_data_dir(my_chrome: bool, raw_user_data_dir: str) -> Path | None:
     """--my-chrome 処理を含む user_data_dir 解決。"""
-    if args.my_chrome:
-        if args.user_data_dir != CHROME_USER_DATA_DIR:
+    if my_chrome:
+        if raw_user_data_dir != CHROME_USER_DATA_DIR:
             logger.warning("--my-chrome が指定されたため --user-data-dir は無視されます")
         return None
 
-    if not args.user_data_dir:
+    if not raw_user_data_dir:
         return None
 
-    resolved = Path(args.user_data_dir).expanduser().resolve()
+    resolved = Path(raw_user_data_dir).expanduser().resolve()
     ensure_exists(resolved, "Chrome user data dir")
     return resolved
 
 
-def _log_run_config(
-    chrome_path: Path,
-    download_dir: Path,
-    user_data_dir: Path | None,
-    args: argparse.Namespace,
-    output_dir: Path | None,
-) -> None:
+def _log_run_config(cfg: RunConfig, output_dir: Path | None) -> None:
     """設定値をログ出力。"""
-    logger.info("Chrome      : %s", chrome_path)
-    logger.info("Downloads   : %s", download_dir)
-    if user_data_dir is not None:
-        logger.info("UserDataDir : %s", user_data_dir)
-    if args.profile_directory:
-        logger.info("Profile     : %s", args.profile_directory)
-    logger.info("Port        : %d", args.port)
-    logger.info("Timeout     : %ds", args.timeout)
+    logger.info("Chrome      : %s", cfg.chrome_path)
+    logger.info("Downloads   : %s", cfg.download_dir)
+    if cfg.user_data_dir is not None:
+        logger.info("UserDataDir : %s", cfg.user_data_dir)
+    if cfg.profile_directory:
+        logger.info("Profile     : %s", cfg.profile_directory)
+    logger.info("Port        : %d", cfg.port)
+    logger.info("Timeout     : %ds", cfg.timeout)
     if output_dir:
         logger.info("Output dir  : %s", output_dir)
     else:
         logger.info("Output mode : direct-deliver (per-job)")
 
 
-def _print_dry_run(args: argparse.Namespace, jobs, *, csv_dir: Path) -> None:
+def _print_dry_run(direct_deliver: bool, jobs, *, csv_dir: Path) -> None:
     """dry-run モードのジョブ一覧表示。"""
-    if not args.direct_deliver:
+    if not direct_deliver:
         logger.info("Output dir  : %s", csv_dir)
     logger.info("--- dry-run mode ---")
     dummy_dl = Path("{download}")
@@ -111,7 +127,7 @@ def _print_dry_run(args: argparse.Namespace, jobs, *, csv_dir: Path) -> None:
         rid = j.report_id or "(なし)"
         enc = j.encode if j.encode else "Shift_JIS"
         url = build_export_url(rid, enc=enc) if j.report_id else "(URL 構築不可)"
-        if not args.direct_deliver:
+        if not direct_deliver:
             dest = build_destination(
                 j, dummy_dl,
                 output_dir=csv_dir,
@@ -244,18 +260,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 # ── main ─────────────────────────────────────────────────
 
 
-def _prepare_session(
-    args: argparse.Namespace,
-    chrome_path: Path,
-    user_data_dir: Path | None,
-) -> BrowserSession | None:
-    """pre-flight login check。失敗時は None ではなく例外を raise。"""
-    if args.no_login_check:
-        return None
+def _prepare_session(cfg: RunConfig) -> BrowserSession:
+    """pre-flight login check。失敗時は例外を raise。"""
     session = prepare_salesforce_session(
-        port=args.port,
-        chrome_exe=str(chrome_path),
-        user_data_dir=str(user_data_dir) if user_data_dir else None,
+        port=cfg.port,
+        chrome_exe=str(cfg.chrome_path),
+        user_data_dir=str(cfg.user_data_dir) if cfg.user_data_dir else None,
         url=SF_HOME_URL,
         try_existing=True,
     )
@@ -291,11 +301,8 @@ def _finalize(
 
 
 def _execute(
-    args: argparse.Namespace,
+    cfg: RunConfig,
     active_jobs: list[JobEntry],
-    chrome_path: Path,
-    download_dir: Path,
-    user_data_dir: Path | None,
     session: BrowserSession | None,
     *,
     csv_dir: Path,
@@ -307,8 +314,8 @@ def _execute(
     work_dir: Path | None = None
 
     try:
-        if args.direct_deliver:
-            errors = probe_destinations(active_jobs, mkdir=args.mkdir)
+        if cfg.direct_deliver:
+            errors = probe_destinations(active_jobs, mkdir=cfg.mkdir)
             if errors:
                 for msg in errors:
                     logger.error("移動先フォルダに問題があります: %s", msg)
@@ -320,44 +327,44 @@ def _execute(
             probe_output_dir(OUTPUT_ROOT.parent)
             OUTPUT_ROOT.mkdir(exist_ok=True)
 
-        if args.direct_deliver:
+        if cfg.direct_deliver:
             output_dir = None
         else:
             work_dir = prepare_work_dir(csv_dir)
             output_dir = work_dir
 
-        _log_run_config(chrome_path, download_dir, user_data_dir, args, output_dir)
+        _log_run_config(cfg, output_dir)
 
-        if args.open_download_dir:
-            open_folder(download_dir)
-        if args.open_output_dir:
+        if cfg.open_download_dir:
+            open_folder(cfg.download_dir)
+        if cfg.open_output_dir:
             open_folder(output_dir if output_dir else OUTPUT_ROOT.parent)
 
         if output_dir is not None:
             write_start_marker(output_dir, len(active_jobs))
 
-        phase = "direct" if args.direct_deliver else "dl"
+        phase = "direct" if cfg.direct_deliver else "dl"
         write_pipeline_status(
-            OUTPUT_ROOT.parent, args.pipeline, phase,
+            OUTPUT_ROOT.parent, cfg.pipeline, phase,
             f"START_{time_label()}_{len(active_jobs)}件の予定",
         )
 
         results = export_batch(
-            chrome_path,
+            cfg.chrome_path,
             active_jobs,
-            download_dir,
-            timeout=args.timeout,
-            poll=args.poll,
-            interval=args.interval,
+            cfg.download_dir,
+            timeout=cfg.timeout,
+            poll=cfg.poll,
+            interval=cfg.interval,
             output_dir=output_dir,
-            user_data_dir=user_data_dir,
-            profile_directory=args.profile_directory,
+            user_data_dir=cfg.user_data_dir,
+            profile_directory=cfg.profile_directory,
             driver=driver,
         )
 
         return _finalize(
             results,
-            pipeline=args.pipeline, phase=phase,
+            pipeline=cfg.pipeline, phase=phase,
             work_dir=work_dir, csv_dir=csv_dir, result_dir=result_dir,
         )
     except KeyboardInterrupt:
@@ -398,7 +405,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.dry_run:
-        _print_dry_run(args, active_jobs, csv_dir=pipeline.csv_dir)
+        _print_dry_run(args.direct_deliver, active_jobs, csv_dir=pipeline.csv_dir)
         return 0
 
     # --- resolve paths ---
@@ -408,17 +415,35 @@ def main(argv: list[str] | None = None) -> int:
     download_dir = resolve_download_dir(args.download_dir)
     ensure_exists(download_dir, "Download directory")
 
-    user_data_dir = _resolve_user_data_dir(args)
+    user_data_dir = _resolve_user_data_dir(args.my_chrome, args.user_data_dir)
+
+    cfg = RunConfig(
+        chrome_path=chrome_path,
+        download_dir=download_dir,
+        user_data_dir=user_data_dir,
+        profile_directory=args.profile_directory,
+        port=args.port,
+        pipeline=args.pipeline,
+        timeout=args.timeout,
+        poll=args.poll,
+        interval=args.interval,
+        direct_deliver=args.direct_deliver,
+        mkdir=args.mkdir,
+        open_download_dir=args.open_download_dir,
+        open_output_dir=args.open_output_dir,
+    )
 
     # --- pre-flight login ---
-    try:
-        session = _prepare_session(args, chrome_path, user_data_dir)
-    except Exception:  # Chrome + Selenium + SF login — 例外が多岐にわたるため broad catch
-        logger.exception("pre-flight login check に失敗したため中断します")
-        return 1
+    session = None
+    if not args.no_login_check:
+        try:
+            session = _prepare_session(cfg)
+        except Exception:  # Chrome + Selenium + SF login — 例外が多岐にわたるため broad catch
+            logger.exception("pre-flight login check に失敗したため中断します")
+            return 1
 
     # --- execute ---
     return _execute(
-        args, active_jobs, chrome_path, download_dir, user_data_dir, session,
+        cfg, active_jobs, session,
         csv_dir=pipeline.csv_dir, result_dir=pipeline.result_dir,
     )
