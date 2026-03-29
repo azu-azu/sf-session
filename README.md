@@ -43,7 +43,7 @@ API ではなく、ブラウザの export URL (`?export=1`) を使う VBA マク
 | スクリプト | 役割 |
 |---|---|
 | `01_stay_awake.bat` | Windows スリープ防止（`--minutes` で時間指定、0 で無制限） |
-| `98_setup_初回または設定更新の場合のみ実行する.bat` | venv 作成 + pip upgrade + 依存パッケージ install + missing pipeline 自動作成（初回のみ実行） |
+| `98_setup_初回または設定更新の場合のみ実行する.bat` | Python version チェック (>=3.12) + venv 作成 + pip upgrade + 依存パッケージ install + missing pipeline 自動作成（初回のみ実行） |
 | `sf_session/keeper.py` | Chrome 起動 → 手動ログイン待機（SSO / MFA）→ 定期 reload でセッション維持 |
 | `sf_session/download/cli.py` | 営業日ガード + pre-flight login check 付きバッチ export orchestration |
 | `sf_session/download/runner.py` | レポート export 実行エンジン (export_one / export_batch) |
@@ -68,7 +68,7 @@ API ではなく、ブラウザの export URL (`?export=1`) を使う VBA マク
 ## セットアップ
 
 ```powershell
-# 初回のみ実行（venv 作成 + 依存 install + missing pipeline 自動作成）
+# 初回のみ実行（Python version チェック + venv 作成 + 依存 install + missing pipeline 自動作成）
 98_setup_初回または設定更新の場合のみ実行する.bat
 ```
 
@@ -287,12 +287,21 @@ py -m sf_session.report_filter archive
 
 各ステップの実行状態を示す txt ファイルが自動生成される。
 
+**★ marker** — csv_dir 内に配置。START と完了が両方残る。
+
 | マーカー | 配置先 | 用途 |
 |---|---|---|
-| `★{time}_START_{N}件の予定.txt` | csv_dir (`OUTPUT_ROOT/{pipeline}/csv/`) | download 開始マーカー |
-| `★{time}_成功{N}件_失敗{N}件.txt` | csv_dir (`OUTPUT_ROOT/{pipeline}/csv/`) | download 完了マーカー |
-| `★{time}_振り分け完了.txt` | source_dir (= csv_dir) | file_deliver 完了マーカー |
-| `_{pipeline}_{phase}_{label}.txt` | `OUTPUT_ROOT.parent` | pipeline status マーカー |
+| `★{time}_START_{N}件の予定.txt` | csv_dir (`OUTPUT_ROOT/{pipeline}/csv/`) | download 開始 |
+| `★{time}_成功{N}件_失敗{N}件.txt` | csv_dir (`OUTPUT_ROOT/{pipeline}/csv/`) | download 完了 |
+| `★{time}_振り分け完了.txt` | source_dir (= csv_dir) | file_deliver 完了 |
+
+**_ marker** — `OUTPUT_ROOT.parent` に配置。同 phase の旧ファイルは上書きで消える（START → 完了で START は消える）。
+
+| マーカー | 配置先 | 用途 |
+|---|---|---|
+| `_{pipeline}_{phase}_START_{time}_{N}件の予定.txt` | `OUTPUT_ROOT.parent` | download/direct 開始 |
+| `_{pipeline}_{phase}_{time}_成功{N}件_失敗{N}件.txt` | `OUTPUT_ROOT.parent` | download/direct 完了 |
+| `_{pipeline}_dv_{time}_振り分け完了.txt` | `OUTPUT_ROOT.parent` | file_deliver 完了 |
 
 ```
 OUTPUT_ROOT.parent/
