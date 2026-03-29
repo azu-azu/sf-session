@@ -264,9 +264,10 @@ def _prepare_session(
 
 
 def _finalize(
-    args: argparse.Namespace,
     results: list,
     *,
+    pipeline: str,
+    phase: str,
     work_dir: Path | None,
     csv_dir: Path,
     result_dir: Path,
@@ -279,10 +280,9 @@ def _finalize(
         write_completion_marker(work_dir, ok, ng)
         swap_work_to_staging(work_dir, csv_dir, ok)
 
-    phase = "direct" if args.direct_deliver else "dl"
     other = "dl" if phase == "direct" else "direct"
     write_pipeline_status(
-        OUTPUT_ROOT.parent, args.pipeline, phase,
+        OUTPUT_ROOT.parent, pipeline, phase,
         f"{time_label()}_成功{ok}件_失敗{ng}件",
         clear_phases=[other, "dv"],
     )
@@ -336,6 +336,12 @@ def _execute(
         if output_dir is not None:
             write_start_marker(output_dir, len(active_jobs))
 
+        phase = "direct" if args.direct_deliver else "dl"
+        write_pipeline_status(
+            OUTPUT_ROOT.parent, args.pipeline, phase,
+            f"START_{time_label()}_{len(active_jobs)}件の予定",
+        )
+
         results = export_batch(
             chrome_path,
             active_jobs,
@@ -350,7 +356,8 @@ def _execute(
         )
 
         return _finalize(
-            args, results,
+            results,
+            pipeline=args.pipeline, phase=phase,
             work_dir=work_dir, csv_dir=csv_dir, result_dir=result_dir,
         )
     except KeyboardInterrupt:
