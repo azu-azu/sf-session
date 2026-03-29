@@ -327,6 +327,9 @@ def _execute(
             probe_output_dir(OUTPUT_ROOT.parent)
             OUTPUT_ROOT.mkdir(exist_ok=True)
 
+        # direct_deliver: 各 job の振り分け先へ直接コピー
+        # それ以外: work_dir に一旦 export し、完了後に csv_dir へ atomic swap
+        #           → 途中 crash しても csv_dir が中途半端な状態にならない
         if cfg.direct_deliver:
             output_dir = None
         else:
