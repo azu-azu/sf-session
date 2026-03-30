@@ -126,11 +126,16 @@ def _get_output_root() -> Path:
     return Path(raw)
 
 
-def _ensure_macro_dir(name: str) -> tuple[Path, bool]:
-    macro_root_raw = _read_env_value("MACRO_ROOT_PATH")
-    if not macro_root_raw:
+def _get_macro_root() -> Path:
+    """MACRO_ROOT_PATH を .env から取得する。"""
+    raw = _read_env_value("MACRO_ROOT_PATH")
+    if not raw:
         raise RuntimeError("MACRO_ROOT_PATH not found in .env")
-    macro_dir = Path(macro_root_raw) / name
+    return Path(raw)
+
+
+def _ensure_macro_dir(name: str, macro_root: Path) -> tuple[Path, bool]:
+    macro_dir = macro_root / name
     created = not macro_dir.exists()
     macro_dir.mkdir(parents=True, exist_ok=True)
     return macro_dir, created
@@ -192,7 +197,8 @@ def main() -> None:
 
     # 3. macro directory (MACRO_ROOT_PATH)
     try:
-        macro_dir, created = _ensure_macro_dir(name)
+        macro_root = _get_macro_root()
+        macro_dir, created = _ensure_macro_dir(name, macro_root)
         if created:
             print(f"✓ {macro_dir} を作成しました")
             print(f"⚠ マクロファイル (.xlsm) を {macro_dir} に格納してください")
@@ -219,32 +225,42 @@ def main() -> None:
 
 
 def ensure_pipelines() -> None:
-    """PIPELINES に列挙された pipeline で、pipelines/ に存在しないものを自動作成する。"""
+    """PIPELINES に列挙された各 pipeline の scaffold・output dir・macro dir を ensure する。"""
     names = _existing_pipelines()
     if not names:
         return
 
+    # loop 中に変わらない値は先に読む
+    macro_root: Path | None = None
+    try:
+        macro_root = _get_macro_root()
+    except RuntimeError:
+        logger.warning("MACRO_ROOT_PATH not found — skipping macro dirs")
+
+    output_root: Path | None = None
+    try:
+        output_root = _get_output_root()
+    except RuntimeError:
+        logger.warning("OUTPUT_ROOT_PATH not found — skipping output dirs")
+
     for name in names:
-        if (_PIPELINES_DIR / name).exists():
-            continue
+        # scaffold only if pipelines/ dir doesn't exist yet
+        if not (_PIPELINES_DIR / name).exists():
+            logger.info("Creating missing pipeline: %s", name)
+            _scaffold_pipeline(name)
+            logger.info("Created pipeline: %s", name)
 
-        logger.info("Creating missing pipeline: %s", name)
-        _scaffold_pipeline(name)
+        # macro directory — always ensure (failure is non-fatal)
+        if macro_root is not None:
+            macro_dir, created = _ensure_macro_dir(name, macro_root)
+            if created:
+                logger.info("Created macro dir: %s", macro_dir)
 
-        # macro directory (failure is non-fatal)
-        try:
-            _ensure_macro_dir(name)
-        except RuntimeError as e:
-            logger.warning("MACRO_ROOT_PATH skipped for %s: %s", name, e)
-
-        # output directory (failure is non-fatal)
-        try:
-            output_root = _get_output_root()
-            _ensure_output_dir(name, output_root)
-        except RuntimeError as e:
-            logger.warning("OUTPUT_ROOT_PATH skipped for %s: %s", name, e)
-
-        logger.info("Created pipeline: %s", name)
+        # output directory — always ensure (failure is non-fatal)
+        if output_root is not None:
+            csv_dir, created = _ensure_output_dir(name, output_root)
+            if created:
+                logger.info("Created output dir: %s", csv_dir)
 
 
 if __name__ == "__main__":

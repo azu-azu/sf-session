@@ -52,6 +52,9 @@ def test_ensure_creates_missing_pipeline(workspace: Path):
         assert (pipeline_dir / "★01_download.bat").exists()
         # devtest-only bat should NOT exist for normal pipelines
         assert not (pipeline_dir / "■00_cleanup_test_csv.bat").exists()
+        # output / macro dirs
+        assert (workspace / "output" / name / "csv").is_dir()
+        assert (workspace / "macro" / name).is_dir()
 
 
 def test_ensure_skips_existing_pipeline(workspace: Path):
@@ -67,6 +70,9 @@ def test_ensure_skips_existing_pipeline(workspace: Path):
     assert marker.read_text(encoding="utf-8") == "do not touch"
     # no bat files should have been created
     assert not (existing_dir / "★01_download.bat").exists()
+    # output / macro dirs should still be created for existing pipelines
+    assert (workspace / "output" / "existing" / "csv").is_dir()
+    assert (workspace / "macro" / "existing").is_dir()
 
 
 def test_ensure_no_pipelines(workspace: Path):
