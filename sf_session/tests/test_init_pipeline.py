@@ -49,9 +49,9 @@ def test_ensure_creates_missing_pipeline(workspace: Path):
         assert (pipeline_dir / "ids_file" / "ids.txt").exists()
         assert (pipeline_dir / "readme.txt").exists()
         # bat files
-        assert (pipeline_dir / "★01_download.bat").exists()
+        assert (pipeline_dir / "01_download.bat").exists()
         # devtest-only bat should NOT exist for normal pipelines
-        assert not (pipeline_dir / "■00_cleanup_test_csv.bat").exists()
+        assert not (pipeline_dir / "00_cleanup_test_csv.bat").exists()
         # output / macro dirs
         assert (workspace / "output" / name / "csv").is_dir()
         assert (workspace / "macro" / name).is_dir()
@@ -69,7 +69,7 @@ def test_ensure_skips_existing_pipeline(workspace: Path):
     # marker file should remain untouched — no recreation happened
     assert marker.read_text(encoding="utf-8") == "do not touch"
     # no bat files should have been created
-    assert not (existing_dir / "★01_download.bat").exists()
+    assert not (existing_dir / "01_download.bat").exists()
     # output / macro dirs should still be created for existing pipelines
     assert (workspace / "output" / "existing" / "csv").is_dir()
     assert (workspace / "macro" / "existing").is_dir()
@@ -93,6 +93,6 @@ def test_ensure_creates_devtest_with_extra_bat(workspace: Path):
     pipeline_dir = workspace / "pipelines" / "devtest"
     assert pipeline_dir.is_dir()
     # common bat files should exist
-    assert (pipeline_dir / "★01_download.bat").exists()
+    assert (pipeline_dir / "01_download.bat").exists()
     # devtest-only bat should exist
-    assert (pipeline_dir / "■00_cleanup_test_csv.bat").exists()
+    assert (pipeline_dir / "00_cleanup_test_csv.bat").exists()

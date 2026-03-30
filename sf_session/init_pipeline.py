@@ -25,6 +25,7 @@ _SUBDIRS = ("result", "ids_file")
 
 _BAT_TEMPLATE = """\
 @echo off
+chcp 65001 >nul
 cd /d "%~dp0..\\.."
 
 if not exist ".venv\\Scripts\\python.exe" (
@@ -38,8 +39,8 @@ pause
 """
 
 _BAT_DEFS = (
-    ("★01_download.bat",      "sf_session.download",          ""),
-    ("★02_振り分け.bat",       "sf_session.file_deliver",      ""),
+    ("01_download.bat",        "sf_session.download",          ""),
+    ("02_file_deliver.bat",    "sf_session.file_deliver",      ""),
     ("03_download_direct.bat", "sf_session.download",          " --direct-deliver"),
     ("11_download_ids.bat",    "sf_session.download",          " --ids-file"),
     ("12_download_retry.bat",  "sf_session.download",          " --retry"),
@@ -49,7 +50,14 @@ _BAT_DEFS = (
 )
 
 _DEVTEST_BAT_DEFS = (
-    ("■00_cleanup_test_csv.bat", "sf_session.cleanup_test_csv", ""),
+    ("00_cleanup_test_csv.bat", "sf_session.cleanup_test_csv", ""),
+)
+
+# v0.x で使っていた非 ASCII ファイル名。リネーム後の初回実行で残骸を掃除する。
+_LEGACY_BAT_NAMES = (
+    "★01_download.bat",
+    "★02_振り分け.bat",
+    "■00_cleanup_test_csv.bat",
 )
 
 
@@ -104,6 +112,15 @@ def _create_directories(name: str) -> Path:
     if not ids_txt.exists():
         ids_txt.write_text(_IDS_TXT_TEMPLATE, encoding="utf-8")
     return pipeline_dir
+
+
+def _cleanup_legacy_bats(pipeline_dir: Path) -> None:
+    """旧バージョンの非 ASCII bat ファイルを削除する。"""
+    for legacy in _LEGACY_BAT_NAMES:
+        old = pipeline_dir / legacy
+        if old.exists():
+            old.unlink()
+            logger.info("Removed legacy bat: %s", old.name)
 
 
 def _generate_bat_files(name: str, pipeline_dir: Path) -> int:
@@ -245,7 +262,10 @@ def ensure_pipelines() -> None:
 
     for name in names:
         # scaffold only if pipelines/ dir doesn't exist yet
-        if not (_PIPELINES_DIR / name).exists():
+        pipeline_dir = _PIPELINES_DIR / name
+        _cleanup_legacy_bats(pipeline_dir)
+
+        if not pipeline_dir.exists():
             logger.info("Creating missing pipeline: %s", name)
             _scaffold_pipeline(name)
             logger.info("Created pipeline: %s", name)
