@@ -59,8 +59,12 @@ class PipelineConfig:
         return PIPELINES_DIR / self.name / _RESULT_SUBDIR
 
     @property
+    def ids_dir(self) -> Path:
+        return PIPELINES_DIR / self.name / _IDS_FILE_SUBDIR
+
+    @property
     def ids_file(self) -> Path:
-        return PIPELINES_DIR / self.name / _IDS_FILE_SUBDIR / "ids.txt"
+        return self.ids_dir / "ids.txt"
 
 
 def _load_pipelines() -> dict[str, PipelineConfig]:

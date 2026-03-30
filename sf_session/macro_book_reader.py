@@ -208,6 +208,16 @@ def load_active_jobs(
     return active
 
 
+def write_ids_all(jobs: list[JobEntry], ids_dir: Path) -> Path:
+    """マクロファイル内の全 report_id を ids_all.txt に出力する。"""
+    all_ids = [j.report_id for j in jobs if j.report_id]
+    ids_dir.mkdir(parents=True, exist_ok=True)
+    out = ids_dir / "ids_all.txt"
+    out.write_text("\n".join(all_ids) + "\n", encoding="utf-8")
+    logger.info("ids_all.txt 出力: %d 件 → %s", len(all_ids), out)
+    return out
+
+
 def _log_jobs(entries: list[JobEntry]) -> None:
     """ジョブ定義をテーブル形式でターミナルに表示する。"""
     header = (
@@ -259,3 +269,5 @@ if __name__ == "__main__":
         logger.info("ファイル: %s (更新: %s)", xlsm_path.name, mtime.strftime("%Y-%m-%d %H:%M"))
         jobs = read_jobs_from_xlsm(xlsm_path)
         _log_jobs(jobs)
+
+        write_ids_all(jobs, _pipeline.ids_dir)
