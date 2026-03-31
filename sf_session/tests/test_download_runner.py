@@ -279,6 +279,81 @@ def _stub_export_common(monkeypatch, tmp_path):
     )
 
 
+class TestMoveRetry:
+    """shutil.move の retry をテストする。"""
+
+    def _setup(self, tmp_path, monkeypatch, downloaded):
+        monkeypatch.setattr(
+            "sf_session.download.runner.snapshot_files", lambda *a, **kw: {}
+        )
+        monkeypatch.setattr(
+            "sf_session.download.runner.subprocess.Popen", lambda cmd: None
+        )
+        monkeypatch.setattr(
+            "sf_session.download.runner.wait_for_new_download",
+            lambda *a, **kw: downloaded,
+        )
+        monkeypatch.setattr(
+            "sf_session.download.runner._MOVE_RETRY_WAIT", 0.0,
+        )
+
+    def test_retry_succeeds_on_second_attempt(self, tmp_path, monkeypatch):
+        """1回目 OSError → 2回目で成功。"""
+        from unittest.mock import patch
+
+        dest_dir = tmp_path / "output"
+        dest_dir.mkdir()
+        downloaded = tmp_path / "dl" / "report.csv"
+        downloaded.parent.mkdir()
+        downloaded.write_text("data")
+
+        job = make_job(no="1", report_id="00O123", src_folder_name=str(dest_dir))
+        self._setup(tmp_path, monkeypatch, downloaded)
+
+        call_count = {"n": 0}
+        real_move = __import__("shutil").move
+
+        def flaky_move(src, dst, **kw):
+            call_count["n"] += 1
+            if call_count["n"] == 1:
+                raise OSError(1006, "ERROR_FILE_INVALID")
+            return real_move(src, dst, **kw)
+
+        with patch("sf_session.download.runner.shutil.move", side_effect=flaky_move):
+            with patch("sf_session.utils.datetime") as mock_dt:
+                mock_dt.now.return_value.strftime.return_value = "20260401"
+                results = export_batch(
+                    Path("/dummy/chrome"), [job], tmp_path / "dl", interval=0,
+                )
+
+        assert results[0].success
+        assert call_count["n"] == 2
+
+    def test_retry_exhausted_marks_failure(self, tmp_path, monkeypatch):
+        """全 attempt 失敗 → success=False。"""
+        from unittest.mock import patch
+
+        dest_dir = tmp_path / "output"
+        dest_dir.mkdir()
+        downloaded = tmp_path / "dl" / "report.csv"
+        downloaded.parent.mkdir()
+        downloaded.write_text("data")
+
+        job = make_job(no="1", report_id="00O123", src_folder_name=str(dest_dir))
+        self._setup(tmp_path, monkeypatch, downloaded)
+
+        def always_fail(src, dst, **kw):
+            raise OSError(1006, "ERROR_FILE_INVALID")
+
+        with patch("sf_session.download.runner.shutil.move", side_effect=always_fail):
+            results = export_batch(
+                Path("/dummy/chrome"), [job], tmp_path / "dl", interval=0,
+            )
+
+        assert not results[0].success
+        assert "移動失敗" in results[0].error
+
+
 class TestLoginRecovery:
     """driver が truthy なときの login recovery branch をテストする。"""
 

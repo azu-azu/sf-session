@@ -41,6 +41,24 @@ logger = logging.getLogger(__name__)
 DEFAULT_TIMEOUT = 600  # per-report seconds
 DEFAULT_POLL = 2.0  # poll interval seconds
 DEFAULT_INTERVAL = 2.0  # inter-report wait seconds
+_MOVE_MAX_ATTEMPTS = 3
+_MOVE_RETRY_WAIT = 3.0  # seconds
+
+
+def _move_with_retry(src: Path, dest: Path, *, seq: int) -> None:
+    """shutil.move + retry for transient network errors."""
+    for attempt in range(1, _MOVE_MAX_ATTEMPTS + 1):
+        try:
+            shutil.move(str(src), str(dest))
+            return
+        except OSError as e:
+            if attempt >= _MOVE_MAX_ATTEMPTS:
+                raise
+            logger.warning(
+                "[%d件目] 移動失敗 (attempt %d/%d): %s — %.0fs 後にリトライ",
+                seq, attempt, _MOVE_MAX_ATTEMPTS, e, _MOVE_RETRY_WAIT,
+            )
+            time.sleep(_MOVE_RETRY_WAIT)
 
 
 @dataclass
@@ -232,7 +250,7 @@ def export_batch(
             )
         else:
             try:
-                shutil.move(str(result.dest_path), str(dest))
+                _move_with_retry(result.dest_path, dest, seq=seq)
                 logger.info("[%d件目] 移動完了: %s", seq, dest)
                 result.dest_path = dest
             except OSError as e:
