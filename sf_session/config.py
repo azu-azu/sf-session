@@ -29,14 +29,56 @@ CHROME_USER_DATA_DIR = os.environ.get("CHROME_USER_DATA_DIR", r"C:\ChromeProfile
 SF_BASE_URL = os.environ["SF_BASE_URL"]
 SF_HOME_URL = f"{SF_BASE_URL}/home/home.jsp"
 
+
+# ── path resolve (Z: fallback) ───────────────────────
+
+
+def _expand_path(raw: str) -> Path:
+    return Path(os.path.expandvars(os.path.expanduser(raw)))
+
+
+def _normalize_drive(path: Path) -> str:
+    return str(path).replace("/", "\\")
+
+
+def _is_z_drive(normalized: str) -> bool:
+    return normalized[:2].lower() == "z:"
+
+
+def _needs_home_fallback(path: Path) -> bool:
+    return _is_z_drive(_normalize_drive(path)) and not path.exists()
+
+
+def _to_home_fallback(normalized: str) -> Path:
+    return Path.home() / normalized[3:]
+
+
+_MACRO_ROOT_RAW = os.environ.get("MACRO_ROOT_PATH")
+_OUTPUT_ROOT_RAW = os.environ.get("OUTPUT_ROOT_PATH")
+
+if _MACRO_ROOT_RAW is None:
+    USE_HOME_FALLBACK = False
+else:
+    USE_HOME_FALLBACK = _needs_home_fallback(_expand_path(_MACRO_ROOT_RAW))
+
+
+def resolve_project_path(raw: str | Path) -> Path:
+    """外部由来の path を resolve する。Z: が見つからなければ ~/ に fallback。"""
+    path = _expand_path(str(raw))
+    s = _normalize_drive(path)
+    if USE_HOME_FALLBACK and _is_z_drive(s):
+        return _to_home_fallback(s)
+    return path
+
+
 # Macro root
 _MACRO_ROOT_PATH: Path | None = (
-    Path(os.environ["MACRO_ROOT_PATH"]) if "MACRO_ROOT_PATH" in os.environ else None
+    resolve_project_path(_MACRO_ROOT_RAW) if _MACRO_ROOT_RAW else None
 )
 
 # Output root (csv 出力先の root)
 OUTPUT_ROOT: Path | None = (
-    Path(os.environ["OUTPUT_ROOT_PATH"]) if "OUTPUT_ROOT_PATH" in os.environ else None
+    resolve_project_path(_OUTPUT_ROOT_RAW) if _OUTPUT_ROOT_RAW else None
 )
 
 

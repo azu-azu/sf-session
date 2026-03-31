@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from .runner import ExportResult
 
+from ..config import resolve_project_path
 from ..macro_book_reader import JobEntry
 from ..utils import build_output_stem, log_result_summary, time_label
 
@@ -40,7 +41,7 @@ def build_destination(
     output_dir が指定されていれば全ファイルをそこに出力し、
     未指定なら job.src_folder_name を使う。
     """
-    dest_dir = output_dir if output_dir else Path(job.src_folder_name)
+    dest_dir = output_dir if output_dir else resolve_project_path(job.src_folder_name)
     ext = downloaded.suffix
     raw_stem = job.new_filename if job.has_filename else downloaded.stem
     stem = build_output_stem(job.report_id, raw_stem)
@@ -114,7 +115,7 @@ def probe_destinations(jobs: list[JobEntry], *, mkdir: bool = False) -> list[str
             continue
         seen.add(folder)
         try:
-            probe_output_dir(Path(folder), mkdir=mkdir)
+            probe_output_dir(resolve_project_path(folder), mkdir=mkdir)
         except (FileNotFoundError, OSError) as e:
             errors.append(str(e))
     return errors

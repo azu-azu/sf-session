@@ -17,7 +17,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
-from .config import PIPELINES, VALID_PIPELINES
+from .config import PIPELINES, VALID_PIPELINES, resolve_project_path
 from .macro_book_reader import JobEntry, read_jobs
 from .utils import (
     build_output_stem,
@@ -149,7 +149,7 @@ def _collect_one_job(
 ) -> CollectResult:
     """1ジョブ分の CSV を検索・コピーする。"""
     report_id = job.report_id or job.no
-    source_folder = Path(job.src_folder_name)
+    source_folder = resolve_project_path(job.src_folder_name)
     t0 = time.monotonic()
 
     if not source_folder.is_dir():
@@ -220,7 +220,7 @@ def _dry_run_preview(
             continue
         seq += 1
         report_id = job.report_id or job.no
-        source_folder = Path(job.src_folder_name)
+        source_folder = resolve_project_path(job.src_folder_name)
 
         if not source_folder.is_dir():
             logger.info("  [%d件目] %s → (フォルダなし: %s)", seq, report_id, source_folder)

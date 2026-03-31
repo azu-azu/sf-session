@@ -12,6 +12,7 @@ import re
 import sys
 from pathlib import Path
 
+from .config import resolve_project_path
 from .utils import setup_logging
 
 logger = logging.getLogger(__name__)
@@ -152,7 +153,7 @@ def _get_output_root() -> Path:
     raw = _read_env_value("OUTPUT_ROOT_PATH")
     if not raw:
         raise RuntimeError("OUTPUT_ROOT_PATH not found in .env")
-    return Path(raw)
+    return resolve_project_path(raw)
 
 
 def _get_macro_root() -> Path:
@@ -160,7 +161,7 @@ def _get_macro_root() -> Path:
     raw = _read_env_value("MACRO_ROOT_PATH")
     if not raw:
         raise RuntimeError("MACRO_ROOT_PATH not found in .env")
-    return Path(raw)
+    return resolve_project_path(raw)
 
 
 def _ensure_macro_dir(name: str, macro_root: Path) -> tuple[Path, bool]:
