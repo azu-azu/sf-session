@@ -23,6 +23,7 @@ def workspace(tmp_path: Path):
         "_ENV_PATH": env_path,
         "_PIPELINES_DIR": pipelines_dir,
         "_TEMPLATES_DIR": templates_dir,
+        "_EXTRA_HOLIDAYS_PATH": pipelines_dir / "extra_holidays.csv",
     }
     with patch.multiple(init_pipeline, **patches):
         yield tmp_path
@@ -81,8 +82,33 @@ def test_ensure_no_pipelines(workspace: Path):
     # should simply return without error
     init_pipeline.ensure_pipelines()
 
-    # pipelines/ should be empty
-    assert list((workspace / "pipelines").iterdir()) == []
+    # pipelines/ には extra_holidays.csv のみ
+    children = [p.name for p in (workspace / "pipelines").iterdir()]
+    assert children == ["extra_holidays.csv"]
+
+
+def test_ensure_creates_extra_holidays_csv(workspace: Path):
+    _write_env(workspace, "alpha")
+
+    init_pipeline.ensure_pipelines()
+
+    csv_path = workspace / "pipelines" / "extra_holidays.csv"
+    assert csv_path.exists()
+    content = csv_path.read_text(encoding="utf-8")
+    # テンプレートはコメント行のみ（実データなし）
+    for line in content.splitlines():
+        assert line == "" or line.lstrip().startswith("#")
+
+
+def test_ensure_keeps_existing_extra_holidays_csv(workspace: Path):
+    _write_env(workspace, "alpha")
+    csv_path = workspace / "pipelines" / "extra_holidays.csv"
+    csv_path.write_text("2026-12-31\n", encoding="utf-8")
+
+    init_pipeline.ensure_pipelines()
+
+    # 既存ファイルは上書きしない
+    assert csv_path.read_text(encoding="utf-8") == "2026-12-31\n"
 
 
 def test_ensure_creates_devtest_with_extra_bat(workspace: Path):

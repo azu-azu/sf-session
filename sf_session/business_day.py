@@ -16,7 +16,8 @@ from sf_session.config import PIPELINES_DIR
 
 logger = logging.getLogger(__name__)
 
-EXTRA_HOLIDAYS_PATH = PIPELINES_DIR / "extra_holidays.csv"
+EXTRA_HOLIDAYS_FILENAME = "extra_holidays.csv"
+EXTRA_HOLIDAYS_PATH = PIPELINES_DIR / EXTRA_HOLIDAYS_FILENAME
 
 
 def load_extra_holidays(path: Path = EXTRA_HOLIDAYS_PATH) -> set[date]:
@@ -27,6 +28,8 @@ def load_extra_holidays(path: Path = EXTRA_HOLIDAYS_PATH) -> set[date]:
     with path.open(encoding="utf-8") as f:
         for row in csv.reader(f):
             if not row or not row[0].strip():
+                continue
+            if row[0].lstrip().startswith("#"):
                 continue
             try:
                 holidays.add(date.fromisoformat(row[0].strip()))

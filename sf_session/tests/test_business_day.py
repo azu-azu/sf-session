@@ -74,6 +74,12 @@ class TestLoadExtraHolidays:
         result = load_extra_holidays(csv_file)
         assert len(result) == 2
 
+    def test_skip_comment_lines(self, tmp_path):
+        csv_file = tmp_path / "holidays.csv"
+        csv_file.write_text("# コメント行\n2026-12-31\n# もう一つ\n")
+        result = load_extra_holidays(csv_file)
+        assert result == {date(2026, 12, 31)}
+
     def test_skip_invalid_date(self, tmp_path):
         csv_file = tmp_path / "holidays.csv"
         csv_file.write_text("2026-12-31\nnot-a-date\n")

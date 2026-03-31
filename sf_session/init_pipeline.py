@@ -22,6 +22,18 @@ _ENV_PATH = _PROJECT_ROOT / ".env"
 _PIPELINES_DIR = _PROJECT_ROOT / "pipelines"
 _TEMPLATES_DIR = _PACKAGE_DIR / "templates" / "pipeline"
 _SUBDIRS = ("result", "ids_file")
+_EXTRA_HOLIDAYS_FILENAME = "extra_holidays.csv"
+_EXTRA_HOLIDAYS_PATH = _PIPELINES_DIR / _EXTRA_HOLIDAYS_FILENAME
+
+_EXTRA_HOLIDAYS_TEMPLATE = """\
+# 追加休業日を 1行1日 YYYY-MM-DD 形式で記入する
+# 例:
+# 2026-12-29
+# 2026-12-30
+# 2026-12-31
+# 2027-01-02
+# 2027-01-03
+"""
 
 _BAT_TEMPLATE = """\
 @echo off
@@ -243,6 +255,11 @@ def main() -> None:
 
 def ensure_pipelines() -> None:
     """PIPELINES に列挙された各 pipeline の scaffold・output dir・macro dir を ensure する。"""
+    # extra_holidays.csv — pipeline 共通なので最初に 1 回だけ ensure
+    if not _EXTRA_HOLIDAYS_PATH.exists():
+        _EXTRA_HOLIDAYS_PATH.write_text(_EXTRA_HOLIDAYS_TEMPLATE, encoding="utf-8")
+        logger.info("Created %s", _EXTRA_HOLIDAYS_PATH)
+
     names = _existing_pipelines()
     if not names:
         return
