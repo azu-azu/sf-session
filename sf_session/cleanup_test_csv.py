@@ -39,9 +39,9 @@ def _collect_csv_dir_targets(csv_dir: Path) -> list[Path]:
 
 
 def _delete_csv_in_dir(directory: Path, *, dry_run: bool) -> int:
-    """directory 内の *.csv を削除し、削除件数を返す。"""
+    """directory 配下の *.csv を再帰的に削除し、削除件数を返す。"""
     count = 0
-    for f in sorted(directory.glob("*.csv")):
+    for f in sorted(directory.rglob("*.csv")):
         if not f.is_file():
             continue
         if dry_run:

@@ -61,6 +61,20 @@ class TestDeleteCsvInDir:
         assert count == 1
         assert (tmp_path / "a.csv").exists()
 
+    def test_deletes_csv_in_subdirs(self, tmp_path):
+        sub = tmp_path / "sub"
+        sub.mkdir()
+        (tmp_path / "a.csv").write_text("data")
+        (sub / "b.csv").write_text("data")
+        (sub / "keep.txt").write_text("keep")
+
+        count = _delete_csv_in_dir(tmp_path, dry_run=False)
+
+        assert count == 2
+        assert not (tmp_path / "a.csv").exists()
+        assert not (sub / "b.csv").exists()
+        assert (sub / "keep.txt").exists()
+
     def test_empty_dir(self, tmp_path):
         count = _delete_csv_in_dir(tmp_path, dry_run=False)
         assert count == 0
