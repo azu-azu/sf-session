@@ -18,11 +18,12 @@ import logging
 import shutil
 import sys
 import time
+from datetime import datetime
 from dataclasses import dataclass, replace as _dc_replace
 from pathlib import Path
 
 from .config import PIPELINES, VALID_PIPELINES, OUTPUT_ROOT
-from .download.outputs import build_destination, probe_destinations
+from .download.outputs import probe_destinations
 from .macro_book_reader import JobEntry, load_active_jobs
 from .utils import log_result_summary, setup_logging, time_label, write_pipeline_status
 
@@ -39,6 +40,24 @@ class DistributeResult:
     elapsed: float = 0.0
     dest_path: Path | None = None
     error: str = ""
+
+
+def build_destination(job: JobEntry, source: Path) -> Path:
+    """振り分け先パスを組み立てる。
+
+    rename 指定 (has_filename) があれば new_filename + 日付、
+    なければ元のファイル名をそのまま維持する。
+    """
+    dest_dir = Path(job.src_folder_name)
+    ext = source.suffix
+
+    if job.has_filename:
+        today = datetime.now().strftime("%Y%m%d")
+        stem = f"{job.new_filename}_{today}"
+    else:
+        stem = source.stem
+
+    return dest_dir / f"{stem}{ext}"
 
 
 def build_job_lookup(jobs: list[JobEntry]) -> dict[str, JobEntry]:
