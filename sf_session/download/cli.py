@@ -130,10 +130,13 @@ def _print_dry_run(direct_deliver: bool, jobs, *, csv_dir: Path) -> None:
         if not direct_deliver:
             dest = build_destination(
                 j, dummy_dl,
-                output_dir=csv_dir,
+                mode="download", output_dir=csv_dir,
             )
         else:
-            dest = j.src_folder_name
+            dest = build_destination(
+                j, dummy_dl,
+                mode="download_direct",
+            )
         logger.info(
             "  [%d件目] %s  enc=%s  → %s  %s",
             i, rid, enc, dest, url,
@@ -352,10 +355,12 @@ def _execute(
             f"START_{time_label()}_{len(active_jobs)}件の予定",
         )
 
+        mode = "download_direct" if cfg.direct_deliver else "download"
         results = export_batch(
             cfg.chrome_path,
             active_jobs,
             cfg.download_dir,
+            mode=mode,
             timeout=cfg.timeout,
             poll=cfg.poll,
             interval=cfg.interval,

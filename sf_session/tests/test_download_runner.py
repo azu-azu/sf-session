@@ -190,7 +190,7 @@ class TestExportBatch:
             lambda *a, **kw: downloaded,
         )
 
-        with patch("sf_session.utils.datetime") as mock_dt:
+        with patch("sf_session.download.outputs.datetime") as mock_dt:
             mock_dt.now.return_value.strftime.return_value = "20260327"
             results = export_batch(
                 Path("/dummy/chrome"), [job], tmp_path / "dl", interval=0
@@ -225,7 +225,7 @@ class TestExportBatch:
             lambda *a, **kw: downloaded,
         )
 
-        with patch("sf_session.utils.datetime") as mock_dt:
+        with patch("sf_session.download.outputs.datetime") as mock_dt:
             mock_dt.now.return_value.strftime.return_value = "20260327"
             results = export_batch(
                 Path("/dummy/chrome"), [job], tmp_path / "dl",
@@ -320,7 +320,7 @@ class TestMoveRetry:
             return real_move(src, dst, **kw)
 
         with patch("sf_session.download.runner.shutil.move", side_effect=flaky_move):
-            with patch("sf_session.utils.datetime") as mock_dt:
+            with patch("sf_session.download.outputs.datetime") as mock_dt:
                 mock_dt.now.return_value.strftime.return_value = "20260401"
                 results = export_batch(
                     Path("/dummy/chrome"), [job], tmp_path / "dl", interval=0,

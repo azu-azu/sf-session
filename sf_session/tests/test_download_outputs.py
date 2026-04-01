@@ -30,9 +30,9 @@ class TestBuildDestination:
         downloaded = tmp_path / "report.csv"
         downloaded.touch()
 
-        with patch("sf_session.utils.datetime") as mock_dt:
+        with patch("sf_session.download.outputs.datetime") as mock_dt:
             mock_dt.now.return_value.strftime.return_value = "20260327"
-            result = build_destination(job, downloaded)
+            result = build_destination(job, downloaded, mode="download")
 
         assert result == tmp_path / "00O123_20260327_report.csv"
 
@@ -46,9 +46,9 @@ class TestBuildDestination:
         downloaded = tmp_path / "original.csv"
         downloaded.touch()
 
-        with patch("sf_session.utils.datetime") as mock_dt:
+        with patch("sf_session.download.outputs.datetime") as mock_dt:
             mock_dt.now.return_value.strftime.return_value = "20260327"
-            result = build_destination(job, downloaded)
+            result = build_destination(job, downloaded, mode="download")
 
         assert result == tmp_path / "00O123_20260327_myreport.csv"
 
@@ -62,9 +62,9 @@ class TestBuildDestination:
         downloaded = tmp_path / "data.xls"
         downloaded.touch()
 
-        with patch("sf_session.utils.datetime") as mock_dt:
+        with patch("sf_session.download.outputs.datetime") as mock_dt:
             mock_dt.now.return_value.strftime.return_value = "20260327"
-            result = build_destination(job, downloaded)
+            result = build_destination(job, downloaded, mode="download")
 
         assert result == tmp_path / "00O123_20260327_output.xls"
 
@@ -75,9 +75,9 @@ class TestBuildDestination:
         downloaded = tmp_path / "report.csv"
         downloaded.touch()
 
-        with patch("sf_session.utils.datetime") as mock_dt:
+        with patch("sf_session.download.outputs.datetime") as mock_dt:
             mock_dt.now.return_value.strftime.return_value = "20260327"
-            result = build_destination(job, downloaded, output_dir=out_dir)
+            result = build_destination(job, downloaded, mode="download", output_dir=out_dir)
 
         assert result == out_dir / "00O999_20260327_report.csv"
 
@@ -92,9 +92,9 @@ class TestBuildDestination:
         downloaded = tmp_path / "original.csv"
         downloaded.touch()
 
-        with patch("sf_session.utils.datetime") as mock_dt:
+        with patch("sf_session.download.outputs.datetime") as mock_dt:
             mock_dt.now.return_value.strftime.return_value = "20260327"
-            result = build_destination(job, downloaded, output_dir=out_dir)
+            result = build_destination(job, downloaded, mode="download", output_dir=out_dir)
 
         assert result == out_dir / "00O999_20260327_daily.csv"
 
@@ -104,8 +104,37 @@ class TestBuildDestination:
         downloaded = tmp_path / "report.csv"
         downloaded.touch()
 
-        result = build_destination(job, downloaded)
+        result = build_destination(job, downloaded, mode="download")
         assert result == tmp_path / "report.csv"
+
+    def test_download_direct_with_filename(self, tmp_path):
+        """download_direct + rename=yes: report_id なしで {new}_{YYYYMMDD}。"""
+        job = make_job(
+            report_id="00O123",
+            src_folder_name=str(tmp_path),
+            has_filename=True,
+            new_filename="myreport",
+        )
+        downloaded = tmp_path / "original.csv"
+        downloaded.touch()
+
+        with patch("sf_session.download.outputs.datetime") as mock_dt:
+            mock_dt.now.return_value.strftime.return_value = "20260327"
+            result = build_destination(job, downloaded, mode="download_direct")
+
+        assert result == tmp_path / "myreport_20260327.csv"
+
+    def test_download_direct_no_filename(self, tmp_path):
+        """download_direct + rename=no: download と同じ {id}_{YYYYMMDD}_{stem}。"""
+        job = make_job(report_id="00O123", src_folder_name=str(tmp_path))
+        downloaded = tmp_path / "report.csv"
+        downloaded.touch()
+
+        with patch("sf_session.download.outputs.datetime") as mock_dt:
+            mock_dt.now.return_value.strftime.return_value = "20260327"
+            result = build_destination(job, downloaded, mode="download_direct")
+
+        assert result == tmp_path / "00O123_20260327_report.csv"
 
 
 class TestLogSummary:

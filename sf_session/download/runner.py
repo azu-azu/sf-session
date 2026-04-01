@@ -211,6 +211,7 @@ def export_batch(
     jobs: list[JobEntry],
     download_dir: Path,
     *,
+    mode: str = "download",
     timeout: int = DEFAULT_TIMEOUT,
     poll: float = DEFAULT_POLL,
     interval: float = DEFAULT_INTERVAL,
@@ -239,7 +240,7 @@ def export_batch(
         # 移動先を組み立て
         dest = build_destination(
             job, result.dest_path,
-            output_dir=output_dir,
+            mode=mode, output_dir=output_dir,
         )
         dest_dir = dest.parent
 

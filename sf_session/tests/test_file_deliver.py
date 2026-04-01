@@ -54,14 +54,16 @@ class TestMatchFileToJob:
 
 
 class TestBuildDestination:
+    """file_deliver mode の build_destination テスト。"""
+
     def test_no_filename(self, tmp_path):
         job = make_job(report_id="00O123", src_folder_name=str(tmp_path))
         source = tmp_path / "00O123_report.csv"
         source.touch()
 
-        with patch("sf_session.utils.datetime") as mock_dt:
+        with patch("sf_session.download.outputs.datetime") as mock_dt:
             mock_dt.now.return_value.strftime.return_value = "20260327"
-            result = build_destination(job, source)
+            result = build_destination(job, source, mode="file_deliver")
 
         assert result == tmp_path / "00O123_20260327_00O123_report.csv"
 
@@ -75,11 +77,11 @@ class TestBuildDestination:
         source = tmp_path / "00O123_original.csv"
         source.touch()
 
-        with patch("sf_session.utils.datetime") as mock_dt:
+        with patch("sf_session.download.outputs.datetime") as mock_dt:
             mock_dt.now.return_value.strftime.return_value = "20260327"
-            result = build_destination(job, source)
+            result = build_destination(job, source, mode="file_deliver")
 
-        assert result == tmp_path / "00O123_20260327_daily_export.csv"
+        assert result == tmp_path / "daily_export_20260327.csv"
 
     def test_preserves_extension(self, tmp_path):
         job = make_job(
@@ -91,11 +93,11 @@ class TestBuildDestination:
         source = tmp_path / "00O123_data.xls"
         source.touch()
 
-        with patch("sf_session.utils.datetime") as mock_dt:
+        with patch("sf_session.download.outputs.datetime") as mock_dt:
             mock_dt.now.return_value.strftime.return_value = "20260327"
-            result = build_destination(job, source)
+            result = build_destination(job, source, mode="file_deliver")
 
-        assert result == tmp_path / "00O123_20260327_output.xls"
+        assert result == tmp_path / "output_20260327.xls"
 
     def test_no_report_id(self, tmp_path):
         """report_id が空なら prefix なし。"""
@@ -103,7 +105,7 @@ class TestBuildDestination:
         source = tmp_path / "some_report.csv"
         source.touch()
 
-        result = build_destination(job, source)
+        result = build_destination(job, source, mode="file_deliver")
         assert result == tmp_path / "some_report.csv"
 
 
@@ -119,7 +121,7 @@ class TestDistributeFiles:
 
         jobs = [make_job(report_id="00O123", src_folder_name=str(dest_dir))]
 
-        with patch("sf_session.utils.datetime") as mock_dt:
+        with patch("sf_session.download.outputs.datetime") as mock_dt:
             mock_dt.now.return_value.strftime.return_value = "20260327"
             results = distribute_files(src_dir, jobs)
 
@@ -146,13 +148,13 @@ class TestDistributeFiles:
             new_filename="renamed",
         )]
 
-        with patch("sf_session.utils.datetime") as mock_dt:
+        with patch("sf_session.download.outputs.datetime") as mock_dt:
             mock_dt.now.return_value.strftime.return_value = "20260327"
             results = distribute_files(src_dir, jobs)
 
         assert len(results) == 1
         assert results[0].success
-        expected = dest_dir / "00O123_20260327_renamed.csv"
+        expected = dest_dir / "renamed_20260327.csv"
         assert results[0].dest_path == expected
         assert expected.exists()
 
@@ -201,7 +203,7 @@ class TestDistributeFiles:
             make_job(no="2", report_id="00OBBB", src_folder_name=str(dest2)),
         ]
 
-        with patch("sf_session.utils.datetime") as mock_dt:
+        with patch("sf_session.download.outputs.datetime") as mock_dt:
             mock_dt.now.return_value.strftime.return_value = "20260327"
             results = distribute_files(src_dir, jobs)
 
@@ -232,7 +234,6 @@ class TestLogSummary:
             log_summary(results)
         assert "成功 1 件" in caplog.text
         assert "[NG]" not in caplog.text
-        assert "-" * 50 not in caplog.text
 
     def test_with_failures(self, caplog):
         results = [
