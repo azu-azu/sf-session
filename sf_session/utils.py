@@ -113,11 +113,12 @@ def log_result_summary(
     label: str,
     *,
     path_fn: Callable | None = None,
+    show_successes: bool = False,
 ) -> tuple[int, int]:
     """result list のサマリーをログ出力し、(ok, ng) を返す。
 
     results の各要素は .success, .seq, .report_id, .elapsed, .error を持つこと。
-    path_fn: 失敗時の path 表示文字列を返す callable。省略時は r.dest_path を使用。
+    path_fn: path 表示文字列を返す callable。省略時は r.dest_path を使用。
     """
     ok = sum(1 for r in results if r.success)
     ng = sum(1 for r in results if not r.success)
@@ -126,19 +127,28 @@ def log_result_summary(
     logger.info("%s complete >>", label)
     logger.info("成功 %d 件 / 失敗 %d 件 / 合計 %d 件", ok, ng, len(results))
 
+    def _path_str(r) -> str:
+        if path_fn is not None:
+            return str(path_fn(r))
+        return str(getattr(r, "dest_path", None) or "-")
+
     failures = [r for r in results if not r.success]
     if failures:
         logger.info("-" * 50)
+        logger.info("失敗一覧")
         for r in failures:
-            if path_fn is not None:
-                path_str = path_fn(r)
-            else:
-                path_str = str(getattr(r, "dest_path", None) or "-")
             err = f" ({r.error})" if r.error else ""
             logger.info(
                 "  [NG] %d件目 %s  %.1fs  %s%s",
-                r.seq, r.report_id, r.elapsed, path_str, err,
+                r.seq, r.report_id, r.elapsed, _path_str(r), err,
             )
+
+    successes = [r for r in results if r.success]
+    if show_successes and successes:
+        logger.info("-" * 50)
+        logger.info("成功一覧")
+        for r in successes:
+            logger.info("%d. %s", r.seq, _path_str(r))
 
     logger.info("*" * 50)
     return ok, ng

@@ -138,7 +138,7 @@ def distribute_files(
 
 def log_summary(results: list[DistributeResult]) -> None:
     """実行結果のサマリーをログ出力する。"""
-    log_result_summary(results, "file_deliver")
+    log_result_summary(results, "file_deliver", show_successes=True)
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:

@@ -54,7 +54,7 @@ def build_destination(
 
 def log_summary(results: list[ExportResult]) -> tuple[int, int]:
     """実行結果のサマリーをログ出力し、(ok, ng) を返す。"""
-    return log_result_summary(results, "download")
+    return log_result_summary(results, "download", show_successes=True)
 
 
 def write_success_ids(results: list[ExportResult], *, result_dir: Path) -> Path | None:
