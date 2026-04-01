@@ -72,7 +72,7 @@ def resolve_project_path(raw: str | Path) -> Path:
 
 
 # Macro root
-_MACRO_ROOT_PATH: Path | None = (
+MACRO_ROOT: Path | None = (
     resolve_project_path(_MACRO_ROOT_RAW) if _MACRO_ROOT_RAW else None
 )
 
@@ -117,13 +117,13 @@ def _load_pipelines() -> dict[str, PipelineConfig]:
     raw = os.environ.get("PIPELINES", "")
     if not raw:
         return {}
-    if _MACRO_ROOT_PATH is None:
+    if MACRO_ROOT is None:
         raise ValueError("PIPELINES が設定されていますが MACRO_ROOT_PATH が未設定です")
     if OUTPUT_ROOT is None:
         raise ValueError("PIPELINES が設定されていますが OUTPUT_ROOT_PATH が未設定です")
     names = [n.strip() for n in raw.split(",") if n.strip()]
     return {
-        name: PipelineConfig(name=name, macro_dir=_MACRO_ROOT_PATH / name)
+        name: PipelineConfig(name=name, macro_dir=MACRO_ROOT / name)
         for name in names
     }
 

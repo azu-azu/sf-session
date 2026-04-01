@@ -24,6 +24,8 @@ def workspace(tmp_path: Path):
         "_PIPELINES_DIR": pipelines_dir,
         "_TEMPLATES_DIR": templates_dir,
         "_EXTRA_HOLIDAYS_PATH": pipelines_dir / "extra_holidays.csv",
+        "MACRO_ROOT": tmp_path / "macro",
+        "OUTPUT_ROOT": tmp_path / "output",
     }
     with patch.multiple(init_pipeline, **patches):
         yield tmp_path
@@ -31,8 +33,7 @@ def workspace(tmp_path: Path):
 
 def _write_env(workspace: Path, pipelines: str) -> None:
     (workspace / ".env").write_text(
-        f"PIPELINES={pipelines}\nMACRO_ROOT_PATH={workspace / 'macro'}\n"
-        f"OUTPUT_ROOT_PATH={workspace / 'output'}\n",
+        f"PIPELINES={pipelines}\n",
         encoding="utf-8",
     )
 

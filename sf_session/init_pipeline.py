@@ -12,7 +12,7 @@ import re
 import sys
 from pathlib import Path
 
-from .config import resolve_project_path
+from .config import MACRO_ROOT, OUTPUT_ROOT
 from .utils import setup_logging
 
 logger = logging.getLogger(__name__)
@@ -78,7 +78,7 @@ _LEGACY_BAT_NAMES = (
 
 
 def _read_env_value(key: str) -> str | None:
-    """Read a single value from .env without importing config."""
+    """Read a single value from .env file."""
     if not _ENV_PATH.exists():
         return None
     for line in _ENV_PATH.read_text(encoding="utf-8").splitlines():
@@ -148,22 +148,6 @@ def _generate_bat_files(name: str, pipeline_dir: Path) -> int:
     return len(defs)
 
 
-def _get_output_root() -> Path:
-    """OUTPUT_ROOT_PATH を .env から取得する。"""
-    raw = _read_env_value("OUTPUT_ROOT_PATH")
-    if not raw:
-        raise RuntimeError("OUTPUT_ROOT_PATH not found in .env")
-    return resolve_project_path(raw)
-
-
-def _get_macro_root() -> Path:
-    """MACRO_ROOT_PATH を .env から取得する。"""
-    raw = _read_env_value("MACRO_ROOT_PATH")
-    if not raw:
-        raise RuntimeError("MACRO_ROOT_PATH not found in .env")
-    return resolve_project_path(raw)
-
-
 def _ensure_macro_dir(name: str, macro_root: Path) -> tuple[Path, bool]:
     macro_dir = macro_root / name
     created = not macro_dir.exists()
@@ -226,27 +210,25 @@ def main() -> None:
         print("✓ readme.txt を配置しました")
 
     # 3. macro directory (MACRO_ROOT_PATH)
-    try:
-        macro_root = _get_macro_root()
-        macro_dir, created = _ensure_macro_dir(name, macro_root)
+    if MACRO_ROOT is not None:
+        macro_dir, created = _ensure_macro_dir(name, MACRO_ROOT)
         if created:
             print(f"✓ {macro_dir} を作成しました")
             print(f"⚠ マクロファイル (.xlsm) を {macro_dir} に格納してください")
         else:
             print(f"✓ {macro_dir} は既に存在します")
-    except RuntimeError as e:
-        print(f"⚠ MACRO_ROOT_PATH の処理をスキップしました: {e}")
+    else:
+        print("⚠ MACRO_ROOT_PATH が未設定のためスキップしました")
 
     # 4. output directory (OUTPUT_ROOT_PATH)
-    try:
-        output_root = _get_output_root()
-        csv_dir, csv_created = _ensure_output_dir(name, output_root)
+    if OUTPUT_ROOT is not None:
+        csv_dir, csv_created = _ensure_output_dir(name, OUTPUT_ROOT)
         if csv_created:
             print(f"✓ {csv_dir} を作成しました")
         else:
             print(f"✓ {csv_dir} は既に存在します")
-    except RuntimeError as e:
-        print(f"⚠ OUTPUT_ROOT_PATH の処理をスキップしました: {e}")
+    else:
+        print("⚠ OUTPUT_ROOT_PATH が未設定のためスキップしました")
 
     print("\nセットアップ完了！")
 
@@ -265,17 +247,9 @@ def ensure_pipelines() -> None:
     if not names:
         return
 
-    # loop 中に変わらない値は先に読む
-    macro_root: Path | None = None
-    try:
-        macro_root = _get_macro_root()
-    except RuntimeError:
+    if MACRO_ROOT is None:
         logger.warning("MACRO_ROOT_PATH not found — skipping macro dirs")
-
-    output_root: Path | None = None
-    try:
-        output_root = _get_output_root()
-    except RuntimeError:
+    if OUTPUT_ROOT is None:
         logger.warning("OUTPUT_ROOT_PATH not found — skipping output dirs")
 
     for name in names:
@@ -289,14 +263,14 @@ def ensure_pipelines() -> None:
             logger.info("Created pipeline: %s", name)
 
         # macro directory — always ensure (failure is non-fatal)
-        if macro_root is not None:
-            macro_dir, created = _ensure_macro_dir(name, macro_root)
+        if MACRO_ROOT is not None:
+            macro_dir, created = _ensure_macro_dir(name, MACRO_ROOT)
             if created:
                 logger.info("Created macro dir: %s", macro_dir)
 
         # output directory — always ensure (failure is non-fatal)
-        if output_root is not None:
-            csv_dir, created = _ensure_output_dir(name, output_root)
+        if OUTPUT_ROOT is not None:
+            csv_dir, created = _ensure_output_dir(name, OUTPUT_ROOT)
             if created:
                 logger.info("Created output dir: %s", csv_dir)
 
