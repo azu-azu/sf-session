@@ -217,6 +217,8 @@ def main() -> None:
 
 def ensure_pipelines() -> None:
     """PIPELINES に列挙された各 pipeline の scaffold・output dir・macro dir を ensure する。"""
+    PIPELINES_DIR.mkdir(exist_ok=True)
+
     # extra_holidays.csv — pipeline 共通なので最初に 1 回だけ ensure
     if not EXTRA_HOLIDAYS_PATH.exists():
         EXTRA_HOLIDAYS_PATH.write_text(_EXTRA_HOLIDAYS_TEMPLATE, encoding="utf-8")
