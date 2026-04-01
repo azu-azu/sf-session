@@ -12,19 +12,15 @@ import re
 import sys
 from pathlib import Path
 
-from .config import MACRO_ROOT, OUTPUT_ROOT
+from .business_day import EXTRA_HOLIDAYS_PATH
+from .config import MACRO_ROOT, OUTPUT_ROOT, PIPELINES_DIR, PROJECT_ROOT
 from .utils import setup_logging
 
 logger = logging.getLogger(__name__)
 
-_PACKAGE_DIR = Path(__file__).resolve().parent
-_PROJECT_ROOT = _PACKAGE_DIR.parent
-_ENV_PATH = _PROJECT_ROOT / ".env"
-_PIPELINES_DIR = _PROJECT_ROOT / "pipelines"
-_TEMPLATES_DIR = _PACKAGE_DIR / "templates" / "pipeline"
+_ENV_PATH = PROJECT_ROOT / ".env"
+_TEMPLATES_DIR = Path(__file__).resolve().parent / "templates" / "pipeline"
 _SUBDIRS = ("result", "ids_file")
-_EXTRA_HOLIDAYS_FILENAME = "extra_holidays.csv"
-_EXTRA_HOLIDAYS_PATH = _PIPELINES_DIR / _EXTRA_HOLIDAYS_FILENAME
 
 _EXTRA_HOLIDAYS_TEMPLATE = """\
 # Extra holidays — one date per line, YYYY-MM-DD
@@ -109,7 +105,7 @@ _IDS_TXT_TEMPLATE = """\
 
 
 def _create_directories(name: str) -> Path:
-    pipeline_dir = _PIPELINES_DIR / name
+    pipeline_dir = PIPELINES_DIR / name
     pipeline_dir.mkdir(parents=True, exist_ok=True)
     for sub in _SUBDIRS:
         (pipeline_dir / sub).mkdir(exist_ok=True)
@@ -222,9 +218,9 @@ def main() -> None:
 def ensure_pipelines() -> None:
     """PIPELINES に列挙された各 pipeline の scaffold・output dir・macro dir を ensure する。"""
     # extra_holidays.csv — pipeline 共通なので最初に 1 回だけ ensure
-    if not _EXTRA_HOLIDAYS_PATH.exists():
-        _EXTRA_HOLIDAYS_PATH.write_text(_EXTRA_HOLIDAYS_TEMPLATE, encoding="utf-8")
-        logger.info("Created %s", _EXTRA_HOLIDAYS_PATH)
+    if not EXTRA_HOLIDAYS_PATH.exists():
+        EXTRA_HOLIDAYS_PATH.write_text(_EXTRA_HOLIDAYS_TEMPLATE, encoding="utf-8")
+        logger.info("Created %s", EXTRA_HOLIDAYS_PATH)
 
     names = _existing_pipelines()
     if not names:
@@ -237,7 +233,7 @@ def ensure_pipelines() -> None:
 
     for name in names:
         # scaffold only if pipelines/ dir doesn't exist yet
-        pipeline_dir = _PIPELINES_DIR / name
+        pipeline_dir = PIPELINES_DIR / name
         if not pipeline_dir.exists():
             logger.info("Creating missing pipeline: %s", name)
             _scaffold_pipeline(name)

@@ -21,9 +21,9 @@ def workspace(tmp_path: Path):
 
     patches = {
         "_ENV_PATH": env_path,
-        "_PIPELINES_DIR": pipelines_dir,
+        "PIPELINES_DIR": pipelines_dir,
         "_TEMPLATES_DIR": templates_dir,
-        "_EXTRA_HOLIDAYS_PATH": pipelines_dir / "extra_holidays.csv",
+        "EXTRA_HOLIDAYS_PATH": pipelines_dir / "extra_holidays.csv",
         "MACRO_ROOT": tmp_path / "macro",
         "OUTPUT_ROOT": tmp_path / "output",
     }
