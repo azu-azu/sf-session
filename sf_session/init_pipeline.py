@@ -27,8 +27,8 @@ _EXTRA_HOLIDAYS_FILENAME = "extra_holidays.csv"
 _EXTRA_HOLIDAYS_PATH = _PIPELINES_DIR / _EXTRA_HOLIDAYS_FILENAME
 
 _EXTRA_HOLIDAYS_TEMPLATE = """\
-# 追加休業日を 1行1日 YYYY-MM-DD 形式で記入する
-# 例:
+# Extra holidays — one date per line, YYYY-MM-DD
+# e.g.
 # 2026-12-29
 # 2026-12-30
 # 2026-12-31
