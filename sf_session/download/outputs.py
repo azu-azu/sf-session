@@ -215,10 +215,17 @@ def swap_work_to_staging(
 
 
 def _cleanup_old_dirs(staging_dir: Path, infix: str) -> None:
-    """staging_dir と同階層の {staging_dir.name}{infix}* を全削除する。"""
+    """staging_dir と同階層の {staging_dir.name}{infix}* を削除する。
+
+    _work_ ディレクトリで中身がある場合は中断データとみなし、
+    削除せず warning を出す。
+    """
     parent = staging_dir.parent
     pattern = f"{staging_dir.name}{infix}*"
     for d in sorted(parent.glob(pattern)):
         if d.is_dir():
-            shutil.rmtree(d, ignore_errors=True)
-            logger.info("旧世代削除: %s", d.name)
+            if infix == "_work_" and any(d.iterdir()):
+                logger.warning("前回の中断データが残っています: %s", d.name)
+            else:
+                shutil.rmtree(d, ignore_errors=True)
+                logger.info("旧世代削除: %s", d.name)

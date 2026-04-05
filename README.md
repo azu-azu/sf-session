@@ -182,6 +182,9 @@ export 中にセッションが切れた場合は、タブを traverse してロ
 | Chrome 起動失敗 | 稀 | ポート競合や Chrome が既に占有 |
 | ファイル移動失敗 | 稀 | network folder (Box) 切断で `shutil.move` が失敗 |
 
+Ctrl+C で中断した場合、途中までダウンロードしたファイルは `csv_work_*` フォルダに保持される。
+次回実行時に `前回の中断データが残っています` と warning が出るので、必要に応じて手動で rescue または削除する。
+
 いずれも一時的な問題なので、時間をおいて `12_download_retry.bat` で通ることが多い。
 `--direct-deliver` で実行した後でも `success_ids` は記録されるため、retry bat はそのまま使える（出力先は `csv/` になるので `★02_振り分け.bat` で振り分ける）。
 

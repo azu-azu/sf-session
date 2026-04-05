@@ -14,7 +14,6 @@ from __future__ import annotations
 import argparse
 import dataclasses
 import logging
-import shutil
 from pathlib import Path
 
 from ..config import (
@@ -380,7 +379,7 @@ def _execute(
         return 130
     finally:
         if work_dir is not None and work_dir.is_dir():
-            shutil.rmtree(work_dir, ignore_errors=True)
+            logger.info("中断のため work_dir を保持: %s", work_dir.name)
         if session:
             close_browser_session(session)
 
