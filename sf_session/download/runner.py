@@ -26,6 +26,7 @@ from ..login_helper import (
     find_login_tab,
 )
 from ..macro_book_reader import JobEntry
+from ..utils import short_path
 from .single import (
     DOWNLOAD_EXTS,
     build_chrome_command,
@@ -247,12 +248,12 @@ def export_batch(
         if not dest_dir.is_dir():
             logger.warning(
                 "[%d件目] 移動先フォルダが存在しません: %s。Downloads に残します。",
-                seq, dest_dir,
+                seq, short_path(dest_dir),
             )
         else:
             try:
                 _move_with_retry(result.dest_path, dest, seq=seq)
-                logger.info("[%d件目] 移動完了: %s", seq, dest)
+                logger.info("[%d件目] 移動完了: %s", seq, short_path(dest))
                 result.dest_path = dest
             except OSError as e:
                 logger.error("[%d件目] 移動失敗: %s", seq, e)

@@ -7,7 +7,7 @@ API ではなく、ブラウザの export URL (`?export=1`) を使う VBA マク
 
 ```
 ┌──────────────────────────────────────────────────────────┐
-│ Step 0: ■00_keep_session.bat                              │
+│ Step 0: 00_keep_session.bat                               │
 │   Chrome 起動 → SSO/MFA 手動ログイン → reload 維持            │
 └───────────────────────┬──────────────────────────────────┘
                         │ Chrome がログイン状態を維持
@@ -32,7 +32,7 @@ API ではなく、ブラウザの export URL (`?export=1`) を使う VBA マク
                         ▼
 ┌──────────────────────────────────────────────────────────┐
 │ Step 4: 20_jis_to_utf.bat                                │
-│   *_jis/ フォルダの CSV を UTF-8 BOM に変換                  │
+│   csv_dir 直下の CSV を UTF-8 BOM に変換 → csv_dir/utf/      │
 └──────────────────────────────────────────────────────────┘
 ```
 
@@ -43,7 +43,7 @@ API ではなく、ブラウザの export URL (`?export=1`) を使う VBA マク
 | スクリプト | 役割 |
 |---|---|
 | `01_stay_awake.bat` | Windows スリープ防止（`--minutes` で時間指定、0 で無制限） |
-| `98_setup_初回または設定更新の場合のみ実行する.bat` | Python version チェック (>=3.12) + venv 作成 + pip upgrade + 依存パッケージ install + missing pipeline 自動作成（初回のみ実行） |
+| `98_setup.bat` | Python version チェック (>=3.11) + venv 作成 + pip upgrade + 依存パッケージ install + missing pipeline 自動作成（初回のみ実行） |
 | `sf_session/keeper.py` | Chrome 起動 → 手動ログイン待機（SSO / MFA）→ 定期 reload でセッション維持 |
 | `sf_session/download/cli.py` | 営業日ガード + pre-flight login check 付きバッチ export orchestration |
 | `sf_session/download/runner.py` | レポート export 実行エンジン (export_one / export_batch) |
@@ -69,7 +69,7 @@ API ではなく、ブラウザの export URL (`?export=1`) を使う VBA マク
 
 ```powershell
 # 初回のみ実行（Python version チェック + venv 作成 + 依存 install + missing pipeline 自動作成）
-98_setup_初回または設定更新の場合のみ実行する.bat
+98_setup.bat
 ```
 
 依存: `selenium`, `openpyxl`, `simple-salesforce`, `python-dotenv`, `jpholiday`, `requests`
@@ -77,7 +77,7 @@ API ではなく、ブラウザの export URL (`?export=1`) を使う VBA マク
 ## 使い方
 
 bat ファイルをダブルクリック、または PowerShell からオプション付きで実行。
-初回は `98_setup_初回または設定更新の場合のみ実行する.bat` を先に実行すること。
+初回は `98_setup.bat` を先に実行すること。
 
 ### 起動パターン
 
@@ -86,7 +86,7 @@ bat ファイルをダブルクリック、または PowerShell からオプシ�
 **パターン A: keeper + download（推奨）**
 
 ```
-■00_keep_session.bat     ← Chrome 起動 + 手動ログイン待機 + セッション維持
+00_keep_session.bat      ← Chrome 起動 + 手動ログイン待機 + セッション維持
 ★01_download.bat    ← ↑ の Chrome に接続して export
 ```
 
@@ -132,7 +132,7 @@ SSO 経由のログインに対応。ログインが必要な場合はユーザ�
 ### 1. セッション確立
 
 ```powershell
-■00_keep_session.bat
+00_keep_session.bat
 # Chrome 起動 → 手動ログイン待機（SSO / MFA）→ 8分ごとに reload
 # Ctrl+C で停止
 ```

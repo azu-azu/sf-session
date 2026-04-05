@@ -8,9 +8,24 @@ from collections.abc import Callable, Sequence
 from datetime import datetime
 from pathlib import Path
 
+from .config import MACRO_ROOT, OUTPUT_ROOT, PROJECT_ROOT
+
 logger = logging.getLogger(__name__)
 
 _RE_TRAILING_DATE = re.compile(r"_(\d{8})$")
+
+_SHORT_PATH_BASES: tuple[Path | None, ...] = (OUTPUT_ROOT, MACRO_ROOT, PROJECT_ROOT)
+
+
+def short_path(path: Path | str | None) -> str:
+    """ログ表示用に path を短縮する。OUTPUT_ROOT / MACRO_ROOT / PROJECT_ROOT からの relative path を返す。"""
+    if path is None:
+        return "-"
+    p = Path(path) if isinstance(path, str) else path
+    for base in _SHORT_PATH_BASES:
+        if base is not None and p.is_relative_to(base):
+            return str(p.relative_to(base))
+    return str(p)
 
 
 def setup_logging(level: str = "INFO") -> None:
@@ -130,7 +145,7 @@ def log_result_summary(
     def _path_str(r) -> str:
         if path_fn is not None:
             return str(path_fn(r))
-        return str(getattr(r, "dest_path", None) or "-")
+        return short_path(getattr(r, "dest_path", None))
 
     failures = [r for r in results if not r.success]
     if failures:

@@ -24,7 +24,7 @@ from pathlib import Path
 from .config import PIPELINES, VALID_PIPELINES, OUTPUT_ROOT
 from .download.outputs import build_destination, probe_destinations
 from .macro_book_reader import JobEntry, load_active_jobs
-from .utils import log_result_summary, setup_logging, time_label, write_pipeline_status
+from .utils import log_result_summary, setup_logging, short_path, time_label, write_pipeline_status
 
 logger = logging.getLogger(__name__)
 
@@ -96,7 +96,7 @@ def distribute_files(
         try:
             shutil.copy2(str(file), str(dest))
             elapsed = time.monotonic() - t0
-            logger.info("[%d件目] 移動完了: %s", count, dest)
+            logger.info("[%d件目] 移動完了: %s", count, short_path(dest))
             results.append(DistributeResult(
                 seq=count,
                 report_id=job.report_id or "",
@@ -171,7 +171,7 @@ def main(argv: list[str] | None = None) -> int:
 
     source_dir = (args.source_dir or pipeline.csv_dir).expanduser().resolve()
     if not source_dir.is_dir():
-        logger.error("source-dir が存在しません: %s", source_dir)
+        logger.error("source-dir が存在しません: %s", short_path(source_dir))
         return 1
 
     effective = _dc_replace(pipeline, macro_dir=args.macro_dir) if args.macro_dir else pipeline
@@ -188,7 +188,7 @@ def main(argv: list[str] | None = None) -> int:
     lookup = build_job_lookup(active_jobs)
 
     if args.dry_run:
-        logger.info("Source dir  : %s", source_dir)
+        logger.info("Source dir  : %s", short_path(source_dir))
         logger.info("--- dry-run mode ---")
         seq = 0
         for file in sorted(source_dir.iterdir()):
@@ -199,8 +199,8 @@ def main(argv: list[str] | None = None) -> int:
                 logger.info("  %s → (マッチなし)", file.name)
                 continue
             seq += 1
-            dest = build_destination(job, file)
-            logger.info("  [%d件目] %s → %s", seq, file.name, dest)
+            dest = build_destination(job, file, mode="file_deliver")
+            logger.info("  [%d件目] %s → %s", seq, file.name, short_path(dest))
         return 0
 
     errors = probe_destinations(active_jobs, mkdir=args.mkdir)
@@ -209,7 +209,7 @@ def main(argv: list[str] | None = None) -> int:
             logger.error("振り分け先フォルダに問題があります: %s", msg)
         return 1
 
-    logger.info("Source dir  : %s", source_dir)
+    logger.info("Source dir  : %s", short_path(source_dir))
 
     results = distribute_files(source_dir, active_jobs)
 

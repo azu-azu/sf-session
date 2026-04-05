@@ -17,7 +17,7 @@ from pathlib import Path
 
 from .config import PIPELINES, VALID_PIPELINES, resolve_project_path
 from .macro_book_reader import read_jobs
-from .utils import setup_logging
+from .utils import setup_logging, short_path
 
 logger = logging.getLogger(__name__)
 
@@ -27,19 +27,19 @@ _DEVTEST_ONLY = True
 def _delete_csv_recursive(directory: Path, *, dry_run: bool) -> int:
     """directory 配下の *.csv を再帰削除して件数を返す。"""
     if not directory.is_dir():
-        logger.info("[%s] (存在しない — skip)", directory)
+        logger.info("[%s] (存在しない — skip)", short_path(directory))
         return 0
 
     count = 0
-    logger.info("[%s]", directory)
+    logger.info("[%s]", short_path(directory))
     for path in sorted(directory.rglob("*.csv")):
         if not path.is_file():
             continue
         if dry_run:
-            logger.info("  [dry-run] delete: %s", path)
+            logger.info("  [dry-run] delete: %s", short_path(path))
         else:
             path.unlink()
-            logger.info("  deleted: %s", path)
+            logger.info("  deleted: %s", short_path(path))
         count += 1
     return count
 
