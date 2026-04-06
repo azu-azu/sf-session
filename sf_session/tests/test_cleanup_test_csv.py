@@ -7,46 +7,19 @@ from unittest.mock import patch
 import pytest
 
 from sf_session.cleanup_test_csv import (
-    _collect_csv_dir_targets,
-    _delete_csv_in_dir,
-    _delete_dir_if_empty,
+    _delete_csv_recursive,
     parse_args,
     run,
 )
 
 
-class TestCollectCsvDirTargets:
-    def test_csv_dir_only(self, tmp_path):
-        csv_dir = tmp_path / "csv"
-        csv_dir.mkdir()
-        targets = _collect_csv_dir_targets(csv_dir)
-        assert targets == [csv_dir]
-
-    def test_with_prev_and_work(self, tmp_path):
-        csv_dir = tmp_path / "csv"
-        csv_dir.mkdir()
-        prev = tmp_path / "csv_prev_20260101_000000"
-        prev.mkdir()
-        work = tmp_path / "csv_work_20260102_000000"
-        work.mkdir()
-        targets = _collect_csv_dir_targets(csv_dir)
-        assert csv_dir in targets
-        assert prev in targets
-        assert work in targets
-
-    def test_nonexistent_csv_dir(self, tmp_path):
-        csv_dir = tmp_path / "csv"
-        targets = _collect_csv_dir_targets(csv_dir)
-        assert targets == []
-
-
-class TestDeleteCsvInDir:
+class TestDeleteCsvRecursive:
     def test_deletes_csv_files(self, tmp_path):
         (tmp_path / "a.csv").write_text("data")
         (tmp_path / "b.csv").write_text("data")
         (tmp_path / "keep.txt").write_text("keep")
 
-        count = _delete_csv_in_dir(tmp_path, dry_run=False)
+        count = _delete_csv_recursive(tmp_path, dry_run=False)
 
         assert count == 2
         assert not (tmp_path / "a.csv").exists()
@@ -56,7 +29,7 @@ class TestDeleteCsvInDir:
     def test_dry_run_keeps_files(self, tmp_path):
         (tmp_path / "a.csv").write_text("data")
 
-        count = _delete_csv_in_dir(tmp_path, dry_run=True)
+        count = _delete_csv_recursive(tmp_path, dry_run=True)
 
         assert count == 1
         assert (tmp_path / "a.csv").exists()
@@ -68,7 +41,7 @@ class TestDeleteCsvInDir:
         (sub / "b.csv").write_text("data")
         (sub / "keep.txt").write_text("keep")
 
-        count = _delete_csv_in_dir(tmp_path, dry_run=False)
+        count = _delete_csv_recursive(tmp_path, dry_run=False)
 
         assert count == 2
         assert not (tmp_path / "a.csv").exists()
@@ -76,29 +49,12 @@ class TestDeleteCsvInDir:
         assert (sub / "keep.txt").exists()
 
     def test_empty_dir(self, tmp_path):
-        count = _delete_csv_in_dir(tmp_path, dry_run=False)
+        count = _delete_csv_recursive(tmp_path, dry_run=False)
         assert count == 0
 
-
-class TestDeleteDirIfEmpty:
-    def test_removes_empty_dir(self, tmp_path):
-        target = tmp_path / "empty"
-        target.mkdir()
-        _delete_dir_if_empty(target, dry_run=False)
-        assert not target.exists()
-
-    def test_keeps_non_empty_dir(self, tmp_path):
-        target = tmp_path / "notempty"
-        target.mkdir()
-        (target / "file.txt").write_text("keep")
-        _delete_dir_if_empty(target, dry_run=False)
-        assert target.is_dir()
-
-    def test_dry_run_keeps_dir(self, tmp_path):
-        target = tmp_path / "empty"
-        target.mkdir()
-        _delete_dir_if_empty(target, dry_run=True)
-        assert target.exists()
+    def test_nonexistent_dir(self, tmp_path):
+        count = _delete_csv_recursive(tmp_path / "nope", dry_run=False)
+        assert count == 0
 
 
 class TestRunSafetyGuard:
