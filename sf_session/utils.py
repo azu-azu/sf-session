@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import re
+import sys
 from collections.abc import Callable, Sequence
 from datetime import datetime
 from pathlib import Path
@@ -26,6 +27,19 @@ def short_path(path: Path | str | None) -> str:
         if base is not None and p.is_relative_to(base):
             return str(p.relative_to(base))
     return str(p)
+
+
+def file_link(path: Path | str | None) -> str:
+    """short_path に OSC 8 hyperlink を付与する。TTY でなければ plain text。"""
+    display = short_path(path)
+    if path is None or not sys.stderr.isatty():
+        return display
+    p = Path(path) if isinstance(path, str) else path
+    try:
+        uri = p.resolve().as_uri()
+    except ValueError:
+        return display
+    return f"\033]8;;{uri}\a{display}\033]8;;\a"
 
 
 def setup_logging(level: str = "INFO") -> None:
@@ -142,10 +156,11 @@ def log_result_summary(
     logger.info("%s complete >>", label)
     logger.info("成功 %d 件 / 失敗 %d 件 / 合計 %d 件", ok, ng, len(results))
 
-    def _path_str(r) -> str:
+    def _path_str(r, *, link: bool = False) -> str:
         if path_fn is not None:
             return str(path_fn(r))
-        return short_path(getattr(r, "dest_path", None))
+        dest = getattr(r, "dest_path", None)
+        return file_link(dest) if link else short_path(dest)
 
     failures = [r for r in results if not r.success]
     if failures:
@@ -163,7 +178,7 @@ def log_result_summary(
         logger.info("-" * 50)
         logger.info("成功一覧")
         for r in successes:
-            logger.info("%d. %s", r.seq, _path_str(r))
+            logger.info("%d. %s", r.seq, _path_str(r, link=True))
 
     logger.info("*" * 50)
     return ok, ng
