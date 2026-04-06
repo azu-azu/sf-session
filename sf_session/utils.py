@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import os
 import re
 import sys
 from collections.abc import Callable, Sequence
@@ -29,10 +30,20 @@ def short_path(path: Path | str | None) -> str:
     return str(p)
 
 
+def _supports_hyperlink() -> bool:
+    """terminal が OSC 8 hyperlink に対応しているか判定する。"""
+    if not sys.stderr.isatty():
+        return False
+    # Windows: Windows Terminal (WT_SESSION) のみ対応。conhost はゴミ文字になる
+    if os.name == "nt" and "WT_SESSION" not in os.environ:
+        return False
+    return True
+
+
 def file_link(path: Path | str | None) -> str:
-    """short_path に OSC 8 hyperlink を付与する。TTY でなければ plain text。"""
+    """short_path に OSC 8 hyperlink を付与する。非対応 terminal では plain text。"""
     display = short_path(path)
-    if path is None or not sys.stderr.isatty():
+    if path is None or not _supports_hyperlink():
         return display
     p = Path(path) if isinstance(path, str) else path
     try:
