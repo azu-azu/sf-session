@@ -43,13 +43,19 @@ def build_destination(
     | ----------------- | ------------------------------------ | -------------------------------------- |
     | download          | {report_id}_{YYYYMMDD}_{new}{ext}    | {report_id}_{YYYYMMDD}_{stem}{ext}    |
     | download_direct   | {new}_{YYYYMMDD}{ext}                | {report_id}_{YYYYMMDD}_{stem}{ext}    |
-    | file_deliver      | {new}_{YYYYMMDD}{ext}                | {report_id}_{YYYYMMDD}_{stem}{ext}    |
+    | file_deliver      | {new}{ext}                           | そのまま (download 済み名を維持)       |
 
     output_dir が指定されていれば全ファイルをそこに出力し、
     未指定なら job.src_folder_name を使う。
     """
     dest_dir = output_dir if output_dir else resolve_project_path(job.src_folder_name)
     ext = downloaded.suffix
+
+    # file_deliver: download 済みファイルの再配送。日付付与は不要
+    if mode == "file_deliver":
+        stem = job.new_filename if job.has_filename else downloaded.stem
+        return dest_dir / f"{stem}{ext}"
+
     today = datetime.now().strftime("%Y%m%d")
 
     if job.has_filename:
@@ -58,7 +64,7 @@ def build_destination(
                 stem = f"{job.report_id}_{today}_{job.new_filename}"
             else:
                 stem = job.new_filename
-        elif mode in {"download_direct", "file_deliver"}:
+        elif mode == "download_direct":
             stem = f"{job.new_filename}_{today}"
         else:
             raise ValueError(f"unknown mode: {mode}")

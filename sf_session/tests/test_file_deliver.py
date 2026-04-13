@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from unittest.mock import patch
 
 import pytest
 
@@ -61,11 +60,8 @@ class TestBuildDestination:
         source = tmp_path / "00O123_report.csv"
         source.touch()
 
-        with patch("sf_session.download.outputs.datetime") as mock_dt:
-            mock_dt.now.return_value.strftime.return_value = "20260327"
-            result = build_destination(job, source, mode="file_deliver")
-
-        assert result == tmp_path / "00O123_20260327_00O123_report.csv"
+        result = build_destination(job, source, mode="file_deliver")
+        assert result == tmp_path / "00O123_report.csv"
 
     def test_with_new_filename(self, tmp_path):
         job = make_job(
@@ -77,11 +73,8 @@ class TestBuildDestination:
         source = tmp_path / "00O123_original.csv"
         source.touch()
 
-        with patch("sf_session.download.outputs.datetime") as mock_dt:
-            mock_dt.now.return_value.strftime.return_value = "20260327"
-            result = build_destination(job, source, mode="file_deliver")
-
-        assert result == tmp_path / "daily_export_20260327.csv"
+        result = build_destination(job, source, mode="file_deliver")
+        assert result == tmp_path / "daily_export.csv"
 
     def test_preserves_extension(self, tmp_path):
         job = make_job(
@@ -93,11 +86,8 @@ class TestBuildDestination:
         source = tmp_path / "00O123_data.xls"
         source.touch()
 
-        with patch("sf_session.download.outputs.datetime") as mock_dt:
-            mock_dt.now.return_value.strftime.return_value = "20260327"
-            result = build_destination(job, source, mode="file_deliver")
-
-        assert result == tmp_path / "output_20260327.xls"
+        result = build_destination(job, source, mode="file_deliver")
+        assert result == tmp_path / "output.xls"
 
     def test_no_report_id(self, tmp_path):
         """report_id が空なら prefix なし。"""
@@ -120,14 +110,11 @@ class TestDistributeFiles:
         f.write_text("data")
 
         jobs = [make_job(report_id="00O123", src_folder_name=str(dest_dir))]
-
-        with patch("sf_session.download.outputs.datetime") as mock_dt:
-            mock_dt.now.return_value.strftime.return_value = "20260327"
-            results = distribute_files(src_dir, jobs)
+        results = distribute_files(src_dir, jobs)
 
         assert len(results) == 1
         assert results[0].success
-        expected = dest_dir / "00O123_20260327_00O123_report.csv"
+        expected = dest_dir / "00O123_report.csv"
         assert results[0].dest_path == expected
         assert expected.exists()
         assert f.exists()  # コピーなので元ファイルは残る
@@ -148,13 +135,11 @@ class TestDistributeFiles:
             new_filename="renamed",
         )]
 
-        with patch("sf_session.download.outputs.datetime") as mock_dt:
-            mock_dt.now.return_value.strftime.return_value = "20260327"
-            results = distribute_files(src_dir, jobs)
+        results = distribute_files(src_dir, jobs)
 
         assert len(results) == 1
         assert results[0].success
-        expected = dest_dir / "renamed_20260327.csv"
+        expected = dest_dir / "renamed.csv"
         assert results[0].dest_path == expected
         assert expected.exists()
 
@@ -203,14 +188,12 @@ class TestDistributeFiles:
             make_job(no="2", report_id="00OBBB", src_folder_name=str(dest2)),
         ]
 
-        with patch("sf_session.download.outputs.datetime") as mock_dt:
-            mock_dt.now.return_value.strftime.return_value = "20260327"
-            results = distribute_files(src_dir, jobs)
+        results = distribute_files(src_dir, jobs)
 
         assert len(results) == 2
         assert all(r.success for r in results)
-        assert (dest1 / "00OAAA_20260327_00OAAA_report_a.csv").exists()
-        assert (dest2 / "00OBBB_20260327_00OBBB_report_b.csv").exists()
+        assert (dest1 / "00OAAA_report_a.csv").exists()
+        assert (dest2 / "00OBBB_report_b.csv").exists()
 
     def test_directories_ignored(self, tmp_path):
         src_dir = tmp_path / "source"
