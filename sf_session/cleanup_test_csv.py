@@ -31,7 +31,7 @@ def _delete_csv_recursive(directory: Path, *, dry_run: bool) -> int:
     """directory 配下の *.csv を再帰削除して件数を返す。"""
     if not directory.is_dir():
         logger.info("[%s] (NOT exists - skip)", directory)
-        return
+        return 0
 
     count = 0
     logger.info("[%s]", directory)
@@ -91,7 +91,7 @@ def run(pipeline_name: str, *, dry_run: bool = False) -> int:
     if extra_dirs:
         logger.info("--- extra destinations ---")
         for directory in extra_dirs:
-            total =+ _delete_csv_recursive(directory, dry_run=dry_run)
+            total += _delete_csv_recursive(directory, dry_run=dry_run)
 
     label = "dry-run" if dry_run else "deleted"
     logger.info("合計 %d 件 %s", total, label)

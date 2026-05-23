@@ -29,6 +29,8 @@ def load_extra_holidays(path: Path = EXTRA_HOLIDAYS_PATH) -> set[date]:
     holidays: set[date] = set()
     with path.open(encoding="utf-8") as f:
         for row in csv.reader(f):
+            if not row or not row[0].strip():
+                continue
             if row[0].lstrip().startswith("#"):
                 continue
             try:
