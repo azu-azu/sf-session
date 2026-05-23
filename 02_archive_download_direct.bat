@@ -8,5 +8,5 @@ if not exist ".venv\Scripts\python.exe" (
     exit /b 1
 )
 
-.venv\Scripts\python.exe -m sf_session.init_pipeline %*
+.venv\Scripts\python.exe -m sf_session.download archive --direct-deliver %*
 pause

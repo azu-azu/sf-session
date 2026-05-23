@@ -19,12 +19,13 @@ import shutil
 import sys
 import time
 from dataclasses import dataclass, replace as _dc_replace
+from datetime import datetime
 from pathlib import Path
 
-from .config import PIPELINES, VALID_PIPELINES, OUTPUT_ROOT
+from .config import PIPELINES, VALID_PIPELINES, OUTPUT_ROOT, resolve_project_path
 from .download.outputs import build_destination, probe_destinations
 from .macro_book_reader import JobEntry, load_active_jobs
-from .utils import log_result_summary, setup_logging, short_path, time_label, write_pipeline_status
+from .utils import log_result_summary, setup_logging, time_label, write_pipeline_status
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +42,7 @@ class DistributeResult:
     error: str = ""
 
 
-def build_job_lookup(jobs: list[JobEntry]) -> dict[str, JobEntry]:
+def _build_job_lookup(jobs: list[JobEntry]) -> dict[str, JobEntry]:
     """report_id → JobEntry の lookup dict を構築する。"""
     lookup: dict[str, JobEntry] = {}
     for job in jobs:
@@ -50,7 +51,7 @@ def build_job_lookup(jobs: list[JobEntry]) -> dict[str, JobEntry]:
     return lookup
 
 
-def match_file_to_job(
+def _match_file_to_job(
     filename: str,
     lookup: dict[str, JobEntry],
 ) -> JobEntry | None:
@@ -61,12 +62,29 @@ def match_file_to_job(
     return None
 
 
-def distribute_files(
+def _collect_target_jobs(source_dir: Path, lookup: dict[str, JobEntry]) -> list[JobEntry]:
+    """source_dir に実在するファイルとマッチした job だけを返す。"""
+    selected: dict[str, JobEntry] = {}
+
+    for file in sorted(source_dir.iterdir()):
+        if not file.is_file():
+            continue
+
+        job = _match_file_to_job(file.name, lookup)
+        if job is None or not job.report_id:
+            continue
+        
+        selected[job.report_id] = job
+
+    return list(selected.values())
+
+
+def _distribute_files(
     source_dir: Path,
     jobs: list[JobEntry],
 ) -> list[DistributeResult]:
     """source_dir 内のファイルを jobs に基づいて振り分ける。"""
-    lookup = build_job_lookup(jobs)
+    lookup = _build_job_lookup(jobs)
     results: list[DistributeResult] = []
     count = 0
 
@@ -74,7 +92,7 @@ def distribute_files(
         if not file.is_file():
             continue
 
-        job = match_file_to_job(file.name, lookup)
+        job = _match_file_to_job(file.name, lookup)
         if job is None:
             logger.warning("マッチするジョブなし: %s", file.name)
             continue
@@ -96,7 +114,7 @@ def distribute_files(
         try:
             shutil.copy2(str(file), str(dest))
             elapsed = time.monotonic() - t0
-            logger.info("[%d件目] 移動完了: %s", count, short_path(dest))
+            logger.info("[%d件目] 移動完了", count)
             results.append(DistributeResult(
                 seq=count,
                 report_id=job.report_id or "",
@@ -119,7 +137,11 @@ def distribute_files(
 
 def log_summary(results: list[DistributeResult]) -> None:
     """実行結果のサマリーをログ出力する。"""
-    log_result_summary(results, "file_deliver", show_successes=True)
+    log_result_summary(
+        results, 
+        "file_deliver",
+        show_successes=True,
+    )
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -169,12 +191,16 @@ def main(argv: list[str] | None = None) -> int:
     assert OUTPUT_ROOT is not None  # validated by _load_pipelines
     pipeline = PIPELINES[args.pipeline]
 
-    source_dir = (args.source_dir or pipeline.csv_dir).expanduser().resolve()
+    source_dir = resolve_project_path(args.source_dir or pipeline.csv_dir)
     if not source_dir.is_dir():
-        logger.error("source-dir が存在しません: %s", short_path(source_dir))
+        logger.error("source-dir が存在しません: %s", source_dir)
         return 1
 
-    effective = _dc_replace(pipeline, macro_dir=args.macro_dir) if args.macro_dir else pipeline
+    effective = (
+        _dc_replace(pipeline, macro_dir=resolve_project_path(args.macro_dir))
+        if args.macro_dir 
+        else pipeline
+    )
     try:
         active_jobs = load_active_jobs(effective, ids_file=args.ids_file)
     except FileNotFoundError as e:
@@ -185,33 +211,35 @@ def main(argv: list[str] | None = None) -> int:
         logger.info("実行対象のジョブが 0 件のため終了します")
         return 0
 
-    lookup = build_job_lookup(active_jobs)
+    lookup = _build_job_lookup(active_jobs)
 
     if args.dry_run:
-        logger.info("Source dir  : %s", short_path(source_dir))
+        logger.info("Source dir  : %s", source_dir)
         logger.info("--- dry-run mode ---")
         seq = 0
         for file in sorted(source_dir.iterdir()):
             if not file.is_file():
                 continue
-            job = match_file_to_job(file.name, lookup)
+            job = _match_file_to_job(file.name, lookup)
             if job is None:
                 logger.info("  %s → (マッチなし)", file.name)
                 continue
             seq += 1
             dest = build_destination(job, file, mode="file_deliver")
-            logger.info("  [%d件目] %s → %s", seq, file.name, short_path(dest))
+            logger.info("  [%d件目] %s → %s", seq, file.name, dest)
         return 0
 
-    errors = probe_destinations(active_jobs, mkdir=args.mkdir)
+    target_jobs = _collect_target_jobs(source_dir, lookup)
+
+    errors = probe_destinations(target_jobs, mkdir=args.mkdir)
     if errors:
         for msg in errors:
-            logger.error("振り分け先フォルダに問題があります: %s", msg)
+            logger.error("振り分け先フォルダの判定に問題が発生: %s", msg)
         return 1
 
-    logger.info("Source dir  : %s", short_path(source_dir))
+    logger.info("Source dir  : %s", source_dir)
 
-    results = distribute_files(source_dir, active_jobs)
+    results = _distribute_files(source_dir, active_jobs)
 
     log_summary(results)
 

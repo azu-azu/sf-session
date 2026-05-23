@@ -14,7 +14,7 @@ import sys
 from pathlib import Path
 
 from .config import PIPELINES, VALID_PIPELINES
-from .utils import setup_logging, short_path
+from .utils import setup_logging
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +42,7 @@ def convert_dir(src: Path) -> Path:
 
     csv_files = sorted(src.glob("*.csv"))
     if not csv_files:
-        logger.info("スキップ: '%s' に CSV ファイルがありません", short_path(src))
+        logger.info("スキップ: '%s' に CSV ファイルがありません", src)
         return dest
 
     for csv_path in csv_files:
@@ -50,7 +50,7 @@ def convert_dir(src: Path) -> Path:
         out_path = dest / f"{csv_path.stem}_utf{csv_path.suffix}"
         out_path.write_text(text, encoding="utf-8-sig")
 
-    logger.info("変換完了: %d files → '%s'", len(csv_files), short_path(dest))
+    logger.info("変換完了: %d files → '%s'", len(csv_files), dest)
     return dest
 
 
@@ -72,7 +72,7 @@ def main(argv: list[str] | None = None) -> int:
     pipeline = PIPELINES[args.pipeline]
 
     if not pipeline.csv_dir.is_dir():
-        logger.error("'%s' が見つかりません。", short_path(pipeline.csv_dir))
+        logger.error("'%s' が見つかりません。", pipeline.csv_dir)
         return 1
 
     convert_dir(pipeline.csv_dir)

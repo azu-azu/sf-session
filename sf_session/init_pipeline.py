@@ -2,7 +2,7 @@
 
 Usage:
     python -m sf_session.init_pipeline            # interactive: create a new pipeline
-    python -m sf_session.init_pipeline --ensure    # auto-create missing pipelines from .env
+    python -m sf_session.init_pipeline --ensure   # auto-create missing pipelines from .env
 """
 
 from __future__ import annotations
@@ -13,23 +13,21 @@ import sys
 from pathlib import Path
 
 from .business_day import EXTRA_HOLIDAYS_PATH
-from .config import MACRO_ROOT, OUTPUT_ROOT, PIPELINES_DIR, PROJECT_ROOT
+from .config import PIPELINES_DIR, MACRO_ROOT, OUTPUT_ROOT
 from .utils import setup_logging
 
 logger = logging.getLogger(__name__)
 
-_ENV_PATH = PROJECT_ROOT / ".env"
-_TEMPLATES_DIR = Path(__file__).resolve().parent / "templates" / "pipeline"
+_PACKAGE_DIR = Path(__file__).resolve().parent
+_PROJECT_ROOT = _PACKAGE_DIR.parent
+_ENV_PATH = _PROJECT_ROOT / ".env"
+_TEMPLATES_DIR = _PACKAGE_DIR / "templates" / "pipeline"
 _SUBDIRS = ("result", "ids_file")
 
 _EXTRA_HOLIDAYS_TEMPLATE = """\
-# Extra holidays — one date per line, YYYY-MM-DD
-# e.g.
-# 2026-12-29
-# 2026-12-30
-# 2026-12-31
-# 2027-01-02
-# 2027-01-03
+# Format: YYYY-MM-DD 
+# e.g.:
+# 2026-01-01
 """
 
 _BAT_TEMPLATE = """\
@@ -54,13 +52,16 @@ _BAT_DEFS = (
     ("11_download_ids.bat",    "sf_session.download",          " --ids-file"),
     ("12_download_retry.bat",  "sf_session.download",          " --retry"),
     ("20_jis_to_utf.bat",      "sf_session.jis_to_utf8",       ""),
-    ("21_file_collect.bat",    "sf_session.file_collect",       ""),
-    ("90_show_macrofile.bat",  "sf_session.macro_book_reader",  ""),
+    ("21_file_collect.bat",    "sf_session.file_collect",      ""),
+    ("90_show_macrofile.bat",  "sf_session.macro_book_reader", ""),
 )
 
-_DEVTEST_BAT_DEFS = (
+__devtest_BAT_DEFS = (
     ("00_cleanup_test_csv.bat", "sf_session.cleanup_test_csv", ""),
+    ("03_download_direct.bat", "sf_session.download",          " --direct-deliver --mkdir"),
+    ("11_download_ids_direct.bat","sf_session.download",       " --ids-file --direct-deliver --mkdir"),
 )
+
 
 # ── helpers ──────────────────────────────────────────────────────────
 
@@ -84,13 +85,13 @@ def _existing_pipelines() -> list[str]:
 def _update_env_pipelines(new_name: str) -> str:
     """Append *new_name* to the PIPELINES line in .env and return the updated value."""
     text = _ENV_PATH.read_text(encoding="utf-8")
-    pattern = re.compile(r"^(PIPELINES\s*=\s*)(.+?)(\s*(?:#.*)?)$", re.MULTILINE)
+    pattern = re.compile(r"^(PIPELINES\s*=\s*)(.*?)(\s*(?:#.*)?)$", re.MULTILINE)
     match = pattern.search(text)
     if not match:
         raise RuntimeError("PIPELINES line not found in .env")
 
     current = match.group(2).strip()
-    updated = f"{current}, {new_name}"
+    updated = new_name if not current else f"{current}, {new_name}"
     new_text = pattern.sub(rf"\g<1>{updated}\3", text)
     _ENV_PATH.write_text(new_text, encoding="utf-8")
     return updated
@@ -117,8 +118,8 @@ def _create_directories(name: str) -> Path:
 
 def _generate_bat_files(name: str, pipeline_dir: Path) -> int:
     defs = _BAT_DEFS
-    if name == "devtest":
-        defs = _BAT_DEFS + _DEVTEST_BAT_DEFS
+    if name == "_devtest":
+        defs = _BAT_DEFS + __devtest_BAT_DEFS
     for filename, module, extra_args in defs:
         content = _BAT_TEMPLATE.format(
             module=module, pipeline=name, extra_args=extra_args,
@@ -160,7 +161,6 @@ def _scaffold_pipeline(name: str) -> tuple[Path, int]:
 
 
 def main() -> None:
-    setup_logging()
     name = input("pipeline名を入力してください: ").strip()
 
     # validation
@@ -193,11 +193,11 @@ def main() -> None:
         macro_dir, created = _ensure_macro_dir(name, MACRO_ROOT)
         if created:
             print(f"✓ {macro_dir} を作成しました")
-            print(f"⚠ マクロファイル (.xlsm) を {macro_dir} に格納してください")
+            print(f"⚠ マクロファイル（.xlsm） を {macro_dir} に格納してください")
         else:
-            print(f"✓ {macro_dir} は既に存在します")
+            print(f"✓ {macro_dir} は既に存在していました")
     else:
-        print("⚠ MACRO_ROOT_PATH が未設定のためスキップしました")
+        print(f"⚠ MACRO_ROOT_PATH が未設定のためスキップしました")
 
     # 4. output directory (OUTPUT_ROOT_PATH)
     if OUTPUT_ROOT is not None:
@@ -205,10 +205,9 @@ def main() -> None:
         if csv_created:
             print(f"✓ {csv_dir} を作成しました")
         else:
-            print(f"✓ {csv_dir} は既に存在します")
+            print(f"✓ {csv_dir} は既に存在していました")
     else:
-        print("⚠ OUTPUT_ROOT_PATH が未設定のためスキップしました")
-
+        print(f"⚠ OUTPUT_ROOT_PATH が未設定のためスキップしました")
     print("\nセットアップ完了！")
 
 
@@ -217,9 +216,9 @@ def main() -> None:
 
 def ensure_pipelines() -> None:
     """PIPELINES に列挙された各 pipeline の scaffold・output dir・macro dir を ensure する。"""
-    PIPELINES_DIR.mkdir(exist_ok=True)
+    PIPELINES_DIR.mkdir(parents=True, exist_ok=True)
 
-    # extra_holidays.csv — pipeline 共通なので最初に 1 回だけ ensure
+    # extra_holidays.csv - pipeline 共通なので最初に 1 回だけ ensure
     if not EXTRA_HOLIDAYS_PATH.exists():
         EXTRA_HOLIDAYS_PATH.write_text(_EXTRA_HOLIDAYS_TEMPLATE, encoding="utf-8")
         logger.info("Created %s", EXTRA_HOLIDAYS_PATH)
@@ -236,6 +235,7 @@ def ensure_pipelines() -> None:
     for name in names:
         # scaffold only if pipelines/ dir doesn't exist yet
         pipeline_dir = PIPELINES_DIR / name
+
         if not pipeline_dir.exists():
             logger.info("Creating missing pipeline: %s", name)
             _scaffold_pipeline(name)
@@ -255,8 +255,9 @@ def ensure_pipelines() -> None:
 
 
 if __name__ == "__main__":
+    setup_logging()
+
     if len(sys.argv) > 1 and sys.argv[1] == "--ensure":
-        setup_logging()
         ensure_pipelines()
     else:
         main()

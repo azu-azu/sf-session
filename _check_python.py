@@ -9,7 +9,7 @@ import sys
 
 
 def main():
-    with open("pyproject.toml", encoding="utf-8") as f:
+    with open("pyproject.toml") as f:
         text = f.read()
 
     m = re.search(r'requires-python\s*=\s*">=(\d+)\.(\d+)"', text)

@@ -36,7 +36,7 @@ def launch_chrome(
     cmd = [exe, f"--remote-debugging-port={port}", f"--user-data-dir={user_data_dir}"]
     if url:
         cmd.append(url)
-    logger.info("Chrome 起動: %s", " ".join(cmd))
+    logger.info("Chrome 起動")
     proc = subprocess.Popen(cmd)
     logger.info("Chrome PID: %d", proc.pid)
     return proc

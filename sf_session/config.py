@@ -18,6 +18,60 @@ _CSV_SUBDIR = "csv"
 _RESULT_SUBDIR = "result"
 _IDS_FILE_SUBDIR = "ids_file"
 
+USER_HOME = Path.home()
+USER_NAME = USER_HOME.name
+
+
+def _expand_path(raw: str) -> Path:
+    return Path(os.path.expandvars(os.path.expanduser(raw)))
+
+
+def _normalize_path(path: Path) -> str:
+    return str(path).replace("/", "\\")
+
+
+def _is_z_drive(normalized: str) -> bool:
+    return normalized[:2].lower() == "z:"
+
+
+def _needs_home_fallback(path: Path) -> bool:
+    return _is_z_drive(_normalize_path(path)) and not path.exists()
+
+
+def _to_home_fallback(normalized: str) -> Path:
+    return Path.home() / normalized[3:]
+
+
+# Path
+_MACRO_ROOT_RAW = os.environ.get("MACRO_ROOT_PATH")
+_OUTPUT_ROOT_RAW = os.environ.get("OUTPUT_ROOT_PATH")
+
+if _MACRO_ROOT_RAW is None:
+    USE_HOME_FALLBACK = False
+else:
+    USE_HOME_FALLBACK = _needs_home_fallback(_expand_path(_MACRO_ROOT_RAW))
+
+
+def resolve_project_path(raw: str | Path) -> Path:
+    """外部由来の path を resolve する。
+    Z: が見つからなければ ~/ に fallback."""
+    path = _expand_path(str(raw))
+    normalized = _normalize_path(path)
+    
+    if USE_HOME_FALLBACK and _is_z_drive(normalized):
+        return _to_home_fallback(normalized)
+    return path
+
+
+MACRO_ROOT: Path | None = (
+    resolve_project_path(_MACRO_ROOT_RAW) if _MACRO_ROOT_RAW else None
+)
+
+OUTPUT_ROOT: Path | None = (
+    resolve_project_path(_OUTPUT_ROOT_RAW) if _OUTPUT_ROOT_RAW else None
+)
+
+
 # Chrome
 CHROME_EXE_PATH = os.environ.get(
     "CHROME_EXE_PATH",
@@ -30,62 +84,10 @@ SF_BASE_URL = os.environ["SF_BASE_URL"]
 SF_HOME_URL = f"{SF_BASE_URL}/home/home.jsp"
 
 
-# ── path resolve (Z: fallback) ───────────────────────
-
-
-def _expand_path(raw: str) -> Path:
-    return Path(os.path.expandvars(os.path.expanduser(raw)))
-
-
-def _normalize_drive(path: Path) -> str:
-    return str(path).replace("/", "\\")
-
-
-def _is_z_drive(normalized: str) -> bool:
-    return normalized[:2].lower() == "z:"
-
-
-def _needs_home_fallback(path: Path) -> bool:
-    return _is_z_drive(_normalize_drive(path)) and not path.exists()
-
-
-def _to_home_fallback(normalized: str) -> Path:
-    return Path.home() / normalized[3:]
-
-
-_MACRO_ROOT_RAW = os.environ.get("MACRO_ROOT_PATH")
-_OUTPUT_ROOT_RAW = os.environ.get("OUTPUT_ROOT_PATH")
-
-if _MACRO_ROOT_RAW is None:
-    USE_HOME_FALLBACK = False
-else:
-    USE_HOME_FALLBACK = _needs_home_fallback(_expand_path(_MACRO_ROOT_RAW))
-
-
-def resolve_project_path(raw: str | Path) -> Path:
-    """外部由来の path を resolve する。Z: が見つからなければ ~/ に fallback。"""
-    path = _expand_path(str(raw))
-    s = _normalize_drive(path)
-    if USE_HOME_FALLBACK and _is_z_drive(s):
-        return _to_home_fallback(s)
-    return path
-
-
-# Macro root
-MACRO_ROOT: Path | None = (
-    resolve_project_path(_MACRO_ROOT_RAW) if _MACRO_ROOT_RAW else None
-)
-
-# Output root (csv 出力先の root)
-OUTPUT_ROOT: Path | None = (
-    resolve_project_path(_OUTPUT_ROOT_RAW) if _OUTPUT_ROOT_RAW else None
-)
-
-
 # ── PipelineConfig ────────────────────────────────────
 @dataclass(frozen=True)
 class PipelineConfig:
-    """pipeline ごとの設定。macro_dir は MACRO_ROOT_PATH/name で derive、他は convention ベース。"""
+    """pipeline ごとの設定。macro_dir は MACRO_ROOT/name で組み立て 、他は ルール通り。"""
 
     name: str
     macro_dir: Path
@@ -112,7 +114,7 @@ class PipelineConfig:
 def _load_pipelines() -> dict[str, PipelineConfig]:
     """環境変数 PIPELINES (カンマ区切り) から pipeline 定義を読み込む。
 
-    macro_dir は MACRO_ROOT_PATH / name で自動 derive する。
+    macro_dir は MACRO_ROOT / name で自動 derive する。
     """
     raw = os.environ.get("PIPELINES", "")
     if not raw:

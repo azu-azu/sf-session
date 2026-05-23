@@ -3,48 +3,23 @@
 from __future__ import annotations
 
 import logging
-import os
 import re
 import sys
 from collections.abc import Callable, Sequence
 from datetime import datetime
 from pathlib import Path
 
-from .config import MACRO_ROOT, OUTPUT_ROOT, PROJECT_ROOT
-
 logger = logging.getLogger(__name__)
 
 _RE_TRAILING_DATE = re.compile(r"_(\d{8})$")
 
-_SHORT_PATH_BASES: tuple[Path | None, ...] = (OUTPUT_ROOT, MACRO_ROOT, PROJECT_ROOT)
 
-
-def short_path(path: Path | str | None) -> str:
-    """ログ表示用に path を短縮する。OUTPUT_ROOT / MACRO_ROOT / PROJECT_ROOT からの relative path を返す。"""
-    if path is None:
-        return "-"
-    p = Path(path) if isinstance(path, str) else path
-    for base in _SHORT_PATH_BASES:
-        if base is not None and p.is_relative_to(base):
-            return str(p.relative_to(base))
-    return str(p)
-
-
-def _supports_hyperlink() -> bool:
-    """terminal が OSC 8 hyperlink に対応しているか判定する。"""
-    if not sys.stderr.isatty():
-        return False
-    # Windows: Windows Terminal (WT_SESSION) のみ対応。conhost はゴミ文字になる
-    if os.name == "nt" and "WT_SESSION" not in os.environ:
-        return False
-    return True
-
-
+# 一応設定しているものの、たぶんクリックできない(セキュリティ制限だと思われる)
 def file_link(path: Path | str | None) -> str:
-    """short_path に OSC 8 hyperlink を付与する。非対応 terminal では plain text。"""
-    display = short_path(path)
-    if path is None or not _supports_hyperlink():
+    display = str(path)
+    if path is None or not sys.stderr.isatty():
         return display
+
     p = Path(path) if isinstance(path, str) else path
     try:
         uri = p.resolve().as_uri()
@@ -68,6 +43,7 @@ def find_latest_success_ids(results_dir: Path) -> Path | None:
         return None
     candidates = sorted(results_dir.glob("success_ids_*.txt"))
     return candidates[-1] if candidates else None
+
 
 
 def time_label() -> str:
@@ -171,18 +147,7 @@ def log_result_summary(
         if path_fn is not None:
             return str(path_fn(r))
         dest = getattr(r, "dest_path", None)
-        return file_link(dest) if link else short_path(dest)
-
-    failures = [r for r in results if not r.success]
-    if failures:
-        logger.info("-" * 50)
-        logger.info("失敗一覧")
-        for r in failures:
-            err = f" ({r.error})" if r.error else ""
-            logger.info(
-                "  [NG] %d件目 %s  %.1fs  %s%s",
-                r.seq, r.report_id, r.elapsed, _path_str(r), err,
-            )
+        return file_link(dest) if link else str(dest)
 
     successes = [r for r in results if r.success]
     if show_successes and successes:
@@ -191,5 +156,40 @@ def log_result_summary(
         for r in successes:
             logger.info("%d. %s", r.seq, _path_str(r, link=True))
 
+    failures = [r for r in results if not r.success]
+    if failures:
+        logger.info("-" * 50)
+        for r in failures:
+            if path_fn is not None:
+                path_str = path_fn(r)
+            else:
+                path_str = str(getattr(r, "dest_path", None) or "-")
+            err = f" ({r.error})" if r.error else ""
+            logger.info(
+                "  [NG] %d件目 %s  %.1fs  %s%s",
+                r.seq, r.report_id, r.elapsed, path_str, err,
+            )
+
     logger.info("*" * 50)
     return ok, ng
+
+
+def format_path_for_log(path: Path | None, base: Path | None = None) -> str:
+    """ログ表示用に Path を整形する。
+    
+    - path が None なら "-"
+    - base 配下なら base からの相対パスを返す
+    - base が None、または配下でなければフルパスを返す 
+    """
+    if path is None:
+        return "-"
+    if base is None:
+        return str(path)
+
+    try:
+        return str(path.relative_to(base))
+    except ValueError:
+        return str(path)
+
+
+    

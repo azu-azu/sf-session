@@ -15,8 +15,9 @@ from pathlib import Path
 from openpyxl import load_workbook
 from openpyxl.worksheet.worksheet import Worksheet
 
-from .config import PIPELINES, PipelineConfig, VALID_PIPELINES
-from .utils import find_latest_success_ids, read_ids_file, strip_trailing_date
+from .config import PIPELINES, PipelineConfig, VALID_PIPELINES, USER_HOME, USE_HOME_FALLBACK
+from .utils import find_latest_success_ids, read_ids_file, strip_trailing_date, file_link
+from .utils_excel import col_to_index, get_cell_value
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +29,7 @@ _COL_SRC_FOLDER_NAME = "AD"
 _COL_ENCODE = "AE"
 _COL_SKIP = "AG"
 
-_SHEET_NAME = "Salesforce"
+_SHEET_NAME = "SalesForce"
 
 # データ開始行（100 = ヘッダ、101〜 = データ）
 _DATA_START_ROW = 101
@@ -74,19 +75,6 @@ class JobEntry:
     skip: str
 
 
-def _col_to_index(col_letter: str) -> int:
-    """Excel 列文字を 1-based インデックスに変換する。"""
-    result = 0
-    for ch in col_letter.upper():
-        result = result * 26 + (ord(ch) - ord("A") + 1)
-    return result
-
-
-def _cell(ws, row: int, col_letter: str):
-    """ワークシートからセル値を取得する。"""
-    return ws.cell(row=row, column=_col_to_index(col_letter)).value
-
-
 def _extract_id(url: str | None) -> str | None:
     """URL から末尾の ID を抽出する。"""
     if not url or not isinstance(url, str):
@@ -124,14 +112,14 @@ def read_jobs_from_xlsm(xlsm_path: Path) -> list[JobEntry]:
 
         entries: list[JobEntry] = []
         for row in range(_DATA_START_ROW, ws.max_row + 1):
-            no = _cell(ws, row, _COL_NO)
-            url = _cell(ws, row, _COL_URL)
+            no = get_cell_value(ws, row, _COL_NO)
+            url = get_cell_value(ws, row, _COL_URL)
 
             # No も URL も空なら終端
             if no is None and url is None:
                 break
 
-            raw_filename = _cell(ws, row, _COL_NEW_FILENAME)
+            raw_filename = get_cell_value(ws, row, _COL_NEW_FILENAME)
             has_fn = _has_filename(raw_filename)
 
             entries.append(JobEntry(
@@ -139,9 +127,9 @@ def read_jobs_from_xlsm(xlsm_path: Path) -> list[JobEntry]:
                 report_id=_extract_id(url),
                 has_filename=has_fn,
                 new_filename=strip_trailing_date(str(raw_filename).strip()) if has_fn else "",
-                src_folder_name=str(_cell(ws, row, _COL_SRC_FOLDER_NAME) or ""),
-                encode=str(_cell(ws, row, _COL_ENCODE) or ""),
-                skip=str(_cell(ws, row, _COL_SKIP) or ""),
+                src_folder_name=str(get_cell_value(ws, row, _COL_SRC_FOLDER_NAME) or ""),
+                encode=str(get_cell_value(ws, row, _COL_ENCODE) or ""),
+                skip=str(get_cell_value(ws, row, _COL_SKIP) or ""),
             ))
 
         return entries
@@ -160,7 +148,7 @@ def read_jobs(macro_dir: Path) -> list[JobEntry]:
             f"'{macro_dir.name}/' に .xlsm がありません。"
         )
 
-    logger.info("xlsm から読み取り: %s", xlsm_path.name)
+    logger.info("xlsm から読み取り: %s", xlsm_path)
     return read_jobs_from_xlsm(xlsm_path)
 
 
@@ -230,9 +218,10 @@ def _log_jobs(entries: list[JobEntry]) -> None:
     for i, e in enumerate(entries, start=1):
         id_str = e.report_id or "(なし)"
         fn_flag = "True" if e.has_filename else "False"
+        path = file_link(Path(e.src_folder_name))
         lines.append(
             f"{i:<6} {id_str:<20} {fn_flag:<10} "
-            f"{e.new_filename:<30} {e.src_folder_name:<30} "
+            f"{e.new_filename:<30} {path:<30} "
             f"{e.encode:<10} {e.skip:<6}"
         )
 
@@ -263,10 +252,12 @@ if __name__ == "__main__":
 
     xlsm_path = _find_xlsm(_pipeline.macro_dir)
     if xlsm_path is None:
-        logger.error("'%s/' に .xlsm がありません。", _pipeline.macro_dir.name)
+        logger.error("'%s/' に .xlsm がありません。", _pipeline.macro_dir)
     else:
         mtime = _dt.fromtimestamp(xlsm_path.stat().st_mtime)
-        logger.info("ファイル: %s (更新: %s)", xlsm_path.name, mtime.strftime("%Y-%m-%d %H:%M"))
+        logger.info("Use Home: %s", USE_HOME_FALLBACK)
+        logger.info("Home: %s", USER_HOME)
+        logger.info("ファイル: %s (更新: %s)", xlsm_path, mtime.strftime("%Y-%m-%d %H:%M"))
         jobs = read_jobs_from_xlsm(xlsm_path)
         _log_jobs(jobs)
 

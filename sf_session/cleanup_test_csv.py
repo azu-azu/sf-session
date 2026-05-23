@@ -1,11 +1,11 @@
-"""devtest 用 CSV クリーンアップスクリプト。
+"""_devtest 用 CSV クリーンアップスクリプト。
 
-- pipeline 出力ルート（csv_dir の親）配下の CSV を再帰削除
-- マクロ定義の振り分け先フォルダがあれば、そこも再帰削除
+- pipeline.csv_dir 配下の csv を再帰削除
+- マクロファイル定義の振り分け先フォルダがあれば、そこも再帰削除
 
 Usage:
-    python -m sf_session.cleanup_test_csv devtest
-    python -m sf_session.cleanup_test_csv devtest --dry-run
+    python -m sf_session.cleanup_test_csv _devtest
+    python -m sf_session.cleanup_test_csv _devtest --dry-run
 """
 
 from __future__ import annotations
@@ -17,34 +17,38 @@ from pathlib import Path
 
 from .config import PIPELINES, VALID_PIPELINES, resolve_project_path
 from .macro_book_reader import read_jobs
-from .utils import setup_logging, short_path
+from .utils import setup_logging
 
 logger = logging.getLogger(__name__)
 
-_DEVTEST_ONLY = True
+# _devtest 以外で誤実行すると本番 CSV が消えるため safety guard を入れている。
+# 別 pipeline で使いたい場合は False に変更する。
+# → ただし実行後は必ず True に戻すこと。取扱要注意。
+__devtest_ONLY = True
 
 
 def _delete_csv_recursive(directory: Path, *, dry_run: bool) -> int:
     """directory 配下の *.csv を再帰削除して件数を返す。"""
     if not directory.is_dir():
-        logger.info("[%s] (存在しない — skip)", short_path(directory))
-        return 0
+        logger.info("[%s] (NOT exists - skip)", directory)
+        return
 
     count = 0
-    logger.info("[%s]", short_path(directory))
+    logger.info("[%s]", directory)
     for path in sorted(directory.rglob("*.csv")):
         if not path.is_file():
             continue
         if dry_run:
-            logger.info("  [dry-run] delete: %s", short_path(path))
+            logger.info("[dry-run] delete: %s", path)
         else:
             path.unlink()
-            logger.info("  deleted: %s", short_path(path))
+            logger.info("deleted: %s", path)
         count += 1
     return count
 
 
 def _collect_extra_dirs(macro_dir: Path, base_dir: Path) -> list[Path]:
+    """マクロファイル定義の振り分け先フォルダから、base_dir 以外の実在パスを集める。"""
     try:
         jobs = read_jobs(macro_dir)
     except FileNotFoundError as e:
@@ -58,7 +62,7 @@ def _collect_extra_dirs(macro_dir: Path, base_dir: Path) -> list[Path]:
         folder = job.src_folder_name
         if not folder:
             continue
-
+        
         path = resolve_project_path(folder)
 
         if path == base_dir or base_dir in path.parents:
@@ -68,16 +72,16 @@ def _collect_extra_dirs(macro_dir: Path, base_dir: Path) -> list[Path]:
 
         seen.add(path)
         extra_dirs.append(path)
-
+    
     return extra_dirs
 
 
 def run(pipeline_name: str, *, dry_run: bool = False) -> int:
-    if _DEVTEST_ONLY and pipeline_name != "devtest":
-        raise SystemExit(f"[ERROR] '{pipeline_name}' は cleanup 対象外です。")
+    if __devtest_ONLY and pipeline_name != "_devtest":
+        raise SystemExit(f"[Error] '{pipeline_name}' は cleanup 対象外です。")
 
     pipeline = PIPELINES[pipeline_name]
-    base_dir = pipeline.csv_dir.parent
+    base_dir = resolve_project_path(pipeline.csv_dir).parent
     total = 0
 
     logger.info("--- csv_dir ---")
@@ -87,7 +91,7 @@ def run(pipeline_name: str, *, dry_run: bool = False) -> int:
     if extra_dirs:
         logger.info("--- extra destinations ---")
         for directory in extra_dirs:
-            total += _delete_csv_recursive(directory, dry_run=dry_run)
+            total =+ _delete_csv_recursive(directory, dry_run=dry_run)
 
     label = "dry-run" if dry_run else "deleted"
     logger.info("合計 %d 件 %s", total, label)
@@ -96,7 +100,7 @@ def run(pipeline_name: str, *, dry_run: bool = False) -> int:
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="テスト用 CSV を一括削除する (devtest 向け)",
+        description="テスト用 CSV を一括削除する (_devtest 向け)",
     )
     parser.add_argument(
         "pipeline",

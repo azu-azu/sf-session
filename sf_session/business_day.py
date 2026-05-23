@@ -21,14 +21,14 @@ EXTRA_HOLIDAYS_PATH = PIPELINES_DIR / EXTRA_HOLIDAYS_FILENAME
 
 
 def load_extra_holidays(path: Path = EXTRA_HOLIDAYS_PATH) -> set[date]:
-    """CSV (A列: YYYY-MM-DD) から追加休業日を読み込む。"""
+    """CSV (A列: YYYY-MM-DD) から追加休業日を読み込む。
+    空行は無視、先頭が # のコメント行も無視。
+    """
     if not path.exists():
         return set()
     holidays: set[date] = set()
     with path.open(encoding="utf-8") as f:
         for row in csv.reader(f):
-            if not row or not row[0].strip():
-                continue
             if row[0].lstrip().startswith("#"):
                 continue
             try:

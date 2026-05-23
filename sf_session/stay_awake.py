@@ -32,6 +32,9 @@ def stay_awake(minutes: int = 0, keep_display_on: bool = True) -> None:
     if keep_display_on:
         flags |= ES_DISPLAY_REQUIRED
 
+    def today_fmt() -> str:
+        return datetime.now().strftime("%Y/%m/%d (%a)")
+
     def now_fmt() -> str:
         return datetime.now().strftime("%H:%M:%S")
 
@@ -43,7 +46,10 @@ def stay_awake(minutes: int = 0, keep_display_on: bool = True) -> None:
             minutes, now_fmt(), end_time.strftime("%H:%M:%S"),
         )
     else:
-        logger.info("StayAwake START (infinite) %s", now_fmt())
+        print(today_fmt())
+        print("--------------------------")
+        print("StayAwake - infinite -")
+        print("--------------------------")
 
     try:
         while end_time is None or datetime.now() < end_time:

@@ -17,7 +17,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
-from .config import PIPELINES, VALID_PIPELINES, resolve_project_path
+from .config import PIPELINES, VALID_PIPELINES
 from .macro_book_reader import JobEntry, read_jobs
 from .utils import (
     build_output_stem,
@@ -25,7 +25,6 @@ from .utils import (
     log_result_summary,
     read_ids_file,
     setup_logging,
-    short_path,
     strip_trailing_date,
 )
 
@@ -150,11 +149,11 @@ def _collect_one_job(
 ) -> CollectResult:
     """1ジョブ分の CSV を検索・コピーする。"""
     report_id = job.report_id or job.no
-    source_folder = resolve_project_path(job.src_folder_name)
+    source_folder = Path(job.src_folder_name)
     t0 = time.monotonic()
 
     if not source_folder.is_dir():
-        logger.warning("フォルダが見つかりません: %s (No: %s)。スキップ。", short_path(source_folder), job.no)
+        logger.warning("フォルダが見つかりません: %s (No: %s)。スキップ。", source_folder, job.no)
         return CollectResult(
             seq=seq, report_id=report_id, success=False,
             elapsed=time.monotonic() - t0, error="フォルダが見つかりません",
@@ -164,7 +163,7 @@ def _collect_one_job(
         base = strip_trailing_date(job.new_filename, strict=False)
         target = _find_csv_by_name(source_folder, base, today_str, job.report_id)
         if target is None:
-            logger.warning("'%s' を含む CSV が %s に見つかりません (No: %s)。スキップ。", base, short_path(source_folder), job.no)
+            logger.warning("'%s' を含む CSV が %s に見つかりません (No: %s)。スキップ。", base, source_folder, job.no)
             return CollectResult(
                 seq=seq, report_id=report_id, success=False,
                 elapsed=time.monotonic() - t0, error="CSV が見つかりません",
@@ -173,7 +172,7 @@ def _collect_one_job(
     else:
         target = _find_csv_by_date(source_folder, today_str, job.report_id)
         if target is None:
-            logger.warning("今日の CSV が %s に見つかりません (No: %s)。スキップ。", short_path(source_folder), job.no)
+            logger.warning("今日の CSV が %s に見つかりません (No: %s)。スキップ。", source_folder, job.no)
             return CollectResult(
                 seq=seq, report_id=report_id, success=False,
                 elapsed=time.monotonic() - t0, error="CSV が見つかりません",
@@ -186,14 +185,14 @@ def _collect_one_job(
     try:
         shutil.copy2(target, destination)
         elapsed = time.monotonic() - t0
-        logger.info("[%d件目] 収集完了: From %s", seq, short_path(target))
+        logger.info("[%d件目] 収集完了: From %s", seq, target)
         return CollectResult(
             seq=seq, report_id=report_id, success=True,
             elapsed=elapsed, source_path=target,
         )
     except OSError as e:
         elapsed = time.monotonic() - t0
-        logger.error("コピー失敗 %s → %s: %s", short_path(target), short_path(destination), e)
+        logger.error("コピー失敗 %s → %s: %s", target, destination, e)
         return CollectResult(
             seq=seq, report_id=report_id, success=False,
             elapsed=elapsed, error=f"コピー失敗: {e}",
@@ -204,7 +203,7 @@ def log_summary(results: list[CollectResult]) -> None:
     """実行結果のサマリーをログ出力する。"""
     log_result_summary(
         results, "file_collect",
-        path_fn=lambda r: f"From {short_path(r.source_path)}" if r.source_path else "-",
+        path_fn=lambda r: f"From {r.source_path}" if r.source_path else "-",
     )
 
 
@@ -221,10 +220,10 @@ def _dry_run_preview(
             continue
         seq += 1
         report_id = job.report_id or job.no
-        source_folder = resolve_project_path(job.src_folder_name)
+        source_folder = Path(job.src_folder_name)
 
         if not source_folder.is_dir():
-            logger.info("  [%d件目] %s → (フォルダなし: %s)", seq, report_id, short_path(source_folder))
+            logger.info("  [%d件目] %s → (フォルダなし: %s)", seq, report_id, source_folder)
             continue
 
         if job.has_filename:
@@ -234,9 +233,9 @@ def _dry_run_preview(
             target = _find_csv_by_date(source_folder, today_str, job.report_id)
 
         if target is None:
-            logger.info("  [%d件目] %s → (CSV なし: %s)", seq, report_id, short_path(source_folder))
+            logger.info("  [%d件目] %s → (CSV なし: %s)", seq, report_id, source_folder)
         else:
-            logger.info("  [%d件目] %s → From %s", seq, report_id, short_path(target))
+            logger.info("  [%d件目] %s → From %s", seq, report_id, target)
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
