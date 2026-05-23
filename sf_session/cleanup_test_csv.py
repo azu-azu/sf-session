@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 # _devtest 以外で誤実行すると本番 CSV が消えるため safety guard を入れている。
 # 別 pipeline で使いたい場合は False に変更する。
 # → ただし実行後は必ず True に戻すこと。取扱要注意。
-__devtest_ONLY = True
+_DEVTEST_ONLY = True
 
 
 def _delete_csv_recursive(directory: Path, *, dry_run: bool) -> int:
@@ -48,7 +48,8 @@ def _delete_csv_recursive(directory: Path, *, dry_run: bool) -> int:
 
 
 def _collect_extra_dirs(macro_dir: Path, base_dir: Path) -> list[Path]:
-    """マクロファイル定義の振り分け先フォルダから、base_dir 以外の実在パスを集める。"""
+    """マクロファイル定義の振り分け先フォルダから、base_dir 以外のパスを集める。
+    存在しないパスも含む（_delete_csv_recursive 側でスキップする）。"""
     try:
         jobs = read_jobs(macro_dir)
     except FileNotFoundError as e:
@@ -62,7 +63,7 @@ def _collect_extra_dirs(macro_dir: Path, base_dir: Path) -> list[Path]:
         folder = job.src_folder_name
         if not folder:
             continue
-        
+
         path = resolve_project_path(folder)
 
         if path == base_dir or base_dir in path.parents:
@@ -72,12 +73,12 @@ def _collect_extra_dirs(macro_dir: Path, base_dir: Path) -> list[Path]:
 
         seen.add(path)
         extra_dirs.append(path)
-    
+
     return extra_dirs
 
 
 def run(pipeline_name: str, *, dry_run: bool = False) -> int:
-    if __devtest_ONLY and pipeline_name != "_devtest":
+    if _DEVTEST_ONLY and pipeline_name != "_devtest":
         raise SystemExit(f"[Error] '{pipeline_name}' は cleanup 対象外です。")
 
     pipeline = PIPELINES[pipeline_name]
@@ -118,7 +119,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 def main(argv: list[str] | None = None) -> int:
     setup_logging()
     args = parse_args(argv)
-    run(args.pipeline, dry_run=args.dry_run)
+    run(args.pipeline, dry_run=args.dry_run)  # count is already logged inside run()
     return 0
 
 

@@ -63,5 +63,3 @@ def should_run_download(
         return False, "extra_holiday"
 
     return True, "weekday"
-
-
