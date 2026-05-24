@@ -172,24 +172,3 @@ def log_result_summary(
 
     logger.info("*" * 50)
     return ok, ng
-
-
-def format_path_for_log(path: Path | None, base: Path | None = None) -> str:
-    """ログ表示用に Path を整形する。
-    
-    - path が None なら "-"
-    - base 配下なら base からの相対パスを返す
-    - base が None、または配下でなければフルパスを返す 
-    """
-    if path is None:
-        return "-"
-    if base is None:
-        return str(path)
-
-    try:
-        return str(path.relative_to(base))
-    except ValueError:
-        return str(path)
-
-
-    

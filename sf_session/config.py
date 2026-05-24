@@ -19,7 +19,6 @@ _RESULT_SUBDIR = "result"
 _IDS_FILE_SUBDIR = "ids_file"
 
 USER_HOME = Path.home()
-USER_NAME = USER_HOME.name
 
 
 def _expand_path(raw: str) -> Path:

@@ -17,7 +17,7 @@ from openpyxl.worksheet.worksheet import Worksheet
 
 from .config import PIPELINES, PipelineConfig, VALID_PIPELINES, USER_HOME, USE_HOME_FALLBACK
 from .utils import find_latest_success_ids, read_ids_file, strip_trailing_date, file_link
-from .utils_excel import col_to_index, get_cell_value
+from .utils_excel import get_cell_value
 
 logger = logging.getLogger(__name__)
 
