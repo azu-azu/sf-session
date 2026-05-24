@@ -9,15 +9,13 @@ from __future__ import annotations
 import argparse
 import logging
 from dataclasses import dataclass
-from difflib import get_close_matches
 from pathlib import Path
 
 from openpyxl import load_workbook
-from openpyxl.worksheet.worksheet import Worksheet
 
 from .config import PIPELINES, PipelineConfig, VALID_PIPELINES, USER_HOME, USE_HOME_FALLBACK
 from .utils import find_latest_success_ids, read_ids_file, strip_trailing_date, file_link
-from .utils_excel import get_cell_value
+from .utils_excel import SheetNotFoundError, get_cell_value, resolve_sheet
 
 logger = logging.getLogger(__name__)
 
@@ -33,33 +31,6 @@ _SHEET_NAME = "SalesForce"
 
 # データ開始行（100 = ヘッダ、101〜 = データ）
 _DATA_START_ROW = 101
-
-
-class SheetNotFoundError(Exception):
-    """xlsm に期待するシートが存在しない場合のエラー。"""
-
-
-def _resolve_sheet(wb, expected: str) -> Worksheet:
-    """expected 名のシートを返す。見つからなければ typo 候補を提示して error。"""
-    if expected in wb.sheetnames:
-        return wb[expected]
-
-    candidates = get_close_matches(expected, wb.sheetnames, n=3, cutoff=0.5)
-    sheets_list = ", ".join(wb.sheetnames)
-
-    if candidates:
-        suggestion = ", ".join(candidates)
-        raise SheetNotFoundError(
-            f"シート '{expected}' が見つかりません。"
-            f"\n  typo の可能性: {suggestion}"
-            f"\n  → Excel でシート名を '{expected}' に修正してください。"
-            f"\n  (全シート: {sheets_list})"
-        )
-    raise SheetNotFoundError(
-        f"シート '{expected}' が見つかりません。"
-        f"\n  全シート: {sheets_list}"
-        f"\n  → Excel に '{expected}' シートを作成してください。"
-    )
 
 
 @dataclass
@@ -108,7 +79,7 @@ def read_jobs_from_xlsm(xlsm_path: Path) -> list[JobEntry]:
     """指定した xlsm パスからジョブ定義を読み取る。"""
     wb = load_workbook(xlsm_path, read_only=True, data_only=True)
     try:
-        ws = _resolve_sheet(wb, _SHEET_NAME)
+        ws = resolve_sheet(wb, _SHEET_NAME)
 
         entries: list[JobEntry] = []
         for row in range(_DATA_START_ROW, ws.max_row + 1):
