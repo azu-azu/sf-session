@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import logging
 import re
-import sys
 from collections.abc import Callable, Sequence
 from datetime import datetime
 from pathlib import Path
@@ -12,20 +11,6 @@ from pathlib import Path
 logger = logging.getLogger(__name__)
 
 _RE_TRAILING_DATE = re.compile(r"_(\d{8})$")
-
-
-# 一応設定しているものの、たぶんクリックできない(セキュリティ制限だと思われる)
-def file_link(path: Path | str | None) -> str:
-    display = str(path)
-    if path is None or not sys.stderr.isatty():
-        return display
-
-    p = Path(path) if isinstance(path, str) else path
-    try:
-        uri = p.resolve().as_uri()
-    except ValueError:
-        return display
-    return f"\033]8;;{uri}\a{display}\033]8;;\a"
 
 
 def setup_logging(level: str = "INFO") -> None:
@@ -43,7 +28,6 @@ def find_latest_success_ids(results_dir: Path) -> Path | None:
         return None
     candidates = sorted(results_dir.glob("success_ids_*.txt"))
     return candidates[-1] if candidates else None
-
 
 
 def time_label() -> str:
@@ -143,31 +127,27 @@ def log_result_summary(
     logger.info("%s complete >>", label)
     logger.info("成功 %d 件 / 失敗 %d 件 / 合計 %d 件", ok, ng, len(results))
 
-    def _path_str(r, *, link: bool = False) -> str:
+    def _path_str(r) -> str:
         if path_fn is not None:
             return str(path_fn(r))
         dest = getattr(r, "dest_path", None)
-        return file_link(dest) if link else str(dest)
+        return str(dest) if dest is not None else "-"
 
     successes = [r for r in results if r.success]
     if show_successes and successes:
         logger.info("-" * 50)
         logger.info("成功一覧")
         for r in successes:
-            logger.info("%d. %s", r.seq, _path_str(r, link=True))
+            logger.info("%d. %s", r.seq, _path_str(r))
 
     failures = [r for r in results if not r.success]
     if failures:
         logger.info("-" * 50)
         for r in failures:
-            if path_fn is not None:
-                path_str = path_fn(r)
-            else:
-                path_str = str(getattr(r, "dest_path", None) or "-")
             err = f" ({r.error})" if r.error else ""
             logger.info(
                 "  [NG] %d件目 %s  %.1fs  %s%s",
-                r.seq, r.report_id, r.elapsed, path_str, err,
+                r.seq, r.report_id, r.elapsed, _path_str(r), err,
             )
 
     logger.info("*" * 50)

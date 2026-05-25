@@ -14,7 +14,7 @@ from pathlib import Path
 from openpyxl import load_workbook
 
 from .config import PIPELINES, PipelineConfig, VALID_PIPELINES, USER_HOME, USE_HOME_FALLBACK
-from .utils import find_latest_success_ids, read_ids_file, strip_trailing_date, file_link
+from .utils import find_latest_success_ids, read_ids_file, strip_trailing_date
 from .utils_excel import SheetNotFoundError, get_cell_value, resolve_sheet
 
 logger = logging.getLogger(__name__)
@@ -189,10 +189,9 @@ def _log_jobs(entries: list[JobEntry]) -> None:
     for i, e in enumerate(entries, start=1):
         id_str = e.report_id or "(なし)"
         fn_flag = "True" if e.has_filename else "False"
-        path = file_link(Path(e.src_folder_name))
         lines.append(
             f"{i:<6} {id_str:<20} {fn_flag:<10} "
-            f"{e.new_filename:<30} {path:<30} "
+            f"{e.new_filename:<30} {e.src_folder_name:<30} "
             f"{e.encode:<10} {e.skip:<6}"
         )
 
