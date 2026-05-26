@@ -88,15 +88,6 @@ def write_pipeline_status(
     logger.info("pipeline status: %s", marker.name)
     return marker
 
-
-def build_output_stem(report_id: str | None, stem: str) -> str:
-    """出力ファイル名の stem を組み立てる。{report_id}_{YYYYMMDD}_{stem} 形式。"""
-    today = datetime.now().strftime("%Y%m%d")
-    if report_id:
-        return f"{report_id}_{today}_{stem}"
-    return stem
-
-
 def read_ids_file(path: Path) -> set[str]:
     """ID テキストファイルを読み取り、set で返す。# 行はスキップ。"""
     if not path.exists():

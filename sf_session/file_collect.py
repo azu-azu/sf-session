@@ -20,7 +20,6 @@ from pathlib import Path
 from .config import PIPELINES, VALID_PIPELINES
 from .macro_book_reader import JobEntry, read_jobs
 from .utils import (
-    build_output_stem,
     find_latest_success_ids,
     log_result_summary,
     read_ids_file,
@@ -43,6 +42,14 @@ class CollectResult:
     elapsed: float = 0.0
     source_path: Path | None = None
     error: str = ""
+
+
+def _build_output_stem(report_id: str | None, stem: str) -> str:
+    """出力ファイル名の stem を組み立てる。{report_id}_{YYYYMMDD}_{stem} 形式。"""
+    today = datetime.now().strftime("%Y%m%d")
+    if report_id:
+        return f"{report_id}_{today}_{stem}"
+    return stem
 
 
 def _extract_raw_stem(stem: str, report_id: str | None, today_str: str) -> str:
@@ -179,7 +186,7 @@ def _collect_one_job(
             )
         raw_stem = _extract_raw_stem(target.stem, job.report_id, today_str)
 
-    dest_name = f"{build_output_stem(job.report_id, raw_stem)}{target.suffix}"
+    dest_name = f"{_build_output_stem(job.report_id, raw_stem)}{target.suffix}"
     destination = daily_output_folder / dest_name
 
     try:
