@@ -25,7 +25,8 @@ from pathlib import Path
 from .config import PIPELINES, VALID_PIPELINES, OUTPUT_ROOT, resolve_project_path
 from .download.outputs import build_destination, probe_destinations
 from .macro_book_reader import JobEntry, load_active_jobs
-from .utils import log_result_summary, setup_logging, time_label, write_pipeline_status
+from .pipeline_status import log_result_summary, write_pipeline_status
+from .utils import setup_logging, time_label
 
 logger = logging.getLogger(__name__)
 
