@@ -19,7 +19,6 @@ import shutil
 import sys
 import time
 from dataclasses import dataclass, replace as _dc_replace
-from datetime import datetime
 from pathlib import Path
 
 from .config import PIPELINES, VALID_PIPELINES, OUTPUT_ROOT, resolve_project_path
