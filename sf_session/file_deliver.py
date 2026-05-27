@@ -73,7 +73,7 @@ def _collect_target_jobs(source_dir: Path, lookup: dict[str, JobEntry]) -> list[
         job = match_file_to_job(file.name, lookup)
         if job is None or not job.report_id:
             continue
-        
+
         selected[job.report_id] = job
 
     return list(selected.values())

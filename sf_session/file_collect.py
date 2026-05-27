@@ -40,7 +40,6 @@ class CollectResult:
     error: str = ""
 
 
-
 def _dump_csv_list(csvs: list[Path]) -> None:
     """フォルダ内の CSV ファイルと mtime を出力する（検索失敗時の診断用）。"""
     lines = [

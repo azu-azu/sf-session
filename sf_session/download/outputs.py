@@ -30,10 +30,10 @@ logger = logging.getLogger(__name__)
 
 
 def _strip_raw_stem(stem: str, report_id: str | None) -> str:
-    """file_deliver 用: {report_id}_{YYYYMMDD}_{raw} から末尾の raw を除去する。
+    """file_deliver 用: {report_id}_{YYYYMMDD} を返す。旧形式の raw suffix も除去。
 
-    download で生成されたファイル名 (例: 00O123_20260327_report12345) から
-    Salesforce が付けた末尾の raw 部分を取り除き {report_id}_{YYYYMMDD} だけ返す。
+    新形式 (例: 00O123_20260327) はそのまま {report_id}_{YYYYMMDD} を返す。
+    旧形式 (例: 00O123_20260327_report12345) は末尾の raw 部分を除去して返す。
     パターン不一致の場合は stem をそのまま返す。
     """
     if not report_id:
