@@ -28,7 +28,7 @@ from ..browser import REMOTE_DEBUGGING_PORT
 from ..business_day import should_run_download
 from ..macro_book_reader import JobEntry, load_active_jobs
 from ..pipeline_status import write_pipeline_status
-from ..utils import setup_logging, short_path, time_label
+from ..utils import setup_logging, time_label
 from .single import (
     build_export_url,
     ensure_exists,
@@ -112,7 +112,7 @@ def _log_run_config(cfg: RunConfig, output_dir: Path | None) -> None:
     logger.info("Port        : %d", cfg.port)
     logger.info("Timeout     : %ds", cfg.timeout)
     if output_dir:
-        logger.info("Output dir  : %s", short_path(output_dir))
+        logger.info("Output dir  : %s", \1
     else:
         logger.info("Output mode : direct-deliver (per-job)")
 
@@ -120,7 +120,7 @@ def _log_run_config(cfg: RunConfig, output_dir: Path | None) -> None:
 def _print_dry_run(direct_deliver: bool, jobs, *, csv_dir: Path) -> None:
     """dry-run モードのジョブ一覧表示。"""
     if not direct_deliver:
-        logger.info("Output dir  : %s", short_path(csv_dir))
+        logger.info("Output dir  : %s", \1
     logger.info("--- dry-run mode ---")
     dummy_dl = Path("{download}")
     for i, j in enumerate(jobs, 1):
@@ -139,7 +139,7 @@ def _print_dry_run(direct_deliver: bool, jobs, *, csv_dir: Path) -> None:
             )
         logger.info(
             "  [%d件目] %s  enc=%s  → %s  %s",
-            i, rid, enc, short_path(dest), url,
+            i, rid, enc, \1, url,
         )
 
 

@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 from ..config import resolve_project_path
 from ..macro_book_reader import JobEntry
 from ..pipeline_status import log_result_summary
-from ..utils import short_path, time_label
+from ..utils import time_label
 
 logger = logging.getLogger(__name__)
 
@@ -118,7 +118,7 @@ def probe_output_dir(path: Path, *, mkdir: bool = False) -> None:
                     f"出力先パスがファイルとして存在します: {path}"
                 )
             path.mkdir()
-            logger.info("出力先ディレクトリを作成しました: %s", short_path(path))
+            logger.info("出力先ディレクトリを作成しました: %s", path)
         else:
             raise FileNotFoundError(f"出力先ディレクトリが存在しません: {path}")
 
@@ -163,9 +163,9 @@ def open_folder(path: Path) -> None:
             subprocess.Popen(["open", str(path)])
         else:
             subprocess.Popen(["xdg-open", str(path)])
-        logger.info("フォルダを開きました: %s", short_path(path))
+        logger.info("フォルダを開きました: %s", path)
     except OSError as e:
-        logger.warning("open_folder 失敗: %s (%s)", short_path(path), e)
+        logger.warning("open_folder 失敗: %s (%s)", path, e)
 
 
 # ── work_dir 管理 ────────────────────────────────────────
