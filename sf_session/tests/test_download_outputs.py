@@ -34,7 +34,7 @@ class TestBuildDestination:
             mock_dt.now.return_value.strftime.return_value = "20260327"
             result = build_destination(job, downloaded, mode="download")
 
-        assert result == tmp_path / "00O123_20260327_report.csv"
+        assert result == tmp_path / "00O123_20260327.csv"
 
     def test_with_filename(self, tmp_path):
         job = make_job(
@@ -79,7 +79,7 @@ class TestBuildDestination:
             mock_dt.now.return_value.strftime.return_value = "20260327"
             result = build_destination(job, downloaded, mode="download", output_dir=out_dir)
 
-        assert result == out_dir / "00O999_20260327_report.csv"
+        assert result == out_dir / "00O999_20260327.csv"
 
     def test_output_dir_with_new_filename(self, tmp_path):
         out_dir = tmp_path / "outputs_csv"
@@ -134,7 +134,7 @@ class TestBuildDestination:
             mock_dt.now.return_value.strftime.return_value = "20260327"
             result = build_destination(job, downloaded, mode="download_direct")
 
-        assert result == tmp_path / "00O123_20260327_report.csv"
+        assert result == tmp_path / "00O123_20260327.csv"
 
 
 class TestLogSummary:

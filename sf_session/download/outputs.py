@@ -61,8 +61,8 @@ def build_destination(
 
     | mode              | rename あり                          | rename なし                                  |
     | ----------------- | ------------------------------------ | -------------------------------------------- |
-    | download          | {report_id}_{YYYYMMDD}_{new}{ext}    | {report_id}_{YYYYMMDD}_{stem}{ext}          |
-    | download_direct   | {new}_{YYYYMMDD}{ext}                | {report_id}_{YYYYMMDD}_{stem}{ext}          |
+    | download          | {report_id}_{YYYYMMDD}_{new}{ext}    | {report_id}_{YYYYMMDD}{ext}                 |
+    | download_direct   | {new}_{YYYYMMDD}{ext}                | {report_id}_{YYYYMMDD}{ext}                 |
     | file_deliver      | {new}{ext}                           | {report_id}_{YYYYMMDD}{ext} (raw 部分を除去) |
 
     output_dir が指定されていれば全ファイルをそこに出力し、
@@ -93,7 +93,7 @@ def build_destination(
             raise ValueError(f"unknown mode: {mode}")
     else:
         if job.report_id:
-            stem = f"{job.report_id}_{today}_{downloaded.stem}"
+            stem = f"{job.report_id}_{today}"
         else:
             stem = downloaded.stem
 
