@@ -42,7 +42,7 @@ class DistributeResult:
     error: str = ""
 
 
-def _build_job_lookup(jobs: list[JobEntry]) -> dict[str, JobEntry]:
+def build_job_lookup(jobs: list[JobEntry]) -> dict[str, JobEntry]:
     """report_id → JobEntry の lookup dict を構築する。"""
     lookup: dict[str, JobEntry] = {}
     for job in jobs:
@@ -51,7 +51,7 @@ def _build_job_lookup(jobs: list[JobEntry]) -> dict[str, JobEntry]:
     return lookup
 
 
-def _match_file_to_job(
+def match_file_to_job(
     filename: str,
     lookup: dict[str, JobEntry],
 ) -> JobEntry | None:
@@ -70,7 +70,7 @@ def _collect_target_jobs(source_dir: Path, lookup: dict[str, JobEntry]) -> list[
         if not file.is_file():
             continue
 
-        job = _match_file_to_job(file.name, lookup)
+        job = match_file_to_job(file.name, lookup)
         if job is None or not job.report_id:
             continue
         
@@ -79,12 +79,12 @@ def _collect_target_jobs(source_dir: Path, lookup: dict[str, JobEntry]) -> list[
     return list(selected.values())
 
 
-def _distribute_files(
+def distribute_files(
     source_dir: Path,
     jobs: list[JobEntry],
 ) -> list[DistributeResult]:
     """source_dir 内のファイルを jobs に基づいて振り分ける。"""
-    lookup = _build_job_lookup(jobs)
+    lookup = build_job_lookup(jobs)
     results: list[DistributeResult] = []
     count = 0
 
@@ -92,7 +92,7 @@ def _distribute_files(
         if not file.is_file():
             continue
 
-        job = _match_file_to_job(file.name, lookup)
+        job = match_file_to_job(file.name, lookup)
         if job is None:
             logger.warning("マッチするジョブなし: %s", file.name)
             continue
@@ -211,7 +211,7 @@ def main(argv: list[str] | None = None) -> int:
         logger.info("実行対象のジョブが 0 件のため終了します")
         return 0
 
-    lookup = _build_job_lookup(active_jobs)
+    lookup = build_job_lookup(active_jobs)
 
     if args.dry_run:
         logger.info("Source dir  : %s", source_dir)
@@ -220,7 +220,7 @@ def main(argv: list[str] | None = None) -> int:
         for file in sorted(source_dir.iterdir()):
             if not file.is_file():
                 continue
-            job = _match_file_to_job(file.name, lookup)
+            job = match_file_to_job(file.name, lookup)
             if job is None:
                 logger.info("  %s → (マッチなし)", file.name)
                 continue
@@ -239,7 +239,7 @@ def main(argv: list[str] | None = None) -> int:
 
     logger.info("Source dir  : %s", source_dir)
 
-    results = _distribute_files(source_dir, active_jobs)
+    results = distribute_files(source_dir, active_jobs)
 
     log_summary(results)
 

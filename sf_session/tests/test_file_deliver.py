@@ -55,7 +55,17 @@ class TestMatchFileToJob:
 class TestBuildDestination:
     """file_deliver mode の build_destination テスト。"""
 
-    def test_no_filename(self, tmp_path):
+    def test_no_filename_strips_raw_suffix(self, tmp_path):
+        """download 後の {report_id}_{YYYYMMDD}_{raw} から raw 部分を除去する。"""
+        job = make_job(report_id="00O123", src_folder_name=str(tmp_path))
+        source = tmp_path / "00O123_20260327_report12345678.csv"
+        source.touch()
+
+        result = build_destination(job, source, mode="file_deliver")
+        assert result == tmp_path / "00O123_20260327.csv"
+
+    def test_no_filename_fallback(self, tmp_path):
+        """パターン不一致の場合は stem をそのまま使う。"""
         job = make_job(report_id="00O123", src_folder_name=str(tmp_path))
         source = tmp_path / "00O123_report.csv"
         source.touch()
@@ -242,7 +252,7 @@ class TestMainProbeFailure:
         """移動先フォルダが存在しない場合、main() が 1 を返す。"""
         source_dir = tmp_path / "source"
         source_dir.mkdir()
-        (source_dir / "dummy.csv").write_text("data")
+        (source_dir / "00O123_data.csv").write_text("data")
 
         jobs = [make_job(
             report_id="00O123",

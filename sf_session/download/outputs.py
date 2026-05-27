@@ -29,6 +29,25 @@ logger = logging.getLogger(__name__)
 # ── ファイルパス組み立て ──────────────────────────────────
 
 
+def _strip_raw_stem(stem: str, report_id: str | None) -> str:
+    """file_deliver 用: {report_id}_{YYYYMMDD}_{raw} から末尾の raw を除去する。
+
+    download で生成されたファイル名 (例: 00O123_20260327_report12345) から
+    Salesforce が付けた末尾の raw 部分を取り除き {report_id}_{YYYYMMDD} だけ返す。
+    パターン不一致の場合は stem をそのまま返す。
+    """
+    if not report_id:
+        return stem
+    prefix = f"{report_id}_"
+    if not stem.startswith(prefix):
+        return stem
+    after_id = stem[len(prefix):]   # "20260327_report12345" or "20260327"
+    date_candidate = after_id[:8]
+    if len(date_candidate) == 8 and date_candidate.isdigit():
+        return f"{report_id}_{date_candidate}"
+    return stem
+
+
 def build_destination(
     job: JobEntry,
     downloaded: Path,
@@ -40,11 +59,11 @@ def build_destination(
 
     mode ごとの命名規則:
 
-    | mode              | rename あり                          | rename なし                            |
-    | ----------------- | ------------------------------------ | -------------------------------------- |
-    | download          | {report_id}_{YYYYMMDD}_{new}{ext}    | {report_id}_{YYYYMMDD}_{stem}{ext}    |
-    | download_direct   | {new}_{YYYYMMDD}{ext}                | {report_id}_{YYYYMMDD}_{stem}{ext}    |
-    | file_deliver      | {new}{ext}                           | そのまま (download 済み名を維持)       |
+    | mode              | rename あり                          | rename なし                                  |
+    | ----------------- | ------------------------------------ | -------------------------------------------- |
+    | download          | {report_id}_{YYYYMMDD}_{new}{ext}    | {report_id}_{YYYYMMDD}_{stem}{ext}          |
+    | download_direct   | {new}_{YYYYMMDD}{ext}                | {report_id}_{YYYYMMDD}_{stem}{ext}          |
+    | file_deliver      | {new}{ext}                           | {report_id}_{YYYYMMDD}{ext} (raw 部分を除去) |
 
     output_dir が指定されていれば全ファイルをそこに出力し、
     未指定なら job.src_folder_name を使う。
@@ -52,9 +71,12 @@ def build_destination(
     dest_dir = output_dir if output_dir else resolve_project_path(job.src_folder_name)
     ext = downloaded.suffix
 
-    # file_deliver: download 済みファイルの再配送。日付付与は不要
+    # file_deliver: download 済みファイルの再配送。Salesforce raw ファイル名は除去
     if mode == "file_deliver":
-        stem = job.new_filename if job.has_filename else downloaded.stem
+        if job.has_filename:
+            stem = job.new_filename
+        else:
+            stem = _strip_raw_stem(downloaded.stem, job.report_id)
         return dest_dir / f"{stem}{ext}"
 
     today = datetime.now().strftime("%Y%m%d")
