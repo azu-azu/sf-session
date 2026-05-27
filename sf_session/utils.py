@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import logging
 import re
-from collections.abc import Callable, Sequence
 from datetime import datetime
 from pathlib import Path
 
@@ -20,14 +19,6 @@ def setup_logging(level: str = "INFO") -> None:
         format="%(asctime)s [%(levelname)s] %(message)s",
         datefmt="%H:%M:%S",
     )
-
-
-def find_latest_success_ids(results_dir: Path) -> Path | None:
-    """results_dir から最新の success_ids_*.txt を返す。"""
-    if not results_dir.is_dir():
-        return None
-    candidates = sorted(results_dir.glob("success_ids_*.txt"))
-    return candidates[-1] if candidates else None
 
 
 def time_label() -> str:
@@ -66,89 +57,3 @@ def strip_trailing_date(name: str, *, strict: bool = True) -> str:
     return name[: m.start()]
 
 
-def write_pipeline_status(
-    outputs_dir: Path,
-    pipeline: str,
-    phase: str,
-    label: str,
-    *,
-    clear_phases: list[str] | None = None,
-) -> Path:
-    """pipeline status marker を書く。同 pipeline+phase の旧ファイルは削除。
-
-    clear_phases が指定されていれば、それらの phase のマーカーも削除する。
-    """
-    outputs_dir.mkdir(parents=True, exist_ok=True)
-    phases_to_clear = [phase] + (clear_phases or [])
-    for p in phases_to_clear:
-        for old in outputs_dir.glob(f"_{pipeline}_{p}_*.txt"):
-            old.unlink()
-    marker = outputs_dir / f"_{pipeline}_{phase}_{label}.txt"
-    marker.touch()
-    logger.info("pipeline status: %s", marker.name)
-    return marker
-
-
-def build_output_stem(report_id: str | None, stem: str) -> str:
-    """出力ファイル名の stem を組み立てる。{report_id}_{YYYYMMDD}_{stem} 形式。"""
-    today = datetime.now().strftime("%Y%m%d")
-    if report_id:
-        return f"{report_id}_{today}_{stem}"
-    return stem
-
-
-def read_ids_file(path: Path) -> set[str]:
-    """ID テキストファイルを読み取り、set で返す。# 行はスキップ。"""
-    if not path.exists():
-        raise FileNotFoundError(f"ids-file not found: {path}")
-    return {
-        stripped
-        for line in path.read_text(encoding="utf-8").splitlines()
-        if (stripped := line.strip()) and not stripped.startswith("#")
-    }
-
-
-def log_result_summary(
-    results: Sequence,
-    label: str,
-    *,
-    path_fn: Callable | None = None,
-    show_successes: bool = False,
-) -> tuple[int, int]:
-    """result list のサマリーをログ出力し、(ok, ng) を返す。
-
-    results の各要素は .success, .seq, .report_id, .elapsed, .error を持つこと。
-    path_fn: path 表示文字列を返す callable。省略時は r.dest_path を使用。
-    """
-    ok = sum(1 for r in results if r.success)
-    ng = sum(1 for r in results if not r.success)
-
-    logger.info("*" * 50)
-    logger.info("%s complete >>", label)
-    logger.info("成功 %d 件 / 失敗 %d 件 / 合計 %d 件", ok, ng, len(results))
-
-    def _path_str(r) -> str:
-        if path_fn is not None:
-            return str(path_fn(r))
-        dest = getattr(r, "dest_path", None)
-        return str(dest) if dest is not None else "-"
-
-    successes = [r for r in results if r.success]
-    if show_successes and successes:
-        logger.info("-" * 50)
-        logger.info("成功一覧")
-        for r in successes:
-            logger.info("%d. %s", r.seq, _path_str(r))
-
-    failures = [r for r in results if not r.success]
-    if failures:
-        logger.info("-" * 50)
-        for r in failures:
-            err = f" ({r.error})" if r.error else ""
-            logger.info(
-                "  [NG] %d件目 %s  %.1fs  %s%s",
-                r.seq, r.report_id, r.elapsed, _path_str(r), err,
-            )
-
-    logger.info("*" * 50)
-    return ok, ng

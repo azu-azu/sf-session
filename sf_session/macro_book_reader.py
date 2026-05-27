@@ -14,7 +14,8 @@ from pathlib import Path
 from openpyxl import load_workbook
 
 from .config import PIPELINES, PipelineConfig, VALID_PIPELINES, USER_HOME, USE_HOME_FALLBACK
-from .utils import find_latest_success_ids, read_ids_file, strip_trailing_date
+from .id_files import find_latest_success_ids, read_ids_file
+from .utils import strip_trailing_date
 from .utils_excel import SheetNotFoundError, get_cell_value, resolve_sheet
 
 logger = logging.getLogger(__name__)

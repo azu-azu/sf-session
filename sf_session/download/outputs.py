@@ -20,7 +20,8 @@ if TYPE_CHECKING:
 
 from ..config import resolve_project_path
 from ..macro_book_reader import JobEntry
-from ..utils import log_result_summary, short_path, time_label
+from ..pipeline_status import log_result_summary
+from ..utils import short_path, time_label
 
 logger = logging.getLogger(__name__)
 

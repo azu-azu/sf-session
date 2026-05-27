@@ -27,7 +27,8 @@ from ..config import (
 from ..browser import REMOTE_DEBUGGING_PORT
 from ..business_day import should_run_download
 from ..macro_book_reader import JobEntry, load_active_jobs
-from ..utils import setup_logging, short_path, time_label, write_pipeline_status
+from ..pipeline_status import write_pipeline_status
+from ..utils import setup_logging, short_path, time_label
 from .single import (
     build_export_url,
     ensure_exists,
