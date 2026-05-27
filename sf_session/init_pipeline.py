@@ -177,38 +177,38 @@ def main() -> None:
 
     # 1. update .env
     updated = _update_env_pipelines(name)
-    print(f"\n✓ .env の PIPELINES を更新しました: {updated}")
+    logger.info("\n✓ .env の PIPELINES を更新しました: %s", updated)
 
     # 2. scaffold (directories + bat files + readme)
     _, bat_count = _scaffold_pipeline(name)
-    print(f"✓ pipelines/{name}/ を作成しました")
+    logger.info("✓ pipelines/%s/ を作成しました", name)
     for sub in _SUBDIRS:
-        print(f"  - {sub}/")
-    print(f"✓ bat ファイルを配置しました ({bat_count} files)")
+        logger.info("  - %s/", sub)
+    logger.info("✓ bat ファイルを配置しました (%d files)", bat_count)
     if (_TEMPLATES_DIR / "readme.txt").exists():
-        print("✓ readme.txt を配置しました")
+        logger.info("✓ readme.txt を配置しました")
 
     # 3. macro directory (MACRO_ROOT_PATH)
     if MACRO_ROOT is not None:
         macro_dir, created = _ensure_macro_dir(name, MACRO_ROOT)
         if created:
-            print(f"✓ {macro_dir} を作成しました")
-            print(f"⚠ マクロファイル（.xlsm） を {macro_dir} に格納してください")
+            logger.info("✓ %s を作成しました", macro_dir)
+            logger.info("⚠ マクロファイル（.xlsm） を %s に格納してください", macro_dir)
         else:
-            print(f"✓ {macro_dir} は既に存在していました")
+            logger.info("✓ %s は既に存在していました", macro_dir)
     else:
-        print(f"⚠ MACRO_ROOT_PATH が未設定のためスキップしました")
+        logger.info("⚠ MACRO_ROOT_PATH が未設定のためスキップしました")
 
     # 4. output directory (OUTPUT_ROOT_PATH)
     if OUTPUT_ROOT is not None:
         csv_dir, csv_created = _ensure_output_dir(name, OUTPUT_ROOT)
         if csv_created:
-            print(f"✓ {csv_dir} を作成しました")
+            logger.info("✓ %s を作成しました", csv_dir)
         else:
-            print(f"✓ {csv_dir} は既に存在していました")
+            logger.info("✓ %s は既に存在していました", csv_dir)
     else:
-        print(f"⚠ OUTPUT_ROOT_PATH が未設定のためスキップしました")
-    print("\nセットアップ完了！")
+        logger.info("⚠ OUTPUT_ROOT_PATH が未設定のためスキップしました")
+    logger.info("\nセットアップ完了！")
 
 
 # ── ensure (batch mode) ──────────────────────────────────────────────

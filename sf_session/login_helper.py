@@ -125,11 +125,12 @@ def wait_until_logged_in(
                 elapsed_off_sf = 0.0
             else:
                 elapsed_off_sf += poll
-                if elapsed_off_sf >= OFF_SF_PATIENCE:
-                    raise AuthFlowLeftError(
-                        f"認証フロー外に遷移 ({elapsed_off_sf:.0f}s): "
-                        f"{driver.current_url}"
-                    )
+
+            if elapsed_off_sf >= OFF_SF_PATIENCE:
+                raise AuthFlowLeftError(
+                    f"認証フロー外に遷移 ({elapsed_off_sf:.0f}s): "
+                    f"{driver.current_url}"
+                )
 
             if elapsed >= timeout:
                 raise MfaTimeoutError(
