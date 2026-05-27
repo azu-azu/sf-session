@@ -40,27 +40,6 @@ class CollectResult:
     error: str = ""
 
 
-def _build_output_stem(report_id: str | None, stem: str) -> str:
-    """出力ファイル名の stem を組み立てる。{report_id}_{YYYYMMDD}_{stem} 形式。"""
-    today = datetime.now().strftime("%Y%m%d")
-    if report_id:
-        return f"{report_id}_{today}_{stem}"
-    return stem
-
-
-def _extract_raw_stem(stem: str, report_id: str | None, today_str: str) -> str:
-    """ファイル名の stem から report_id prefix と日付を除いた raw stem を返す。"""
-    # 新命名: {report_id}_{YYYYMMDD}_{raw_stem}
-    if report_id:
-        new_prefix = f"{report_id}_{today_str}_"
-        if stem.startswith(new_prefix):
-            return stem[len(new_prefix):]
-    # 旧命名: {raw_stem}_{YYYYMMDD}
-    old_suffix = f"_{today_str}"
-    if stem.endswith(old_suffix):
-        return stem[: -len(old_suffix)]
-    return stem
-
 
 def _dump_csv_list(csvs: list[Path]) -> None:
     """フォルダ内の CSV ファイルと mtime を出力する（検索失敗時の診断用）。"""
@@ -115,8 +94,12 @@ def _find_csv_by_date(
     """今日の日付を含む CSV を検索する。"""
     csvs = list(source_folder.glob("*.csv"))
 
-    # 新命名: {report_id}_{YYYYMMDD}_*.csv
+    # 新命名: {report_id}_{YYYYMMDD}.csv (exact) または {report_id}_{YYYYMMDD}_{name}.csv
     if report_id:
+        exact = f"{report_id}_{today_str}.csv"
+        for p in csvs:
+            if p.name == exact:
+                return p
         prefix = f"{report_id}_{today_str}_"
         matches = [p for p in csvs if p.name.startswith(prefix)]
         if matches:
@@ -171,7 +154,7 @@ def _collect_one_job(
                 seq=seq, report_id=report_id, success=False,
                 elapsed=time.monotonic() - t0, error="CSV が見つかりません",
             )
-        raw_stem = base
+        dest_stem = f"{job.report_id}_{today_str}_{base}" if job.report_id else base
     else:
         target = _find_csv_by_date(source_folder, today_str, job.report_id)
         if target is None:
@@ -180,9 +163,9 @@ def _collect_one_job(
                 seq=seq, report_id=report_id, success=False,
                 elapsed=time.monotonic() - t0, error="CSV が見つかりません",
             )
-        raw_stem = _extract_raw_stem(target.stem, job.report_id, today_str)
+        dest_stem = f"{job.report_id}_{today_str}" if job.report_id else target.stem
 
-    dest_name = f"{_build_output_stem(job.report_id, raw_stem)}{target.suffix}"
+    dest_name = f"{dest_stem}{target.suffix}"
     destination = daily_output_folder / dest_name
 
     try:
