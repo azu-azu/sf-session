@@ -25,14 +25,15 @@ Thumbs.db
 
 # Data (ローカル固有)
 pipelines/*
-!pipelines/archive/
-pipelines/archive/*/
 
 # Local only
+*.bat
+!97_clean_cache.bat
+!98_setup.bat
+!99_new_pipeline.bat
 *.txt
 !README.txt
 !new_pipeline.txt
-!pipelines/archive/readme.txt
 
 # Temp
 tmp.md

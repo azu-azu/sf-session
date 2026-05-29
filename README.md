@@ -7,42 +7,42 @@ API ではなく、ブラウザの export URL (`?export=1`) を使う VBA マク
 
 ```
 ┌──────────────────────────────────────────────────────────┐
-│ Step 0: 00_keep_session.bat                               │
+│ Step 0: py -m sf_session.keeper                           │
 │   Chrome 起動 → SSO/MFA 手動ログイン → reload 維持            │
 └───────────────────────┬──────────────────────────────────┘
                         │ Chrome がログイン状態を維持
                         ▼
 ┌──────────────────────────────────────────────────────────┐
-│ Step 1: ★01_download.bat                             │
+│ Step 1: py -m sf_session.download <pipeline>          │
 │   営業日チェック → login check → export URL → DL 監視 → 移動 │
 └───────────────────────┬──────────────────────────────────┘
                         │ reportID_*.csv が出力先に集まる
                         ▼
 ┌──────────────────────────────────────────────────────────┐
-│ Step 2: ★02_振り分け.bat                                  │
-│   reportID_* ファイルを Box フォルダへ振り分け・リネーム        │
+│ Step 2: py -m sf_session.file_deliver <pipeline>          │
+│   reportID_* ファイルを振り分け先フォルダへ振り分け・リネーム    │
 └───────────────────────┬──────────────────────────────────┘
                         │
                         ▼
 ┌──────────────────────────────────────────────────────────┐
-│ Step 3: py -m sf_session.file_collect                    │
+│ Step 3: py -m sf_session.file_collect <pipeline>         │
 │   各フォルダから CSV を収集して確認実行用フォルダに集約          │
 └───────────────────────┬──────────────────────────────────┘
                         │
                         ▼
 ┌──────────────────────────────────────────────────────────┐
-│ Step 4: 20_jis_to_utf.bat                                │
+│ Step 4: py -m sf_session.jis_to_utf8 <pipeline>          │
 │   csv_dir 直下の CSV を UTF-8 BOM に変換 → csv_dir/utf/      │
 └──────────────────────────────────────────────────────────┘
 ```
 
 ## スクリプト一覧
 
-ルート直下の `*.bat` がランチャー、`sf_session/` 以下が Python モジュール。
+ルート直下の `*.bat` がユーティリティランチャー、`sf_session/` 以下が Python モジュール。
 
 | スクリプト | 役割 |
 |---|---|
-| `01_stay_awake.bat` | Windows スリープ防止（`--minutes` で時間指定、0 で無制限） |
+| `py -m sf_session.stay_awake` | Windows スリープ防止（`--minutes` で時間指定、0 で無制限） |
 | `98_setup.bat` | Python version チェック (>=3.11) + venv 作成 + pip upgrade + 依存パッケージ install + missing pipeline 自動作成（初回のみ実行） |
 | `sf_session/keeper.py` | Chrome 起動 → 手動ログイン待機（SSO / MFA）→ 定期 reload でセッション維持 |
 | `sf_session/download/cli.py` | 営業日ガード + pre-flight login check 付きバッチ export orchestration |
@@ -76,7 +76,7 @@ API ではなく、ブラウザの export URL (`?export=1`) を使う VBA マク
 
 ## 使い方
 
-bat ファイルをダブルクリック、または PowerShell からオプション付きで実行。
+venv を activate した状態で `py -m` コマンドで実行する。
 初回は `98_setup.bat` を先に実行すること。
 
 ### 起動パターン
@@ -86,8 +86,8 @@ bat ファイルをダブルクリック、または PowerShell からオプシ�
 **パターン A: keeper + download（推奨）**
 
 ```
-00_keep_session.bat      ← Chrome 起動 + 手動ログイン待機 + セッション維持
-★01_download.bat    ← ↑ の Chrome に接続して export
+py -m sf_session.keeper          ← Chrome 起動 + 手動ログイン待機 + セッション維持
+py -m sf_session.download <pipeline>    ← ↑ の Chrome に接続して export
 ```
 
 keeper がセッションを維持するので、長時間の連続 export でも切れにくい。
@@ -95,7 +95,7 @@ keeper がセッションを維持するので、長時間の連続 export で�
 **パターン B: download 単独**
 
 ```
-★01_download.bat    ← 自前で Chrome を起動 + 手動ログイン待機 + export
+py -m sf_session.download <pipeline>    ← 自前で Chrome を起動 + 手動ログイン待機 + export
 ```
 
 keeper なしでも動く。download が専用プロファイルで Chrome を起動し、
@@ -132,7 +132,7 @@ SSO 経由のログインに対応。ログインが必要な場合はユーザ�
 ### 1. セッション確立
 
 ```powershell
-00_keep_session.bat
+py -m sf_session.keeper
 # Chrome 起動 → 手動ログイン待機（SSO / MFA）→ 8分ごとに reload
 # Ctrl+C で停止
 ```
@@ -150,20 +150,19 @@ SSO 経由のログインに対応。ログインが必要な場合はユーザ�
 
 ```powershell
 # dry-run でジョブ一覧を確認
-★01_download.bat --dry-run
+py -m sf_session.download <pipeline> --dry-run
 
 # 実行 (OUTPUT_ROOT_PATH/<pipeline>/csv/ に全ファイル集約)
-★01_download.bat
+py -m sf_session.download <pipeline>
 
 # per-job 振り分け先フォルダへ直接コピー
-★01_download.bat --direct-deliver
+py -m sf_session.download <pipeline> --direct-deliver
 
 # ids.txt でフィルタ
-11_download_ids.bat
+py -m sf_session.download <pipeline> --ids-file
 
 # 失敗分リトライ
-12_download_retry.bat
-
+py -m sf_session.download <pipeline> --retry
 ```
 
 営業日（平日 + 祝日 + `extra_holidays.csv` 除外）のみ実行。`--force` で営業日チェックを bypass できる。
@@ -180,13 +179,13 @@ export 中にセッションが切れた場合は、タブを traverse してロ
 | Timeout (600s) | 最多 | レポートが巨大 or SF 側が高負荷で DL 完了しない |
 | セッション切れ | たまに | SSO セッション期限切れ → login recovery (1回) も失敗した場合 |
 | Chrome 起動失敗 | 稀 | ポート競合や Chrome が既に占有 |
-| ファイル移動失敗 | 稀 | network folder (Box) 切断で `shutil.move` が失敗 |
+| ファイル移動失敗 | 稀 | network folder 切断で `shutil.move` が失敗 |
 
 Ctrl+C で中断した場合、途中までダウンロードしたファイルは `csv_work_*` フォルダに保持される。
 次回実行時に `前回の中断データが残っています` と warning が出るので、必要に応じて手動で rescue または削除する。
 
-いずれも一時的な問題なので、時間をおいて `12_download_retry.bat` で通ることが多い。
-`--direct-deliver` で実行した後でも `success_ids` は記録されるため、retry bat はそのまま使える（出力先は `csv/` になるので `★02_振り分け.bat` で振り分ける）。
+いずれも一時的な問題なので、時間をおいて `--retry` で通ることが多い。
+`--direct-deliver` で実行した後でも `success_ids` は記録されるため、retry はそのまま使える（出力先は `csv/` になるので `file_deliver` で振り分ける）。
 
 主なオプション:
 
@@ -210,16 +209,16 @@ Ctrl+C で中断した場合、途中までダウンロードしたファイル�
 
 ```powershell
 # dry-run で振り分け先を確認
-★02_振り分け.bat --dry-run
+py -m sf_session.file_deliver <pipeline> --dry-run
 
 # 実行 (source-dir 省略時は pipeline の csv/ を参照)
-★02_振り分け.bat
+py -m sf_session.file_deliver <pipeline>
 
 # 別フォルダを指定する場合
-★02_振り分け.bat --source-dir /other/path
+py -m sf_session.file_deliver <pipeline> --source-dir /other/path
 
 # ids.txt でフィルタ
-★02_振り分け.bat --ids-file
+py -m sf_session.file_deliver <pipeline> --ids-file
 ```
 
 実行前に全振り分け先フォルダの到達性を probe し、1 つでもアクセス不可なら即座に abort する。
@@ -257,7 +256,7 @@ Ctrl+C で中断した場合、途中までダウンロードしたファイル�
 00O000000000002AAA
 ```
 
-`★01_download.bat` / `★02_振り分け.bat` の両方で使える。
+`download` / `file_deliver` の両方で使える。
 
 ## ジョブ定義
 
@@ -279,7 +278,7 @@ Ctrl+C で中断した場合、途中までダウンロードしたファイル�
 API 経由でレポートのメタデータ（名前・列数・列名）を取得する。データ本体はダウンロードしない。
 
 ```powershell
-py -m sf_session.report_filter archive
+py -m sf_session.report_filter devtest
 ```
 
 - 前提: `.env` に SF 認証情報
@@ -308,17 +307,17 @@ py -m sf_session.report_filter archive
 
 ```
 OUTPUT_ROOT.parent/
-  _archive_dl_3月28日09時30分_成功2件_失敗0件.txt      ← download 通常モード
-  _archive_direct_3月28日09時30分_成功2件_失敗0件.txt  ← download --direct-deliver
-  _archive_dv_3月28日09時30分_振り分け完了.txt          ← file_deliver
+  _devtest_dl_3月28日09時30分_成功2件_失敗0件.txt      ← download 通常モード
+  _devtest_direct_3月28日09時30分_成功2件_失敗0件.txt  ← download --direct-deliver
+  _devtest_dv_3月28日09時30分_振り分け完了.txt          ← file_deliver
   OUTPUT_ROOT/
-    archive/
+    devtest/
       csv/
         ★3月28日09時30分_START_2件の予定.txt
         ★3月28日09時30分_成功2件_失敗0件.txt
         ★3月28日09時30分_振り分け完了.txt
-        00O000001_20260328_report_001.csv
-        00O000002_20260328_report_002.csv
+        00O000001_20260328.csv
+        00O000002_20260328.csv
 ```
 
 ## テスト
@@ -337,8 +336,8 @@ py -m pytest -v
 ### テスト用 CSV の削除 (devtest 専用)
 
 ```powershell
-■00_cleanup_test_csv.bat             # csv_dir + direct-deliver 先の *.csv を一括削除
-■00_cleanup_test_csv.bat --dry-run   # 削除せず対象だけ表示
+py -m sf_session.cleanup_test_csv devtest             # csv_dir + direct-deliver 先の *.csv を一括削除
+py -m sf_session.cleanup_test_csv devtest --dry-run   # 削除せず対象だけ表示
 ```
 
 devtest pipeline の csv_dir（`_prev_*` / `_work_*` 含む）と、マクロ定義の振り分け先フォルダから `*.csv` を削除する。
