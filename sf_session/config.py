@@ -53,7 +53,7 @@ else:
 
 def resolve_project_path(raw: str | Path) -> Path:
     """外部由来の path を resolve する。
-    Z: が見つからなければ ~/ に fallback."""
+    ネットワークドライブが見つからなければ ~/ に fallback."""
     path = _expand_path(str(raw))
     normalized = _normalize_path(path)
     
