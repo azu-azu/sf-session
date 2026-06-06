@@ -127,11 +127,16 @@ def _print_dry_run(direct_deliver: bool, jobs, *, csv_dir: Path) -> None:
         rid = j.report_id or "(なし)"
         enc = j.encode if j.encode else "Shift_JIS"
         url = build_export_url(rid, enc=enc) if j.report_id else "(URL 構築不可)"
-        mode = "download_direct" if direct_deliver else "download"
-        dest = build_destination(
-            j, dummy_dl,
-            mode=mode, output_dir=csv_dir if not direct_deliver else None,
-        )
+        if not direct_deliver:
+            dest = build_destination(
+                j, dummy_dl,
+                mode="download", output_dir=csv_dir,
+            )
+        else:
+            dest = build_destination(
+                j, dummy_dl,
+                mode="download_direct",
+            )
         logger.info(
             "  [%d件目] %s  enc=%s  → %s  %s",
             i, rid, enc, dest, url,
