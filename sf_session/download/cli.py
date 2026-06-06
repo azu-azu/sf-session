@@ -286,6 +286,7 @@ def _finalize(
     result_dir: Path,
 ) -> int:
     """結果出力 + swap + status marker。return code を返す。"""
+    assert OUTPUT_ROOT is not None  # validated by _load_pipelines
     ok, ng = log_summary(results)
     write_success_ids(results, result_dir=result_dir)
 

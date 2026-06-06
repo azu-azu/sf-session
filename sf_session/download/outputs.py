@@ -254,7 +254,10 @@ def _cleanup_old_dirs(staging_dir: Path, infix: str) -> None:
     for d in sorted(parent.glob(pattern)):
         if d.is_dir():
             if infix == "_work_" and any(d.iterdir()):
-                logger.warning("前回の中断データが残っています: %s", d.name)
+                logger.warning(
+                    "前回の中断データが残っています: %s。今回の処理とは別物です。必要なら手動確認してください。",
+                    d.name,
+                )
             else:
                 shutil.rmtree(d, ignore_errors=True)
                 logger.info("旧世代削除: %s", d.name)

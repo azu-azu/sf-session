@@ -66,13 +66,15 @@ def _has_filename(value) -> bool:
 
 
 def _find_xlsm(directory: Path) -> Path | None:
-    """ディレクトリ内の .xlsm ファイルを1つ返す。"""
-    files = list(directory.glob("*.xlsm"))
+    """ディレクトリ内の .xlsm ファイルを1つ返す。複数あれば RuntimeError。"""
+    files = sorted(directory.glob("*.xlsm"))
     if not files:
         return None
     if len(files) > 1:
-        names = [f.name for f in files]
-        logger.warning(".xlsm が複数あります: %s。最初のものを使用。", names)
+        names = "\n".join(f"  - {f.name}" for f in files)
+        raise RuntimeError(
+            f".xlsm が複数あります。使用するファイルを1つにしてください:\n{names}"
+        )
     return files[0]
 
 
