@@ -9,12 +9,9 @@ from unittest.mock import patch
 import pytest
 
 from sf_session.config import PipelineConfig
-from sf_session.macro_book_reader import (
-    SheetNotFoundError,
-    _resolve_sheet,
-    load_active_jobs,
-)
+from sf_session.macro_book_reader import load_active_jobs
 from sf_session.utils import strip_trailing_date
+from sf_session.utils_excel import SheetNotFoundError, resolve_sheet
 from sf_session.tests.helpers import make_job
 
 
@@ -57,18 +54,18 @@ class _FakeWorkbook:
 class TestResolveSheet:
     def test_exact_match(self):
         wb = _FakeWorkbook(["Sheet1", "Salesforce", "Config"])
-        result = _resolve_sheet(wb, "Salesforce")
+        result = resolve_sheet(wb, "Salesforce")
         assert result.title == "Salesforce"
 
     def test_typo_suggestion(self):
         wb = _FakeWorkbook(["Sheet1", "SalseForce", "Config"])
         with pytest.raises(SheetNotFoundError, match="typo の可能性: SalseForce"):
-            _resolve_sheet(wb, "Salesforce")
+            resolve_sheet(wb, "Salesforce")
 
     def test_no_match(self):
         wb = _FakeWorkbook(["Sheet1", "Data", "Config"])
         with pytest.raises(SheetNotFoundError, match="全シート: Sheet1, Data, Config"):
-            _resolve_sheet(wb, "Salesforce")
+            resolve_sheet(wb, "Salesforce")
 
 
 class TestIdsFileEmpty:
