@@ -11,8 +11,6 @@ import sys
 import time
 from datetime import datetime, timedelta
 
-from .utils import setup_logging
-
 logger = logging.getLogger(__name__)
 
 # SetThreadExecutionState flags
@@ -34,12 +32,24 @@ def stay_awake(minutes: int = 0, keep_display_on: bool = True) -> None:
     if keep_display_on:
         flags |= ES_DISPLAY_REQUIRED
 
+    def today_fmt() -> str:
+        return datetime.now().strftime("%Y/%m/%d (%a)")
+
+    def now_fmt() -> str:
+        return datetime.now().strftime("%H:%M:%S")
+
     end_time = (datetime.now() + timedelta(minutes=minutes)) if minutes > 0 else None
 
     if end_time is not None:
-        logger.info("StayAwake START (%d min, end=%s)", minutes, end_time.strftime("%H:%M:%S"))
+        logger.info(
+            "StayAwake START (%d min) %s -> %s",
+            minutes, now_fmt(), end_time.strftime("%H:%M:%S"),
+        )
     else:
-        logger.info("StayAwake - infinite -")
+        print(today_fmt())
+        print("\033[36m" + "-" * 27)
+        print("StayAwake - infinite -")
+        print("-" * 27 + "\033[0m")
 
     try:
         while end_time is None or datetime.now() < end_time:
@@ -49,11 +59,15 @@ def stay_awake(minutes: int = 0, keep_display_on: bool = True) -> None:
         pass
 
     _set_execution_state(ES_CONTINUOUS)
-    logger.info("StayAwake STOP")
+    logger.info("StayAwake STOP %s", now_fmt())
 
 
 def main() -> int:
-    setup_logging()
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(message)s",
+        datefmt="%H:%M:%S",
+    )
 
     parser = argparse.ArgumentParser(description="Windows スリープ防止")
     parser.add_argument(
