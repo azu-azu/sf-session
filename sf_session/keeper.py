@@ -18,7 +18,7 @@ from .session import (
     close_browser_session,
     prepare_salesforce_session,
 )
-from .utils import format_duration
+from .utils import format_duration, setup_logging
 
 logger = logging.getLogger(__name__)
 
@@ -75,11 +75,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 
 def main(argv: list[str] | None = None) -> int:
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s [%(levelname)s] %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-    )
+    setup_logging()
     args = parse_args(argv)
 
     session: BrowserSession | None = None

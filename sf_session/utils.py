@@ -7,8 +7,6 @@ import re
 from datetime import datetime
 from pathlib import Path
 
-logger = logging.getLogger(__name__)
-
 _RE_TRAILING_DATE = re.compile(r"_(\d{8})$")
 
 

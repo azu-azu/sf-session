@@ -5,6 +5,8 @@ import shutil
 import sys
 from pathlib import Path
 
+from .utils import setup_logging
+
 logger = logging.getLogger(__name__)
 
 
@@ -104,11 +106,7 @@ def clean_directory(
 
 
 def main() -> int:
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s [%(levelname)s] %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-    )
+    setup_logging()
 
     parser = argparse.ArgumentParser(
         description=(
