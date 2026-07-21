@@ -25,7 +25,7 @@ from ..config import (
     OUTPUT_ROOT,
 )
 from ..browser import REMOTE_DEBUGGING_PORT
-from ..business_day import should_run_download
+from ..business_day import SKIP_EXIT_CODE, should_run_download
 from ..macro_book_reader import JobEntry, load_active_jobs
 from ..pipeline_status import write_pipeline_status
 from ..utils import setup_logging, time_label
@@ -397,7 +397,9 @@ def main(argv: list[str] | None = None) -> int:
         should_run, reason = should_run_download()
         if not should_run:
             logger.info("非営業日のため skip (%s)", reason)
-            return 0
+            # 専用 exit code を返す。bat 側はこれを見て pause を飛ばす
+            # （通常実行はコンソールに結果ログを残すため pause する）。
+            return SKIP_EXIT_CODE
 
     # --- setup ---
     try:

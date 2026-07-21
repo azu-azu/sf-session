@@ -13,7 +13,7 @@ import re
 import sys
 from pathlib import Path
 
-from .business_day import EXTRA_HOLIDAYS_PATH
+from .business_day import EXTRA_HOLIDAYS_PATH, SKIP_EXIT_CODE
 from .config import PIPELINES_DIR, MACRO_ROOT, OUTPUT_ROOT
 from .utils import setup_logging
 
@@ -43,8 +43,11 @@ if not exist ".venv\\Scripts\\python.exe" (
 )
 
 .venv\\Scripts\\python.exe -m {module} {pipeline}{extra_args} %*
-rem タスクスケジューラなど無人実行時は SF_NO_PAUSE=1 を設定して pause を抑止する。
-rem pause が残るとキー入力待ちで cmd.exe が終了せず、次回トリガが無視される。
+rem 非営業日 skip (exit code {skip_code}) のときだけ pause せず即終了する。
+rem   → コンソールが残らないので、タスクスケジューラの次回トリガをブロックしない。
+rem 通常実行（成功/失敗）は pause してコンソールに結果ログを残す（手動で閉じる想定）。
+rem 完全無人で pause を一切させたくない場合は SF_NO_PAUSE=1 を設定する。
+if %errorlevel% equ {skip_code} exit /b 0
 if not defined SF_NO_PAUSE pause
 """
 
@@ -126,6 +129,7 @@ def _generate_bat_files(name: str, pipeline_dir: Path) -> int:
     for filename, module, extra_args in defs:
         content = _BAT_TEMPLATE.format(
             module=module, pipeline=name, extra_args=extra_args,
+            skip_code=SKIP_EXIT_CODE,
         )
         (pipeline_dir / filename).write_text(content, encoding="utf-8")
     return len(defs)

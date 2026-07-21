@@ -19,6 +19,11 @@ logger = logging.getLogger(__name__)
 EXTRA_HOLIDAYS_FILENAME = "extra_holidays.csv"
 EXTRA_HOLIDAYS_PATH = PIPELINES_DIR / EXTRA_HOLIDAYS_FILENAME
 
+# 非営業日 skip 時の専用 exit code。
+# bat 側はこの code のときだけ pause を飛ばす（通常実行=成功/失敗は pause してログを残す）。
+# 一般的なエラー (1) や成功 (0) と衝突しない値にしておく。
+SKIP_EXIT_CODE = 42
+
 
 def load_extra_holidays(path: Path = EXTRA_HOLIDAYS_PATH) -> set[date]:
     """CSV (A列: YYYY-MM-DD) から追加休業日を読み込む。

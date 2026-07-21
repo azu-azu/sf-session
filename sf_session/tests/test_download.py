@@ -286,7 +286,9 @@ class TestBusinessDayGuard:
     """営業日ガードのテスト。"""
 
     def test_non_business_day_skip(self, tmp_path, monkeypatch):
-        """非営業日は skip して return 0。"""
+        """非営業日は skip して専用 exit code を返す（bat が pause を飛ばすため）。"""
+        from sf_session.business_day import SKIP_EXIT_CODE
+
         staging_dir, _ = _stub_main_externals(monkeypatch, tmp_path)
         monkeypatch.setattr(
             "sf_session.download.cli.should_run_download",
@@ -295,7 +297,7 @@ class TestBusinessDayGuard:
 
         rc = main(["archive", "--no-login-check"])
 
-        assert rc == 0
+        assert rc == SKIP_EXIT_CODE
         # export 実行されず staging_dir は作られない
         assert not staging_dir.exists()
 
