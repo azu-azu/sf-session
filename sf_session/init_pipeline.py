@@ -37,12 +37,14 @@ cd /d "%~dp0..\\.."
 
 if not exist ".venv\\Scripts\\python.exe" (
     echo [ERROR] Run setup.bat first.
-    pause
+    if not defined SF_NO_PAUSE pause
     exit /b 1
 )
 
 .venv\\Scripts\\python.exe -m {module} {pipeline}{extra_args} %*
-pause
+rem タスクスケジューラなど無人実行時は SF_NO_PAUSE=1 を設定して pause を抑止する。
+rem pause が残るとキー入力待ちで cmd.exe が終了せず、次回トリガが無視される。
+if not defined SF_NO_PAUSE pause
 """
 
 _BAT_DEFS = (
