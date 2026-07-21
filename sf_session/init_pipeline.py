@@ -43,16 +43,15 @@ if not exist ".venv\\Scripts\\python.exe" (
 )
 
 .venv\\Scripts\\python.exe -m {module} {pipeline}{extra_args} %*
-rem python の exit code を保存する（後続の pause 等で %errorlevel% が変わるため）。
+rem Save python's exit code before pause can overwrite %errorlevel%.
 set "rc=%errorlevel%"
-rem 非営業日 skip (exit code {skip_code}) のときだけ pause せず即終了する。
-rem   → コンソールが残らないので、タスクスケジューラの次回トリガをブロックしない。
+rem Non-business-day skip (exit code {skip_code}): exit without pause so no
+rem lingering console window blocks the scheduler's next trigger.
 if %rc% equ {skip_code} exit /b 0
-rem 通常実行（成功/失敗）は pause してコンソールに結果ログを残す（手動で閉じる想定）。
-rem 完全無人で pause を一切させたくない場合は SF_NO_PAUSE=1 を設定する。
+rem Normal run (success/failure): pause so the result log stays on screen.
+rem Set SF_NO_PAUSE=1 to suppress pause entirely for fully-unattended use.
 if not defined SF_NO_PAUSE pause
-rem 保存した exit code を明示的に返す。
-rem pause で %errorlevel% が変わっても、タスクスケジューラが失敗を成功と誤認しないように。
+rem Return the saved code so Task Scheduler never reads a failure as success.
 exit /b %rc%
 """
 

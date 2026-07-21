@@ -93,15 +93,26 @@ if not should_run:
 
 ```bat
 .venv\Scripts\python.exe -m {module} {pipeline}{extra_args} %*
-set "rc=%errorlevel%"                 rem exit code を保存（pause 等で %errorlevel% が変わるため）
-if %rc% equ 42 exit /b 0             rem 非営業日 skip → pause せず即終了
-if not defined SF_NO_PAUSE pause     rem 通常実行（成功/失敗）→ pause してログを残す
-exit /b %rc%                         rem 保存した exit code を明示的に返す
+rem Save python's exit code before pause can overwrite %errorlevel%.
+set "rc=%errorlevel%"
+rem Non-business-day skip: exit without pause.
+if %rc% equ 42 exit /b 0
+rem Normal run: pause so the result log stays on screen.
+if not defined SF_NO_PAUSE pause
+rem Return the saved code so a failure is never read as success.
+exit /b %rc%
 ```
 
-> `exit /b %rc%` が無いと、`pause` の実行結果で `%errorlevel%` が上書きされ、
-> 通常失敗 (1) がタスクスケジューラに成功 (0) と見える余地がある。
-> python の exit code を保存して最後に明示的に返すことでこれを防ぐ。
+要点：
+
+- `set "rc=%errorlevel%"` で python の exit code を保存し、末尾で `exit /b %rc%`
+  として明示的に返す。これが無いと、`pause` の実行結果で `%errorlevel%` が
+  上書きされ、通常失敗 (1) がタスクスケジューラに成功 (0) と見える余地がある。
+- **bat 本体は ASCII のみ**にする。`chcp 65001` は python が出力する日本語ログの
+  表示用であり、bat 自身のコメントに日本語（マルチバイト）を書くと、保存
+  エンコーディングやコードページのずれで `rem` 行の解析が崩れ、コメントの一部が
+  コマンドとして実行される（`... is not recognized as ... command`）。説明用の
+  日本語はこのレポートや python 側に置き、生成される bat には残さない。
 
 これで挙動は下表のとおり。**タスクスケジューラ側の環境変数設定は不要**。
 
