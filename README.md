@@ -1,7 +1,7 @@
 # sf-session
 
 Salesforce レポートを **ログイン済み Chrome 経由** で export するツールキット。
-API ではなく、ブラウザの export URL (`?export=1`) を使う VBA マクロの Python 移植版。
+API ではなく、ブラウザの export URL (`?export=1`) を使う。
 
 ## ワークフロー
 
