@@ -54,5 +54,11 @@ if errorlevel 1 (
     echo [WARN] pipeline check failed, continuing setup...
 )
 
+echo Refreshing bat files...
+.venv\Scripts\python.exe -m sf_session.init_pipeline --regen-bats
+if errorlevel 1 (
+    echo [WARN] bat regeneration failed, continuing setup...
+)
+
 echo Setup complete.
 pause
