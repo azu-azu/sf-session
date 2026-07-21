@@ -197,7 +197,7 @@ class TestExportBatch:
             )
         assert len(results) == 1
         assert results[0].success
-        expected = dest_dir / "00O123_20260327_report.csv"
+        expected = dest_dir / "00O123_20260327.csv"
         assert results[0].dest_path == expected
         assert expected.exists()
 
@@ -233,7 +233,7 @@ class TestExportBatch:
             )
         assert len(results) == 1
         assert results[0].success
-        expected = out_dir / "00O999_20260327_report.csv"
+        expected = out_dir / "00O999_20260327.csv"
         assert results[0].dest_path == expected
         assert expected.exists()
 

@@ -236,8 +236,8 @@ class TestWorkDirSwap:
 
         # current はそのまま残っている
         assert (staging_dir / "precious.csv").read_text() == "do not lose"
-        # work_dir は cleanup されている
-        assert not list(staging_dir.parent.glob(f"{staging_dir.name}_work_*"))
+        # 中断時は work_dir を保持する（途中成果を失わないため）
+        assert list(staging_dir.parent.glob(f"{staging_dir.name}_work_*"))
 
     def test_direct_deliver_skips_swap(self, tmp_path, monkeypatch):
         """--direct-deliver 時は work_dir / swap を使わない。"""
@@ -268,8 +268,8 @@ class TestWorkDirSwap:
         assert rc == 1
         # current は前回分がそのまま
         assert (staging_dir / "good_report.csv").read_text() == "previous good data"
-        # work_dir は cleanup されている
-        assert not list(staging_dir.parent.glob(f"{staging_dir.name}_work_*"))
+        # 全件失敗時も work_dir は保持する（swap しないだけで削除はしない）
+        assert list(staging_dir.parent.glob(f"{staging_dir.name}_work_*"))
 
     def test_marker_written_to_final_staging_dir(self, tmp_path, monkeypatch):
         """完了マーカーは work_dir に書かれてから swap で csv_dir に入る。"""
