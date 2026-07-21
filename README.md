@@ -62,7 +62,7 @@ API ではなく、ブラウザの export URL (`?export=1`) を使う VBA マク
 | `sf_session/config.py` | 共通パス定数 + `create_sf_client()` |
 | `sf_session/clean.py` | `__pycache__` / `.pyc` / `.log` 等のクリーンアップ |
 | `sf_session/cleanup_test_csv.py` | テスト用 CSV の一括削除 (devtest 専用、safety guard 付き) |
-| `sf_session/init_pipeline.py` | 新規 pipeline の scaffolding（ディレクトリ・bat・.env を一括生成）。`--ensure` で .env 記載の missing pipeline を自動作成 |
+| `sf_session/init_pipeline.py` | 新規 pipeline の scaffolding（ディレクトリ・bat・.env を一括生成）。`--ensure` で .env 記載の missing pipeline を自動作成、`--regen-bats` で既存 pipeline の bat をテンプレート最新版に再生成 |
 | `sf_session/report_filter/` | レポートのメタデータ抽出 (API 経由、データ本体は取らない) |
 
 ## セットアップ
