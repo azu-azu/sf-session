@@ -120,7 +120,7 @@ def _create_directories(name: str) -> Path:
 
 def _generate_bat_files(name: str, pipeline_dir: Path) -> int:
     defs = _BAT_DEFS
-    if name == "_devtest":
+    if name == "devtest":
         defs = _BAT_DEFS + __devtest_BAT_DEFS
     for filename, module, extra_args in defs:
         content = _BAT_TEMPLATE.format(
