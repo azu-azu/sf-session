@@ -93,9 +93,15 @@ if not should_run:
 
 ```bat
 .venv\Scripts\python.exe -m {module} {pipeline}{extra_args} %*
-if %errorlevel% equ 42 exit /b 0     rem 非営業日 skip → pause せず即終了
+set "rc=%errorlevel%"                 rem exit code を保存（pause 等で %errorlevel% が変わるため）
+if %rc% equ 42 exit /b 0             rem 非営業日 skip → pause せず即終了
 if not defined SF_NO_PAUSE pause     rem 通常実行（成功/失敗）→ pause してログを残す
+exit /b %rc%                         rem 保存した exit code を明示的に返す
 ```
+
+> `exit /b %rc%` が無いと、`pause` の実行結果で `%errorlevel%` が上書きされ、
+> 通常失敗 (1) がタスクスケジューラに成功 (0) と見える余地がある。
+> python の exit code を保存して最後に明示的に返すことでこれを防ぐ。
 
 これで挙動は下表のとおり。**タスクスケジューラ側の環境変数設定は不要**。
 

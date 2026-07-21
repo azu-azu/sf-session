@@ -126,11 +126,14 @@ def test_regen_bats_overwrites_stale_bats(workspace: Path):
     init_pipeline.regenerate_bats()
 
     content = stale.read_text(encoding="utf-8")
-    # 非営業日 skip (exit code) のときだけ pause を飛ばす分岐が入っている
     from sf_session.business_day import SKIP_EXIT_CODE
 
-    assert f"if %errorlevel% equ {SKIP_EXIT_CODE} exit /b 0" in content
+    # exit code を保存し、非営業日 skip のときだけ pause を飛ばす分岐が入っている
+    assert 'set "rc=%errorlevel%"' in content
+    assert f"if %rc% equ {SKIP_EXIT_CODE} exit /b 0" in content
     assert "if not defined SF_NO_PAUSE pause" in content
+    # 保存した exit code を明示的に返している
+    assert "exit /b %rc%" in content
     # 裸の pause 行は残っていない
     assert "\npause\n" not in content
     # 他の pipeline step bat も生成されている
