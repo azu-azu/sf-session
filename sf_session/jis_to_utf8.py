@@ -18,7 +18,7 @@ from .utils import setup_logging
 
 logger = logging.getLogger(__name__)
 
-# VBA 出力の想定エンコーディング（優先順）
+# Salesforce export CSV の想定エンコーディング（優先順）
 _ENCODINGS = ["cp932", "utf-8-sig", "utf-8"]
 
 

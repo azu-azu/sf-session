@@ -1,4 +1,4 @@
-"""VBA procSalseForce の Python 移植 — バッチ export スクリプト。
+"""バッチ export スクリプト。
 
 ログイン済み Chrome で Salesforce export URL を順次開き、
 Downloads フォルダを監視して新規ファイルを移動先にリネーム・コピーする。
@@ -148,7 +148,7 @@ def _print_dry_run(direct_deliver: bool, jobs, *, csv_dir: Path) -> None:
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="VBA procSalseForce 相当 — バッチ export スクリプト",
+        description="バッチ export スクリプト",
     )
     parser.add_argument(
         "pipeline",

@@ -1,11 +1,11 @@
-"""_devtest 用 CSV クリーンアップスクリプト。
+"""devtest 用 CSV クリーンアップスクリプト。
 
 - pipeline.csv_dir 配下の csv を再帰削除
 - マクロファイル定義の振り分け先フォルダがあれば、そこも再帰削除
 
 Usage:
-    python -m sf_session.cleanup_test_csv _devtest
-    python -m sf_session.cleanup_test_csv _devtest --dry-run
+    python -m sf_session.cleanup_test_csv devtest
+    python -m sf_session.cleanup_test_csv devtest --dry-run
 """
 
 from __future__ import annotations
@@ -21,7 +21,7 @@ from .utils import setup_logging
 
 logger = logging.getLogger(__name__)
 
-# _devtest 以外で誤実行すると本番 CSV が消えるため safety guard を入れている。
+# devtest 以外で誤実行すると本番 CSV が消えるため safety guard を入れている。
 # 別 pipeline で使いたい場合は False に変更する。
 # → ただし実行後は必ず True に戻すこと。取扱要注意。
 _DEVTEST_ONLY = True
@@ -78,7 +78,7 @@ def _collect_extra_dirs(macro_dir: Path, base_dir: Path) -> list[Path]:
 
 
 def run(pipeline_name: str, *, dry_run: bool = False) -> int:
-    if _DEVTEST_ONLY and pipeline_name != "_devtest":
+    if _DEVTEST_ONLY and pipeline_name != "devtest":
         raise SystemExit(f"[Error] '{pipeline_name}' は cleanup 対象外です。")
 
     pipeline = PIPELINES[pipeline_name]
@@ -101,7 +101,7 @@ def run(pipeline_name: str, *, dry_run: bool = False) -> int:
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="テスト用 CSV を一括削除する (_devtest 向け)",
+        description="テスト用 CSV を一括削除する (devtest 向け)",
     )
     parser.add_argument(
         "pipeline",

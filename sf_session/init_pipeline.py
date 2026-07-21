@@ -1,8 +1,9 @@
 """New pipeline scaffolding tool.
 
 Usage:
-    python -m sf_session.init_pipeline            # interactive: create a new pipeline
-    python -m sf_session.init_pipeline --ensure   # auto-create missing pipelines from .env
+    python -m sf_session.init_pipeline              # interactive: create a new pipeline
+    python -m sf_session.init_pipeline --ensure     # auto-create missing pipelines from .env
+    python -m sf_session.init_pipeline --regen-bats # regenerate bat files of existing pipelines
 """
 
 from __future__ import annotations
@@ -37,12 +38,14 @@ cd /d "%~dp0..\\.."
 
 if not exist ".venv\\Scripts\\python.exe" (
     echo [ERROR] Run setup.bat first.
-    pause
+    if not defined SF_NO_PAUSE pause
     exit /b 1
 )
 
 .venv\\Scripts\\python.exe -m {module} {pipeline}{extra_args} %*
-pause
+rem タスクスケジューラなど無人実行時は SF_NO_PAUSE=1 を設定して pause を抑止する。
+rem pause が残るとキー入力待ちで cmd.exe が終了せず、次回トリガが無視される。
+if not defined SF_NO_PAUSE pause
 """
 
 _BAT_DEFS = (
@@ -118,7 +121,7 @@ def _create_directories(name: str) -> Path:
 
 def _generate_bat_files(name: str, pipeline_dir: Path) -> int:
     defs = _BAT_DEFS
-    if name == "_devtest":
+    if name == "devtest":
         defs = _BAT_DEFS + __devtest_BAT_DEFS
     for filename, module, extra_args in defs:
         content = _BAT_TEMPLATE.format(
@@ -254,10 +257,39 @@ def ensure_pipelines() -> None:
                 logger.info("Created output dir: %s", csv_dir)
 
 
+# ── regen bats (existing pipelines) ──────────────────────────────────
+
+
+def regenerate_bats() -> None:
+    """既存 pipeline の bat ファイルを現在のテンプレートで上書き再生成する。
+
+    ディレクトリ構成・ids.txt・readme などは触らず、bat だけを更新する。
+    テンプレート更新（例: SF_NO_PAUSE ガード追加）を、既に scaffold 済みの
+    pipeline に反映させたいときに使う。
+    """
+    names = _existing_pipelines()
+    if not names:
+        logger.info("PIPELINES が空のため再生成対象がありません")
+        return
+
+    for name in names:
+        pipeline_dir = PIPELINES_DIR / name
+        if not pipeline_dir.is_dir():
+            logger.warning(
+                "pipelines/%s が存在しないため skip（先に --ensure が必要）", name,
+            )
+            continue
+        count = _generate_bat_files(name, pipeline_dir)
+        logger.info("bat を再生成しました: pipelines/%s (%d files)", name, count)
+
+
 if __name__ == "__main__":
     setup_logging()
 
-    if len(sys.argv) > 1 and sys.argv[1] == "--ensure":
+    arg = sys.argv[1] if len(sys.argv) > 1 else ""
+    if arg == "--ensure":
         ensure_pipelines()
+    elif arg == "--regen-bats":
+        regenerate_bats()
     else:
         main()

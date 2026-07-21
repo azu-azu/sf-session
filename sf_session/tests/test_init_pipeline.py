@@ -112,6 +112,44 @@ def test_ensure_keeps_existing_extra_holidays_csv(workspace: Path):
     assert csv_path.read_text(encoding="utf-8") == "2026-12-31\n"
 
 
+def test_regen_bats_overwrites_stale_bats(workspace: Path):
+    _write_env(workspace, "alpha")
+    pipeline_dir = workspace / "pipelines" / "alpha"
+    pipeline_dir.mkdir()
+    # 旧テンプレート相当（裸の pause）の bat を置いておく
+    stale = pipeline_dir / "01_download.bat"
+    stale.write_text(
+        ".venv\\Scripts\\python.exe -m sf_session.download alpha %*\npause\n",
+        encoding="utf-8",
+    )
+
+    init_pipeline.regenerate_bats()
+
+    content = stale.read_text(encoding="utf-8")
+    # 新テンプレートの pause ガードが入っている
+    assert "if not defined SF_NO_PAUSE pause" in content
+    # 裸の pause 行は残っていない
+    assert "\npause\n" not in content
+    # 他の pipeline step bat も生成されている
+    assert (pipeline_dir / "03_download_direct.bat").exists()
+
+
+def test_regen_bats_skips_missing_pipeline_dir(workspace: Path):
+    _write_env(workspace, "alpha")
+    # pipelines/alpha を作らないまま regen → dir は作られず skip される
+
+    init_pipeline.regenerate_bats()
+
+    assert not (workspace / "pipelines" / "alpha").exists()
+
+
+def test_regen_bats_no_pipelines(workspace: Path):
+    _write_env(workspace, "")
+
+    # 例外なく return するだけ
+    init_pipeline.regenerate_bats()
+
+
 def test_ensure_creates_devtest_with_extra_bat(workspace: Path):
     _write_env(workspace, "devtest")
 
